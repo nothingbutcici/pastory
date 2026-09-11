@@ -158,10 +158,14 @@ final class ShelfModel {
     var filter: ShelfFilter = .all
     var selectedID: String? { didSet { ShelfPanelController.shared.quickLookSelectionChanged() } }
     var focusSearch = 0
+    /// Card order is frozen while the shelf is open, so copying (which bumps the item in the store)
+    /// does not make cards jump around. Rebuilt on every show.
+    private var orderSnapshot: [String: Int] = [:]
 
     var items: [ClipItem] {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
-        return ClipStore.shared.items.filter { item in
+        let ordered = ClipStore.shared.items.sorted { (orderSnapshot[$0.id] ?? -1) < (orderSnapshot[$1.id] ?? -1) }
+        return ordered.filter { item in
             switch filter {
             case .all: break
             case .pinned: if !item.pinned { return false }
@@ -179,6 +183,7 @@ final class ShelfModel {
         query = ""
         showSettings = false
         filter = .all
+        orderSnapshot = Dictionary(uniqueKeysWithValues: ClipStore.shared.items.enumerated().map { ($1.id, $0) })
         selectedID = ClipStore.shared.items.first?.id
     }
 

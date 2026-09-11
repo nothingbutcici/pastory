@@ -19,6 +19,8 @@ struct ShelfView: View {
     @FocusState private var searchFocused: Bool
     @State private var scrollFraction: CGFloat = 0
     @State private var scrollVisible: CGFloat = 1
+    @State private var scrollRange: CGFloat = 0      // content width minus container width
+    @State private var scrollPos = ScrollPosition(edge: .leading)
 
     var body: some View {
         let items = model.items
@@ -72,6 +74,7 @@ struct ShelfView: View {
         .overlay(alignment: .trailing) { Rectangle().fill(Color.white.opacity(0.06)).frame(width: 1) }
     }
 
+    /// Active: purple bar on the left edge + tinted pill that is flush left and rounded on the right.
     private func navRow(icon: String, _ title: String, active: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 12) {
@@ -80,10 +83,19 @@ struct ShelfView: View {
                 Spacer(minLength: 0)
             }
             .foregroundStyle(active ? Color.purple : Color.shelfInk)
-            .padding(.horizontal, 22)
+            .padding(.leading, 22)
             .frame(height: 54)
             .frame(maxWidth: .infinity)
-            .background(active ? Color.purple.opacity(0.22) : Color.clear)
+            .background(alignment: .leading) {
+                if active {
+                    HStack(spacing: 0) {
+                        Rectangle().fill(Color.purple).frame(width: 3)
+                        UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: 0, bottomTrailingRadius: 27, topTrailingRadius: 27)
+                            .fill(Color.purple.opacity(0.22))
+                    }
+                    .padding(.trailing, 16)
+                }
+            }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -168,10 +180,11 @@ struct ShelfView: View {
                 .padding(.vertical, 4)
                 .padding(.horizontal, 4)
             }
-            .onScrollGeometryChange(for: CGPoint.self, of: { g in
-                let w = max(1, g.contentSize.width - g.containerSize.width)
-                return CGPoint(x: min(1, max(0, g.contentOffset.x / w)), y: min(1, g.containerSize.width / max(1, g.contentSize.width)))
-            }, action: { _, v in scrollFraction = v.x; scrollVisible = v.y })
+            .scrollPosition($scrollPos)
+            .onScrollGeometryChange(for: [CGFloat].self, of: { g in
+                let w = max(0, g.contentSize.width - g.containerSize.width)
+                return [min(1, max(0, g.contentOffset.x / max(1, w))), min(1, g.containerSize.width / max(1, g.contentSize.width)), w]
+            }, action: { _, v in scrollFraction = v[0]; scrollVisible = v[1]; scrollRange = v[2] })
             .onChange(of: model.selectedID) { _, id in
                 if let id { withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(id, anchor: .center) } }
             }
@@ -199,14 +212,23 @@ struct ShelfView: View {
             Button { model.move(-3) } label: { Image(systemName: "chevron.left").font(.system(size: 13, weight: .semibold)) }
                 .buttonStyle(.plain).foregroundStyle(Color.shelfMuted)
             GeometryReader { geo in
+                let thumb = max(40, geo.size.width * scrollVisible)
+                let travel = geo.size.width - thumb
                 ZStack(alignment: .leading) {
                     Capsule().fill(Color.white.opacity(0.07))
                     Capsule().fill(Color.white.opacity(0.28))
-                        .frame(width: max(40, geo.size.width * scrollVisible))
-                        .offset(x: (geo.size.width - max(40, geo.size.width * scrollVisible)) * scrollFraction)
+                        .frame(width: thumb)
+                        .offset(x: travel * scrollFraction)
                 }
+                .frame(height: 14)               // fatter hit area than the 6 pt line
+                .contentShape(Rectangle())
+                .gesture(DragGesture(minimumDistance: 0).onChanged { v in
+                    // Drag anywhere on the track: put the thumb's centre under the pointer.
+                    let f = travel > 0 ? min(1, max(0, (v.location.x - thumb / 2) / travel)) : 0
+                    scrollPos.scrollTo(x: f * scrollRange)
+                })
             }
-            .frame(height: 6)
+            .frame(height: 14)
             Button { model.move(3) } label: { Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)) }
                 .buttonStyle(.plain).foregroundStyle(Color.shelfMuted)
         }
