@@ -14,6 +14,7 @@ final class ClipStore {
     let root: URL
     private let itemsDir: URL
     private let thumbsDir: URL
+    private let shareDir: URL
     private var indexURL: URL { root.appendingPathComponent("index.json") }
     private var thumbCache: [String: NSImage] = [:]
     static let maxTextBytes = 20 * 1024 * 1024
@@ -30,7 +31,8 @@ final class ClipStore {
         }
         itemsDir = self.root.appendingPathComponent("items", isDirectory: true)
         thumbsDir = self.root.appendingPathComponent("thumbs", isDirectory: true)
-        for d in [self.root, itemsDir, thumbsDir] where !fm.fileExists(atPath: d.path) {
+        shareDir = self.root.appendingPathComponent("share", isDirectory: true)
+        for d in [self.root, itemsDir, thumbsDir, shareDir] where !fm.fileExists(atPath: d.path) {
             try? fm.createDirectory(at: d, withIntermediateDirectories: true)
         }
         load()
@@ -55,6 +57,19 @@ final class ClipStore {
     func payloadURL(_ item: ClipItem) -> URL { itemsDir.appendingPathComponent(item.fileName) }
     func rtfURL(_ item: ClipItem) -> URL { itemsDir.appendingPathComponent("\(item.id).rtf") }
     func thumbURL(_ item: ClipItem) -> URL { thumbsDir.appendingPathComponent("\(item.id).png") }
+
+    /// A hard link with a human name ("Rec 2026-09-11 16.10.23.mp4") for putting on the pasteboard:
+    /// receivers show the file name, and a UUID there looks broken.
+    func shareURL(_ item: ClipItem) -> URL {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd HH.mm.ss"
+        let prefix = item.kind == .video ? "Rec" : (item.kind == .image ? "Snip" : "Clip")
+        let url = shareDir.appendingPathComponent("\(prefix) \(f.string(from: item.createdAt)).\(item.ext)")
+        if !FileManager.default.fileExists(atPath: url.path) {
+            try? FileManager.default.linkItem(at: payloadURL(item), to: url)
+        }
+        return url
+    }
 
     // MARK: - Insert
 
@@ -214,6 +229,11 @@ final class ClipStore {
     private func deleteFiles(_ item: ClipItem) {
         let fm = FileManager.default
         for u in [payloadURL(item), rtfURL(item), thumbURL(item)] { try? fm.removeItem(at: u) }
+        if let names = try? fm.contentsOfDirectory(atPath: shareDir.path) {
+            let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd HH.mm.ss"
+            let stamp = f.string(from: item.createdAt)
+            for n in names where n.contains(stamp) { try? fm.removeItem(at: shareDir.appendingPathComponent(n)) }
+        }
         thumbCache[item.id] = nil
     }
 
@@ -251,7 +271,11 @@ final class ClipStore {
         case .files:
             PasteboardWriter.writeFiles(fileURLs(of: item), itemID: item.id)
         case .video:
-            PasteboardWriter.writeFiles([payloadURL(item)], itemID: item.id)
+            if item.ext == "gif", let data = try? Data(contentsOf: payloadURL(item)) {
+                PasteboardWriter.writeGIF(data, itemID: item.id)
+            } else {
+                PasteboardWriter.writeFiles([shareURL(item)], itemID: item.id)
+            }
         }
         bump(item.id)
     }

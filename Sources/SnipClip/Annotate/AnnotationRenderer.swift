@@ -30,7 +30,6 @@ enum AnnotationRenderer {
         ctx.setLineWidth(a.size.lineWidth)
         ctx.setLineCap(.round)
         ctx.setLineJoin(.round)
-        if a.dashed { ctx.setLineDash(phase: 0, lengths: [a.size.lineWidth * 3.5, a.size.lineWidth * 3]) }
         var rng = Seeded(a.seed)
         switch a.tool {
         case .rect:
@@ -45,10 +44,7 @@ enum AnnotationRenderer {
             let path = NSBezierPath()
             path.move(to: p0); path.line(to: p1)
             sketch(path, closed: false, size: a.size, rng: &rng, in: ctx)
-            if a.tool == .arrow {
-                ctx.setLineDash(phase: 0, lengths: [])
-                arrowHead(from: p0, to: p1, size: a.size, rng: &rng, in: ctx)
-            }
+            if a.tool == .arrow { arrowHead(from: p0, to: p1, size: a.size, rng: &rng, in: ctx) }
         case .pen:
             guard a.points.count > 1 else { return }
             ctx.addPath(smoothPath(a.points))
@@ -57,7 +53,7 @@ enum AnnotationRenderer {
             guard let p = a.points.first, !a.text.isEmpty else { return }
             (a.text as NSString).draw(at: p, withAttributes: a.textAttributes)
         case .mosaic:
-            pixelate(a.rect, source: source, pixelsPerPoint: pixelsPerPoint, in: ctx)
+            pixelate(a.rect, block: a.size.mosaicBlock, source: source, pixelsPerPoint: pixelsPerPoint, in: ctx)
         }
     }
 
@@ -147,11 +143,11 @@ enum AnnotationRenderer {
     }
 
     /// Block-average the region: shrink to a few cells, blow back up without interpolation.
-    private static func pixelate(_ rect: CGRect, source: CGImage, pixelsPerPoint: CGFloat, in ctx: CGContext) {
+    private static func pixelate(_ rect: CGRect, block blockPoints: CGFloat, source: CGImage, pixelsPerPoint: CGFloat, in ctx: CGContext) {
         let px = CGRect(x: rect.minX * pixelsPerPoint, y: rect.minY * pixelsPerPoint,
                         width: rect.width * pixelsPerPoint, height: rect.height * pixelsPerPoint).integral
         guard px.width >= 1, px.height >= 1, let crop = source.cropping(to: px) else { return }
-        let block = max(6, 12 * pixelsPerPoint)
+        let block = max(4, blockPoints * pixelsPerPoint)
         let cw = max(1, Int(px.width / block)), ch = max(1, Int(px.height / block))
         guard let small = CGContext(data: nil, width: cw, height: ch, bitsPerComponent: 8, bytesPerRow: 0,
                                     space: source.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!,
@@ -168,12 +164,16 @@ enum AnnotationRenderer {
     }
 
     static let handleRadius: CGFloat = 4.5
-    static let deleteRadius: CGFloat = 9
+    static let deleteRadius: CGFloat = 10
 
-    /// Where the little ✕ sits for a selected annotation: just outside its top-right corner.
+    /// Where the delete button sits for a selected annotation: just outside its top-right corner.
     static func deleteCenter(_ a: Annotation) -> CGPoint {
         let r = a.bounds.insetBy(dx: -8, dy: -8)
-        return CGPoint(x: r.maxX + 4, y: r.minY - 4)
+        return CGPoint(x: r.maxX + 6, y: r.minY - 6)
+    }
+    static func deleteRect(_ a: Annotation) -> CGRect {
+        let c = deleteCenter(a)
+        return CGRect(x: c.x - deleteRadius, y: c.y - deleteRadius, width: 2 * deleteRadius, height: 2 * deleteRadius)
     }
 
     /// Selection chrome (live view only): dashed box for boxes/text/pen, handles, and a delete bubble.
@@ -193,18 +193,18 @@ enum AnnotationRenderer {
             ctx.fillEllipse(in: d)
             ctx.strokeEllipse(in: d)
         }
-        // Delete bubble.
+        // Delete button: dark disc, white ×, soft shadow.
         let c = deleteCenter(a)
-        let d = CGRect(x: c.x - deleteRadius, y: c.y - deleteRadius, width: 2 * deleteRadius, height: 2 * deleteRadius)
-        ctx.setFillColor(NSColor.white.cgColor)
-        ctx.setStrokeColor(NSColor(calibratedWhite: 0, alpha: 0.18).cgColor)
-        ctx.setLineWidth(1)
+        let d = deleteRect(a)
+        ctx.saveGState()
+        ctx.setShadow(offset: CGSize(width: 0, height: 1), blur: 3, color: NSColor(calibratedWhite: 0, alpha: 0.3).cgColor)
+        ctx.setFillColor(NSColor(calibratedWhite: 0.16, alpha: 1).cgColor)
         ctx.fillEllipse(in: d)
-        ctx.strokeEllipse(in: d)
-        ctx.setStrokeColor(NSColor(srgbRed: 0.88, green: 0.20, blue: 0.20, alpha: 1).cgColor)
-        ctx.setLineWidth(1.6)
+        ctx.restoreGState()
+        ctx.setStrokeColor(NSColor.white.cgColor)
+        ctx.setLineWidth(1.8)
         ctx.setLineCap(.round)
-        let k: CGFloat = 3.2
+        let k: CGFloat = 3.4
         ctx.move(to: CGPoint(x: c.x - k, y: c.y - k)); ctx.addLine(to: CGPoint(x: c.x + k, y: c.y + k))
         ctx.move(to: CGPoint(x: c.x + k, y: c.y - k)); ctx.addLine(to: CGPoint(x: c.x - k, y: c.y + k))
         ctx.strokePath()

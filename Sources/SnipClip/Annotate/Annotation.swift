@@ -32,8 +32,12 @@ enum AnnotateTool: CaseIterable {
 enum StrokeSize: Int, CaseIterable {
     case s = 1, m = 2, l = 3
     var label: String { ["S", "M", "L"][rawValue - 1] }
-    var lineWidth: CGFloat { [1.6, 2.6, 4.2][rawValue - 1] }
-    var fontSize: CGFloat { [16, 22, 30][rawValue - 1] }
+    var lineWidth: CGFloat { [2.6, 4.2, 6.5][rawValue - 1] }
+    var fontSize: CGFloat { [18, 24, 34][rawValue - 1] }
+    /// Mosaic cell size in canvas points.
+    var mosaicBlock: CGFloat { [8, 12, 18][rawValue - 1] }
+    /// Diameter of the dot shown in the size picker.
+    var dotDiameter: CGFloat { [5, 8, 11][rawValue - 1] }
 }
 
 enum HandFont {
@@ -49,7 +53,6 @@ struct Annotation: Identifiable {
     var tool: AnnotateTool
     var color: NSColor
     var size: StrokeSize
-    var dashed = false
     /// rect / ellipse / arrow / line / mosaic: [start, end]. pen: the whole path. text: [anchor].
     var points: [CGPoint]
     var text: String = ""

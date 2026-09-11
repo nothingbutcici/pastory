@@ -17,6 +17,7 @@ final class SelectionOverlayController {
     private(set) var hoveredWindow: SCWindow?
     private(set) var annotator: AnnotateView?
     private var toolbar: AnnotateToolbar?
+    private var modeSwitch: ModeSwitch?
 
     private init() {}
 
@@ -98,6 +99,11 @@ final class SelectionOverlayController {
         bar.frame = Self.toolbarFrame(for: rect, size: bar.fittingSize, in: win.overlayView.bounds)
         win.overlayView.addSubview(bar)
         bar.didLayout()
+        let sw = ModeSwitch(frame: .zero)
+        sw.onRecord = { [weak canvas] in canvas?.requestRecord() }
+        sw.frame.origin = Self.modeSwitchOrigin(for: rect, size: ModeSwitch.size, in: win.overlayView.bounds, avoiding: bar.frame)
+        win.overlayView.addSubview(sw)
+        modeSwitch = sw
         annotator = canvas
         toolbar = bar
         win.makeKeyAndOrderFront(nil)
@@ -116,6 +122,17 @@ final class SelectionOverlayController {
         return CGRect(x: x, y: y, width: size.width, height: size.height)
     }
 
+    /// Top-left above the selection; inside the top-left corner when there is no room.
+    private static func modeSwitchOrigin(for rect: CGRect, size: CGSize, in bounds: CGRect, avoiding bar: CGRect) -> CGPoint {
+        let gap: CGFloat = 8
+        var p = CGPoint(x: rect.minX, y: rect.maxY + gap)
+        if p.y + size.height > bounds.maxY - 4 || CGRect(origin: p, size: size).intersects(bar) {
+            p = CGPoint(x: rect.minX + gap, y: rect.maxY - gap - size.height)
+        }
+        p.x = min(max(bounds.minX + 4, p.x), bounds.maxX - size.width - 4)
+        return p
+    }
+
     /// Screen-space rect of the held selection, for placing side panels.
     var heldScreenRect: CGRect? {
         guard let win = overlays.first(where: { $0.overlayView.heldRect != nil }),
@@ -131,6 +148,8 @@ final class SelectionOverlayController {
         annotator?.removeFromSuperview()
         toolbar?.subBar.removeFromSuperview()
         toolbar?.removeFromSuperview()
+        modeSwitch?.removeFromSuperview()
+        modeSwitch = nil
         annotator = nil
         toolbar = nil
         overlays.forEach { $0.orderOut(nil); $0.close() }

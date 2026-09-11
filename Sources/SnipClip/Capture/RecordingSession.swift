@@ -231,8 +231,9 @@ final class RecordingSession {
             let item = ClipStore.shared.insertVideo(tempFile: fileURL, poster: poster, duration: dur, source: CaptureCoordinator.source)
             if gif { try? FileManager.default.removeItem(at: src) }
             if let item {
-                PasteboardWriter.writeFiles([ClipStore.shared.payloadURL(item)], itemID: item.id)
-                preview?.setDone(item.kind == .video ? "\(item.snippet) · \(ByteCountFormatter.string(fromByteCount: Int64(item.byteCount), countStyle: .file)) · 已复制到剪贴板，⌘V 即可发送" : "已复制")
+                ClipStore.shared.copyToPasteboard(item)
+                let size = ByteCountFormatter.string(fromByteCount: Int64(item.byteCount), countStyle: .file)
+                preview?.setDone(gif ? "\(item.snippet) · \(size) · 已复制，⌘V 会作为动图发出" : "\(item.snippet) · \(size) · 已复制，⌘V 会作为文件发出")
             }
             preview?.onDiscard = nil
             preview = nil

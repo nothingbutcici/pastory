@@ -1,6 +1,5 @@
 import AppKit
 import Carbon.HIToolbox
-import UniformTypeIdentifiers
 
 @MainActor
 protocol AnnotateDelegate: AnyObject {
@@ -23,10 +22,9 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
     var tool: AnnotateTool? = nil { didSet { commitTextEditor(); window?.invalidateCursorRects(for: self); onStateChange?() } }
     var color: NSColor = AnnotatePalette.colors[1] { didSet { applyToSelected { $0.color = color } } }
     var size: StrokeSize = .m { didSet { applyToSelected { $0.size = size } } }
-    var dashed = false { didSet { applyToSelected { $0.dashed = dashed } } }
     private(set) var annotations: [Annotation] = [] { didSet { needsDisplay = true; onStateChange?() } }
     private var draft: Annotation?
-    private(set) var selectedID: UUID? { didSet { needsDisplay = true; onStateChange?() } }
+    private(set) var selectedID: UUID? { didSet { needsDisplay = true; window?.invalidateCursorRects(for: self); onStateChange?() } }
 
     private enum Drag { case move(last: CGPoint), handle(Int) }
     private var drag: Drag?
@@ -51,6 +49,13 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
     override func resetCursorRects() {
         let c: NSCursor = tool == nil ? .arrow : (tool == .text ? .iBeam : .crosshair)
         addCursorRect(bounds, cursor: c)
+        // Selection chrome gets the pointer: the delete button and the handles are buttons, not canvas.
+        if let a = selected {
+            addCursorRect(AnnotationRenderer.deleteRect(a).insetBy(dx: -2, dy: -2), cursor: .pointingHand)
+            for h in a.handles {
+                addCursorRect(CGRect(x: h.x - 8, y: h.y - 8, width: 16, height: 16), cursor: .arrow)
+            }
+        }
     }
 
     var canUndo: Bool { !annotations.isEmpty }
@@ -61,7 +66,6 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
     var activeKind: AnnotateTool? { selected?.tool ?? tool }
     var effectiveColor: NSColor { selected?.color ?? color }
     var effectiveSize: StrokeSize { selected?.size ?? size }
-    var effectiveDashed: Bool { selected?.dashed ?? dashed }
 
     func undo() {
         commitTextEditor()
@@ -78,25 +82,6 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
     private func applyToSelected(_ change: (inout Annotation) -> Void) {
         if let i = selectedIndex { change(&annotations[i]) }
         onStateChange?()
-    }
-
-    /// Save the flattened image where the user says, then it also lands on the shelf / pasteboard.
-    func saveToFile() {
-        commitTextEditor()
-        let img = renderedImage()
-        guard let png = Screenshotter.pngData(img) else { return }
-        let panel = NSSavePanel()
-        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd HH.mm.ss"
-        panel.nameFieldStringValue = "Snip \(f.string(from: Date())).png"
-        panel.allowedContentTypes = [.png]
-        panel.directoryURL = Preferences.shared.exportDirectory()
-        panel.canCreateDirectories = true
-        panel.prompt = "保存"
-        panel.level = NSWindow.Level(rawValue: NSWindow.Level.screenSaver.rawValue + 2)
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        try? png.write(to: url, options: .atomic)
-        Preferences.shared.customExportDir = url.deletingLastPathComponent().path
-        delegate?.annotateDidFinish(img)
     }
 
     /// Flattened result.
@@ -161,7 +146,7 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
         if tool == .text {
             beginTextEditor(at: p, text: "", replacing: nil)
         } else {
-            draft = Annotation(tool: tool, color: color, size: size, dashed: dashed, points: [p, p])
+            draft = Annotation(tool: tool, color: color, size: size, points: [p, p])
         }
     }
 
@@ -183,6 +168,7 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
         case .handle(let h):
             annotations[i].setHandle(h, to: p)
         }
+        window?.invalidateCursorRects(for: self)
     }
 
     override func mouseUp(with event: NSEvent) {

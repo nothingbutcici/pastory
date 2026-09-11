@@ -254,6 +254,9 @@ enum SelfTest {
         stage.layer?.backgroundColor = NSColor(calibratedWhite: 0.25, alpha: 1).cgColor
         let canvas = AnnotateView(frame: rect, image: img)
         stage.addSubview(canvas)
+        let sw = ModeSwitch(frame: .zero)
+        sw.frame.origin = CGPoint(x: rect.minX, y: rect.maxY + 8)
+        stage.addSubview(sw)
         let bar = AnnotateToolbar(canvas: canvas)
         bar.frame = CGRect(x: max(8, rect.maxX - bar.fittingSize.width), y: rect.minY - 54, width: bar.fittingSize.width, height: bar.fittingSize.height)
         stage.addSubview(bar)
@@ -267,7 +270,7 @@ enum SelfTest {
             Annotation(tool: .rect, color: red, size: .m, points: [CGPoint(x: 12, y: 8), CGPoint(x: 250, y: 44)]),
             Annotation(tool: .arrow, color: blue, size: .l, points: [CGPoint(x: 300, y: 118), CGPoint(x: 215, y: 52)]),
             Annotation(tool: .ellipse, color: orange, size: .s, points: [CGPoint(x: 20, y: 56), CGPoint(x: 180, y: 104)]),
-            Annotation(tool: .line, color: ink, size: .m, dashed: true, points: [CGPoint(x: 260, y: 60), CGPoint(x: 430, y: 60)]),
+            Annotation(tool: .line, color: ink, size: .s, points: [CGPoint(x: 260, y: 60), CGPoint(x: 430, y: 60)]),
             Annotation(tool: .pen, color: red, size: .m, points: stride(from: 0, to: 120, by: 3).map { CGPoint(x: 280 + CGFloat($0), y: 96 + 9 * sin(CGFloat($0) / 7)) }),
             Annotation(tool: .mosaic, color: red, size: .m, points: [CGPoint(x: 20, y: 72), CGPoint(x: 200, y: 108)]),
             Annotation(tool: .text, color: blue, size: .m, points: [CGPoint(x: 262, y: 6)], text: "你好，今天天气怎么样？"),

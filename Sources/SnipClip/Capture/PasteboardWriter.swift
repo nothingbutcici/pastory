@@ -26,6 +26,14 @@ enum PasteboardWriter {
         commit([item])
     }
 
+    /// Animated GIF as image data (chat apps paste it as a moving picture, not an attachment).
+    static func writeGIF(_ data: Data, itemID: String) {
+        let item = NSPasteboardItem()
+        item.setData(data, forType: NSPasteboard.PasteboardType("com.compuserve.gif"))
+        item.setString(itemID, forType: marker)
+        commit([item])
+    }
+
     static func writeFiles(_ urls: [URL], itemID: String) {
         var items: [NSPasteboardItem] = []
         for (i, url) in urls.enumerated() {

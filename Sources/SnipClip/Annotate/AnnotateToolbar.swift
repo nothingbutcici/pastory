@@ -1,11 +1,12 @@
 import AppKit
 
 /// Two-layer toolbar, Feishu-style.
-/// Main bar:  ● rec │ ▢ ○ ╱ ↗ ✎ A ▦ │ 识别文字 │ ↓ save · ✕ · ✓
-/// Sub bar:   appears under the active tool (or the selected element's tool) with sizes · colors · dashed.
+/// Main bar:  ▢ ○ ╱ ↗ ✎ A ▦ │ 识别文字 │ ↶ · ✕ · ✓
+/// Sub bar:   appears under the active tool (or the selected element's tool) with sizes · colors.
 final class AnnotateToolbar: NSView {
     private unowned let canvas: AnnotateView
     private var toolButtons: [AnnotateTool: NSButton] = [:]
+    private var undoButton: NSButton!
     private let stack = NSStackView()
     let subBar: SubBar
 
@@ -52,10 +53,6 @@ final class AnnotateToolbar: NSView {
             stack.trailingAnchor.constraint(equalTo: trailingAnchor),
             stack.centerYAnchor.constraint(equalTo: centerYAnchor),
         ])
-        let rec = Self.iconButton(ToolIcons.record(), tip: "录屏这块区域（MP4 / GIF）", target: self, action: #selector(record))
-        rec.contentTintColor = Self.red
-        stack.addArrangedSubview(rec)
-        stack.addArrangedSubview(Self.divider())
         for t in AnnotateTool.allCases {
             let b = Self.iconButton(ToolIcons.image(for: t), tip: t.tip, target: self, action: #selector(pickTool(_:)))
             b.tag = AnnotateTool.allCases.firstIndex(of: t)!
@@ -66,8 +63,9 @@ final class AnnotateToolbar: NSView {
         stack.addArrangedSubview(Self.iconButton(NSImage(systemSymbolName: "text.viewfinder", accessibilityDescription: nil)!
             .withSymbolConfiguration(.init(pointSize: 15, weight: .regular))!, tip: "识别文字", target: self, action: #selector(ocr)))
         stack.addArrangedSubview(Self.divider())
-        stack.addArrangedSubview(Self.iconButton(NSImage(systemSymbolName: "arrow.down.to.line", accessibilityDescription: nil)!
-            .withSymbolConfiguration(.init(pointSize: 14, weight: .medium))!, tip: "保存到文件…", target: self, action: #selector(save)))
+        undoButton = Self.iconButton(NSImage(systemSymbolName: "arrow.uturn.backward", accessibilityDescription: nil)!
+            .withSymbolConfiguration(.init(pointSize: 14, weight: .medium))!, tip: "撤销 ⌘Z", target: self, action: #selector(undo))
+        stack.addArrangedSubview(undoButton)
         let cancel = Self.iconButton(NSImage(systemSymbolName: "xmark", accessibilityDescription: nil)!
             .withSymbolConfiguration(.init(pointSize: 15, weight: .semibold))!, tip: "取消 ⎋", target: self, action: #selector(cancel))
         cancel.contentTintColor = Self.red
@@ -107,6 +105,8 @@ final class AnnotateToolbar: NSView {
     func didLayout() { refresh() }
 
     private func refresh() {
+        undoButton.isEnabled = canvas.canUndo
+        undoButton.alphaValue = canvas.canUndo ? 1 : 0.3
         let active = canvas.activeKind
         for (t, b) in toolButtons {
             let on = t == active
@@ -141,8 +141,7 @@ final class AnnotateToolbar: NSView {
         canvas.tool = canvas.tool == t ? nil : t     // second click deactivates
     }
     @objc private func ocr() { canvas.requestOCR() }
-    @objc private func record() { canvas.requestRecord() }
-    @objc private func save() { canvas.saveToFile() }
+    @objc private func undo() { canvas.undo() }
     @objc private func cancel() { canvas.cancel() }
     @objc private func done() { canvas.finish() }
 
@@ -150,14 +149,13 @@ final class AnnotateToolbar: NSView {
     override func mouseDown(with event: NSEvent) {}
 }
 
-/// sizes (dots, or 小/中/大 for text) │ colors as rounded squares with a check │ dashed
+/// sizes (dots, or 小/中/大 for text) │ colors as rounded squares with a check (not for mosaic)
 final class SubBar: NSView {
     private unowned let canvas: AnnotateView
     private let stack = NSStackView()
     private var sizeButtons: [StrokeSize: NSButton] = [:]
     private var colorButtons: [NSButton] = []
-    private var dashButton: NSButton!
-    private var dashDivider: NSView!
+    private var colorDivider: NSView!
     private var kind: AnnotateTool = .rect
     var pointerX: CGFloat = 40
     var pointsUp = true
@@ -169,7 +167,7 @@ final class SubBar: NSView {
         wantsLayer = true
         shadow = AnnotateToolbar.shadow()
         stack.orientation = .horizontal
-        stack.spacing = 6
+        stack.spacing = 5
         stack.translatesAutoresizingMaskIntoConstraints = false
         addSubview(stack)
         NSLayoutConstraint.activate([
@@ -184,12 +182,13 @@ final class SubBar: NSView {
             b.wantsLayer = true
             b.layer?.cornerRadius = 6
             b.translatesAutoresizingMaskIntoConstraints = false
-            b.widthAnchor.constraint(equalToConstant: 30).isActive = true
-            b.heightAnchor.constraint(equalToConstant: 30).isActive = true
+            b.widthAnchor.constraint(equalToConstant: 24).isActive = true
+            b.heightAnchor.constraint(equalToConstant: 24).isActive = true
             sizeButtons[s] = b
             stack.addArrangedSubview(b)
         }
-        stack.addArrangedSubview(AnnotateToolbar.divider())
+        colorDivider = AnnotateToolbar.divider()
+        stack.addArrangedSubview(colorDivider)
         for (i, c) in AnnotatePalette.colors.enumerated() {
             let b = NSButton(title: "", target: self, action: #selector(pickColor(_:)))
             b.isBordered = false
@@ -200,25 +199,21 @@ final class SubBar: NSView {
             b.layer?.borderWidth = 1
             b.layer?.borderColor = (c == .white ? NSColor(calibratedWhite: 0, alpha: 0.2) : c.withAlphaComponent(0.0)).cgColor
             b.translatesAutoresizingMaskIntoConstraints = false
-            b.widthAnchor.constraint(equalToConstant: 26).isActive = true
-            b.heightAnchor.constraint(equalToConstant: 26).isActive = true
+            b.widthAnchor.constraint(equalToConstant: 24).isActive = true
+            b.heightAnchor.constraint(equalToConstant: 24).isActive = true
             colorButtons.append(b)
             stack.addArrangedSubview(b)
         }
-        dashDivider = AnnotateToolbar.divider()
-        stack.addArrangedSubview(dashDivider)
-        dashButton = AnnotateToolbar.iconButton(ToolIcons.dashed(), tip: "虚线", target: self, action: #selector(toggleDash))
-        stack.addArrangedSubview(dashButton)
     }
     required init?(coder: NSCoder) { fatalError() }
 
-    override var fittingSize: CGSize { CGSize(width: stack.fittingSize.width + 24, height: 44 + Self.pointerH) }
+    override var fittingSize: CGSize { CGSize(width: stack.fittingSize.width + 24, height: 40 + Self.pointerH) }
 
     func configure(kind: AnnotateTool) {
         self.kind = kind
-        let dashable = [.rect, .ellipse, .arrow, .line].contains(kind)
-        dashButton.isHidden = !dashable
-        dashDivider.isHidden = !dashable
+        let colored = kind != .mosaic
+        colorDivider.isHidden = !colored
+        colorButtons.forEach { $0.isHidden = !colored }
         let sel = canvas.effectiveSize
         for (s, b) in sizeButtons {
             let on = s == sel
@@ -230,10 +225,10 @@ final class SubBar: NSView {
                     .foregroundColor: tint, .font: NSFont.systemFont(ofSize: 12.5, weight: .medium)])
             } else {
                 b.attributedTitle = NSAttributedString(string: "")
-                let d: CGFloat = [7, 11, 15][s.rawValue - 1]
-                b.image = NSImage(size: CGSize(width: 16, height: 16), flipped: false) { _ in
+                let d = s.dotDiameter
+                b.image = NSImage(size: CGSize(width: 14, height: 14), flipped: false) { _ in
                     tint.setFill()
-                    NSBezierPath(ovalIn: CGRect(x: (16 - d) / 2, y: (16 - d) / 2, width: d, height: d)).fill()
+                    NSBezierPath(ovalIn: CGRect(x: (14 - d) / 2, y: (14 - d) / 2, width: d, height: d)).fill()
                     return true
                 }
                 b.imagePosition = .imageOnly
@@ -248,8 +243,6 @@ final class SubBar: NSView {
             b.layer?.borderColor = (on ? AnnotateToolbar.selectedInk : (c == .white ? NSColor(calibratedWhite: 0, alpha: 0.2) : NSColor.clear)).cgColor
             b.layer?.borderWidth = on ? 2 : 1
         }
-        dashButton.layer?.backgroundColor = canvas.effectiveDashed ? AnnotateToolbar.selectedBG.cgColor : nil
-        dashButton.contentTintColor = canvas.effectiveDashed ? AnnotateToolbar.selectedInk : AnnotateToolbar.ink
     }
 
     private static func check(on color: NSColor) -> NSImage {
@@ -291,7 +284,6 @@ final class SubBar: NSView {
 
     @objc private func pickSize(_ sender: NSButton) { canvas.size = StrokeSize(rawValue: sender.tag) ?? .m }
     @objc private func pickColor(_ sender: NSButton) { canvas.color = AnnotatePalette.colors[sender.tag] }
-    @objc private func toggleDash() { canvas.dashed.toggle() }
     override func mouseDown(with event: NSEvent) {}
 }
 
@@ -331,24 +323,6 @@ enum ToolIcons {
             } }
             q.fill()
         }
-        }
-    }
-
-    /// Filled dot inside a ring: the record glyph.
-    static func record() -> NSImage {
-        make(fill: true) { p in
-            let ring = NSBezierPath(ovalIn: CGRect(x: 2.5, y: 2.5, width: 13, height: 13))
-            ring.lineWidth = 1.6
-            ring.stroke()
-            p.appendOval(in: CGRect(x: 6, y: 6, width: 6, height: 6))
-            p.fill()
-        }
-    }
-
-    static func dashed() -> NSImage {
-        make { p in
-            p.setLineDash([3, 2.5], count: 2, phase: 0)
-            p.move(to: CGPoint(x: 2.5, y: 9)); p.line(to: CGPoint(x: 15.5, y: 9))
         }
     }
 
