@@ -78,6 +78,8 @@ final class CaptureCoordinator: AnnotateDelegate {
 
     func annotateDidCancel() { finish() }
 
+    func annotateMoveRegion(dx: CGFloat, dy: CGFloat) { SelectionOverlayController.shared.moveRegion(dx: dx, dy: dy) }
+
     func annotateRequestRecord() {
         // Record whatever the (possibly resized) frame covers now.
         let overlay = SelectionOverlayController.shared

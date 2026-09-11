@@ -7,7 +7,10 @@ protocol AnnotateDelegate: AnyObject {
     func annotateDidCancel()
     func annotateRequestOCR(_ image: CGImage)
     func annotateRequestRecord()
+    /// Drag on empty canvas with no tool: move the whole selection by (dx, dy) in window points.
+    func annotateMoveRegion(dx: CGFloat, dy: CGFloat)
 }
+extension AnnotateDelegate { func annotateMoveRegion(dx: CGFloat, dy: CGFloat) {} }
 
 /// The frozen capture with vector annotations on top. Flipped: y grows downward, like the image.
 /// The current tool stays active. Clicking a drawn element selects it instead of drawing:
@@ -26,7 +29,7 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
     private var draft: Annotation?
     private(set) var selectedID: UUID? { didSet { needsDisplay = true; window?.invalidateCursorRects(for: self); onStateChange?() } }
 
-    private enum Drag { case move(last: CGPoint), handle(Int) }
+    private enum Drag { case move(last: CGPoint), handle(Int), region(lastWindow: CGPoint) }
     private var drag: Drag?
     private var moved = false
     /// Set when a click lands on already-selected text; becomes an edit if the mouse does not move.
@@ -152,7 +155,10 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
         // 3. Empty space: deselect; double-click finishes; otherwise start drawing with the active tool.
         if selectedID != nil { selectedID = nil; if event.clickCount == 2 { return } }
         if event.clickCount == 2, draft == nil { finish(); return }
-        guard let tool else { return }
+        guard let tool else {
+            drag = .region(lastWindow: event.locationInWindow)      // no tool: drag moves the selection itself
+            return
+        }
         if tool == .text {
             beginTextEditor(at: p, text: "", replacing: nil)
         } else {
@@ -170,6 +176,12 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
             needsDisplay = true
             return
         }
+        if case .region(let last)? = drag {
+            let now = event.locationInWindow
+            delegate?.annotateMoveRegion(dx: now.x - last.x, dy: now.y - last.y)
+            drag = .region(lastWindow: now)
+            return
+        }
         guard let i = selectedIndex, let drag else { return }
         switch drag {
         case .move(let last):
@@ -177,6 +189,8 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
             self.drag = .move(last: p)
         case .handle(let h):
             annotations[i].setHandle(h, to: p)
+        case .region:
+            break
         }
         window?.invalidateCursorRects(for: self)
     }

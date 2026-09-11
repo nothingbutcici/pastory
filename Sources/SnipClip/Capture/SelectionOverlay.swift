@@ -132,6 +132,16 @@ final class SelectionOverlayController {
         layoutChrome()
     }
 
+    /// Slide the whole selection, kept inside the screen; the canvas re-crops as it goes.
+    func moveRegion(dx: CGFloat, dy: CGFloat) {
+        guard let win = heldWindow, let r = win.overlayView.heldRect else { return }
+        let b = win.overlayView.bounds
+        var f = r.offsetBy(dx: dx, dy: dy)
+        f.origin.x = min(max(b.minX, f.minX), b.maxX - f.width)
+        f.origin.y = min(max(b.minY, f.minY), b.maxY - f.height)
+        regionChanged(f.integral)
+    }
+
     func regionCommit() {
         guard let win = heldWindow else { return }
         win.invalidateCursorRects(for: win.overlayView)
@@ -236,9 +246,8 @@ final class OverlayView: NSView {
     override func resetCursorRects() {
         if !held { addCursorRect(bounds, cursor: .crosshair); return }
         guard let r = heldRect else { return }
-        for (i, h) in handles(r).enumerated() {
-            let cursor: NSCursor = i == 4 || i == 5 ? .resizeUpDown : (i == 6 || i == 7 ? .resizeLeftRight : .crosshair)
-            addCursorRect(CGRect(x: h.x - 8, y: h.y - 8, width: 16, height: 16), cursor: cursor)
+        for h in handles(r) {
+            addCursorRect(CGRect(x: h.x - 8, y: h.y - 8, width: 16, height: 16), cursor: .arrow)
         }
     }
 
@@ -280,6 +289,20 @@ final class OverlayView: NSView {
         NSColor.clear.setFill()
         hole.fill()
         ctx.compositingOperation = .sourceOver
+        // Square drop shadow outside the frame only (clipped away from the hole), so the edge reads on white too.
+        NSGraphicsContext.saveGraphicsState()
+        let outside = NSBezierPath(rect: bounds)
+        outside.appendRect(hole)
+        outside.windingRule = .evenOdd
+        outside.addClip()
+        let shadow = NSShadow()
+        shadow.shadowColor = NSColor(calibratedWhite: 0, alpha: 0.55)
+        shadow.shadowBlurRadius = 10
+        shadow.shadowOffset = .zero
+        shadow.set()
+        NSColor(calibratedWhite: 0, alpha: 0.6).setFill()
+        NSBezierPath(rect: hole.insetBy(dx: -1, dy: -1)).fill()
+        NSGraphicsContext.restoreGraphicsState()
         Theme.purple.setStroke()
         let path = NSBezierPath(rect: hole.insetBy(dx: -1, dy: -1))
         path.lineWidth = 2
