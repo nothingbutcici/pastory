@@ -132,21 +132,30 @@ private struct PermissionRow: View {
 private struct ShortcutRow: View {
     let title: String
     let key: String
+    /// HotKeyCenter binding name for this row.
+    var bindingName: String { key == Preferences.Key.hotkeyCapture ? "capture" : "shelf" }
     @State private var shortcut: Shortcut = .none
     @State private var capturing = false
     @State private var monitor: Any?
+    @State private var taken = false
 
     var body: some View {
         HStack {
             Text(title)
             Spacer()
+            if taken, !capturing {
+                Text("被其他应用占用").font(.caption).foregroundStyle(.orange)
+            }
             Button(capturing ? "按下组合键…" : shortcut.display) { capturing ? stop(nil) : startCapture() }
                 .frame(minWidth: 130)
-                .foregroundStyle(capturing ? Color.accentColor : Color.primary)
+                .foregroundStyle(capturing ? Color.accentColor : (taken ? Color.orange : Color.primary))
         }
-        .onAppear { shortcut = Preferences.shared.shortcut(key) }
+        .onAppear { shortcut = Preferences.shared.shortcut(key); refreshTaken() }
         .onDisappear { stop(nil) }
+        .onReceive(NotificationCenter.default.publisher(for: .shortcutBindingChanged)) { _ in refreshTaken() }
     }
+
+    private func refreshTaken() { taken = HotKeyCenter.shared.failed.contains(bindingName) }
 
     private func startCapture() {
         capturing = true

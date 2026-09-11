@@ -39,12 +39,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func bindShortcuts() {
         let p = Preferences.shared
-        HotKeyCenter.shared.bind(p.shortcut(Preferences.Key.hotkeyCapture), name: "capture") {
+        var taken: [String] = []
+        if !HotKeyCenter.shared.bind(p.shortcut(Preferences.Key.hotkeyCapture), name: "capture", action: {
             MainActor.assumeIsolated { CaptureCoordinator.shared.start() }
-        }
-        HotKeyCenter.shared.bind(p.shortcut(Preferences.Key.hotkeyShelf), name: "shelf") {
+        }) { taken.append("截图 \(p.shortcut(Preferences.Key.hotkeyCapture).display)") }
+        if !HotKeyCenter.shared.bind(p.shortcut(Preferences.Key.hotkeyShelf), name: "shelf", action: {
             MainActor.assumeIsolated { ShelfPanelController.shared.toggle() }
-        }
+        }) { taken.append("剪贴板 \(p.shortcut(Preferences.Key.hotkeyShelf).display)") }
+        NotificationCenter.default.post(name: .shortcutBindingChanged, object: nil)
+        guard !taken.isEmpty else { return }
+        let alert = NSAlert()
+        alert.messageText = "快捷键被其他应用占用"
+        alert.informativeText = taken.joined(separator: "、") + "\n\n另一个应用（常见是微信、飞书）已经注册了同样的组合键，系统只认先注册的那个。换一个组合键，或者去那个应用里改掉它的。"
+        alert.addButton(withTitle: "打开设置")
+        alert.addButton(withTitle: "稍后")
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn { SettingsWindowController.shared.show() }
     }
 
     // MARK: - Menu

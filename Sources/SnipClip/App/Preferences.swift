@@ -76,7 +76,7 @@ final class Preferences {
 
     private init() {
         d.register(defaults: [
-            Key.hotkeyCapture: Shortcut(keyCode: 0, carbonModifiers: UInt32(controlKey | cmdKey)).encoded, // ⌃⌘A
+            Key.hotkeyCapture: Shortcut(keyCode: 1, carbonModifiers: UInt32(optionKey | cmdKey)).encoded,  // ⌥⌘S（⌃⌘A 被微信占用）
             Key.hotkeyShelf: Shortcut(keyCode: 9, carbonModifiers: UInt32(shiftKey | cmdKey)).encoded,     // ⇧⌘V
             Key.retentionDays: 1,
             Key.monitoringPaused: false,
@@ -118,4 +118,6 @@ final class Preferences {
 
 extension Notification.Name {
     static let shortcutsChanged = Notification.Name("snipclip.shortcutsChanged")
+    /// Posted after (re)binding, so the settings UI can show which ones were refused.
+    static let shortcutBindingChanged = Notification.Name("snipclip.shortcutBindingChanged")
 }

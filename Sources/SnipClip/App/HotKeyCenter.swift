@@ -9,6 +9,8 @@ final class HotKeyCenter {
     private var refs: [String: (id: UInt32, ref: EventHotKeyRef)] = [:]
     private var nextID: UInt32 = 1
     private var handlerInstalled = false
+    /// Names whose last bind was refused (another app owns the combo).
+    private(set) var failed: Set<String> = []
 
     private init() {}
 
@@ -32,8 +34,11 @@ final class HotKeyCenter {
     @discardableResult
     func bind(_ shortcut: Shortcut, name: String, action: @escaping () -> Void) -> Bool {
         unbind(name)
+        failed.remove(name)
         guard shortcut.isSet else { return true }
-        return bindRaw(keyCode: shortcut.keyCode, modifiers: shortcut.carbonModifiers, name: name, action: action)
+        let ok = bindRaw(keyCode: shortcut.keyCode, modifiers: shortcut.carbonModifiers, name: name, action: action)
+        if !ok { failed.insert(name) }
+        return ok
     }
 
     /// Modifier-less keys allowed (used for Esc while the picker is up). Unbind promptly.
