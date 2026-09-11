@@ -59,14 +59,11 @@ struct ShelfView: View {
             navRow(icon: "clipboard", "剪贴板", active: !model.showSettings) { model.showSettings = false }
             navRow(icon: "gearshape", "设置", active: model.showSettings) { model.showSettings = true }
             Spacer()
-            // 今日暂存: a slightly crooked paper note, taped across its top-left corner.
+            // 今日暂存: a slightly crooked paper note; the mascot sits on the top-left corner like a piece of tape.
             ZStack(alignment: .topLeading) {
-                VStack(spacing: 6) {
-                    HStack(spacing: 8) {
-                        if let m = Theme.mascot { Image(nsImage: m).resizable().scaledToFit().frame(width: 44, height: 44) }
-                        Text("今日暂存").font(.system(size: 15, weight: .bold)).foregroundStyle(Color.shelfInk)
-                    }
-                    .padding(.top, 16)
+                VStack(spacing: 5) {
+                    Text("今日暂存").font(.system(size: 15, weight: .bold)).foregroundStyle(Color.purple)
+                        .padding(.top, 22)
                     Text("Pin 一下长期保存").font(.system(size: 12.5)).foregroundStyle(Color.shelfMuted)
                     Text("未 Pin 内容定时清空").font(.system(size: 12.5)).foregroundStyle(Color.shelfMuted)
                 }
@@ -74,12 +71,11 @@ struct ShelfView: View {
                 .padding(.bottom, 16)
                 .background(NoteShape().fill(Color.shelfCard))
                 .rotationEffect(.degrees(-1.5))
-                // Tape across the corner
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(Color.white.opacity(0.22))
-                    .frame(width: 48, height: 13)
-                    .rotationEffect(.degrees(-38))
-                    .offset(x: -6, y: 2)
+                if let m = Theme.mascot {
+                    Image(nsImage: m).resizable().scaledToFit().frame(width: 48, height: 48)
+                        .rotationEffect(.degrees(-12))
+                        .offset(x: -10, y: -22)
+                }
             }
             .padding(.horizontal, 18)
             .padding(.bottom, 20)

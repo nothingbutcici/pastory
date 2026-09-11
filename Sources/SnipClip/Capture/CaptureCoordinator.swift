@@ -19,7 +19,7 @@ final class CaptureCoordinator: AnnotateDelegate {
         if isBusy { cancel(); return }      // pressing the hotkey again backs out
         guard Permissions.ensureScreenRecording() else { return }
         isBusy = true
-        ShelfPanelController.shared.hide()
+        ShelfPanelController.shared.holdOpen = true      // the shelf may be what you want to capture
         Task { @MainActor in
             do {
                 let snap = try await ShareableSnapshot.fetch()
@@ -112,6 +112,7 @@ final class CaptureCoordinator: AnnotateDelegate {
         if let recording { recording.cancel(); return }   // teardown calls back into finish()
         pickedTarget = nil
         fullImage = nil
+        ShelfPanelController.shared.holdOpen = false
         OCRPanelController.shared.close()
         SelectionOverlayController.shared.release()
         snapshot = nil
