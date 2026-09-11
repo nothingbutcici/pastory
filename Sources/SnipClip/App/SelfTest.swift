@@ -18,6 +18,17 @@ enum SelfTest {
             case "ocr": ok = ocr(path: rest.first)
             case "clipboard": ok = await clipboard(seconds: Int(rest.first ?? "10") ?? 10)
             case "shelf": ok = await renderShelf(out: rest.first ?? "snipclip-shelf.png")
+            case "settings":
+                await seedStore()
+                let model = ShelfPanelController.shared.model
+                model.reset()
+                model.showSettings = true
+                let host = NSHostingView(rootView: ShelfView(model: model))
+                host.frame = CGRect(x: 0, y: 0, width: 1600, height: 560)
+                let w = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+                w.contentView = host
+                w.isReleasedWhenClosed = false
+                ok = snapshot(host, to: rest.first ?? "snipclip-settings.png")
             case "editors":
                 await seedStore()
                 let out = rest.first ?? "snipclip-editor.png"

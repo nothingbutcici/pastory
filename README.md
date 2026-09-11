@@ -68,6 +68,7 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest retention      # 造今天 / 昨天 / �
 SNIPCLIP_STORE=/tmp/x "$BIN" --selftest shelf <out.png>     # 离屏渲染货架面板（含 5 条样例）
 "$BIN" --selftest annotate <out.png>   # 离屏渲染标注画布 + 工具条，另存 <out>.flat.png 为合成结果
 "$BIN" --selftest gif                  # 合成 2 秒 mp4 → GIF，核对帧数与首帧
+SNIPCLIP_STORE=/tmp/x "$BIN" --selftest settings <out.png>   # 离屏渲染货架的设置页
 SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本编辑窗 <out>.text.png 与图片编辑窗 <out>.image.png
 ```
 
@@ -93,7 +94,8 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
   文字用翩翩体（HanziPen SC，系统自带），没有就退回系统字体。
   「识别文字」弹出可编辑结果，「复制文字」把文字复制走（图片条目也保留）。
 - **⇧⌘V 剪贴板**：底部滑出（屏高 55%）深色货架，淡紫强调：左侧侧栏（logo、今日暂存、清理规则、Pin 说明；吉祥物位待素材），
-  顶部胶囊筛选 全部 / Pin / 图片 / 录屏 / 文本 + 搜索 + 设置 + ✕，深色卡片配米色内容纸面（app 图标、时间、内容、
+  侧栏底部「Pin 后一直保留」和「设置」两行，设置在面板右半区内展开（`Shelf/SettingsPane`），不弹窗；
+  顶部胶囊筛选 全部 / Pin / 图片 / 录屏 / 文本 + 搜索 + ✕，深色卡片配米色内容纸面（app 图标、时间、内容、
   「已复制」标记 = 此刻剪贴板里的那条、说明行、编辑或预览 / Pin / 保存（仅图片、录屏）/ 删除），底部滚动条带左右箭头。左 = 最新。
   单击卡片 = 复制并停留（绿标签跳过去就是反馈）；⏎ 或双击 = 复制并收起。
   铅笔键：文本 / 链接进自己的编辑窗（`Shelf/TextEditorWindow`，⌘⏎ 保存并复制），图片进标注编辑器

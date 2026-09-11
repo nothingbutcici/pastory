@@ -24,12 +24,16 @@ struct ShelfView: View {
         let items = model.items
         HStack(spacing: 0) {
             sidebar
-            VStack(spacing: 0) {
-                header
-                if items.isEmpty { empty } else { cards(items) }
-                footer
+            if model.showSettings {
+                SettingsPane(model: model).padding(.horizontal, 24)
+            } else {
+                VStack(spacing: 0) {
+                    header
+                    if items.isEmpty { empty } else { cards(items) }
+                    footer
+                }
+                .padding(.horizontal, 24)
             }
-            .padding(.horizontal, 24)
         }
         .background(ZStack { Color.shelfBG; GridPattern() })
         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 22, topTrailingRadius: 22))
@@ -54,23 +58,35 @@ struct ShelfView: View {
             Text("未 Pin 内容\n\(retentionText)").font(.system(size: 13.5)).foregroundStyle(Color.shelfMuted).lineSpacing(4).padding(.top, 14)
             Spacer()
             if let m = Theme.mascot {
-                Image(nsImage: m).resizable().scaledToFit().frame(width: 100, height: 100)
+                Image(nsImage: m).resizable().scaledToFit().frame(width: 64, height: 64)
                     .frame(maxWidth: .infinity, alignment: .trailing)
-                    .padding(.bottom, 12)
+                    .padding(.bottom, 14)
             }
-            HStack(spacing: 7) {
-                Image(systemName: "pin.fill").font(.system(size: 12)).foregroundStyle(Color.lime)
-                Text("Pin 后一直保留").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.shelfInk)
-            }
-            .padding(.horizontal, 14).padding(.vertical, 9)
-            .background(Color.shelfCard, in: RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.shelfBorder, lineWidth: 1))
-            .padding(.bottom, 24)
+            sideRow(icon: "pin.fill", tint: Color.lime, "Pin 后一直保留", active: false) { model.showSettings = false }
+            sideRow(icon: "gearshape", tint: Color.shelfInk, "设置", active: model.showSettings) { model.showSettings.toggle() }
+                .padding(.top, 8)
+                .padding(.bottom, 24)
         }
         .padding(.horizontal, 26)
         .frame(width: 210, alignment: .leading)
         .background(ZStack { Color.shelfSide; GridPattern() })
         .overlay(alignment: .trailing) { Rectangle().fill(Color.white.opacity(0.06)).frame(width: 1) }
+    }
+
+    private func sideRow(icon: String, tint: Color, _ title: String, active: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon).font(.system(size: 12, weight: .semibold)).foregroundStyle(active ? Color(nsColor: Theme.onLime) : tint)
+                Text(title).font(.system(size: 13, weight: .medium)).foregroundStyle(active ? Color(nsColor: Theme.onLime) : Color.shelfInk)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 14).padding(.vertical, 9)
+            .frame(maxWidth: .infinity)
+            .background(active ? Color.lime : Color.shelfCard, in: RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(active ? Color.clear : Color.shelfBorder, lineWidth: 1))
+            .contentShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
     }
 
     private var retentionText: String {
@@ -116,14 +132,6 @@ struct ShelfView: View {
             .background(Color.shelfCard, in: Capsule())
             .overlay(Capsule().stroke(Color.shelfBorder, lineWidth: 1))
             .frame(width: 350)
-            Button { SettingsWindowController.shared.show() } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "gearshape").font(.system(size: 16))
-                    Text("设置").font(.system(size: 14, weight: .medium))
-                }
-                .foregroundStyle(Color.shelfInk).padding(.horizontal, 6).frame(height: 36)
-            }
-            .buttonStyle(.plain).help("设置")
             Button { ShelfPanelController.shared.hide() } label: {
                 Image(systemName: "xmark").font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.shelfInk).frame(width: 36, height: 36)
             }

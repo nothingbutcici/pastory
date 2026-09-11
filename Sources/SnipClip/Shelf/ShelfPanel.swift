@@ -75,6 +75,7 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
         switch Int(event.keyCode) {
         case kVK_Escape:
             if typing, !model.query.isEmpty { model.query = ""; return true }
+            if model.showSettings { model.showSettings = false; return true }
             hide(); return true
         case kVK_Return, kVK_ANSI_KeypadEnter:
             model.copySelected(); return true
@@ -153,6 +154,7 @@ enum ShelfFilter: String, CaseIterable, Identifiable {
 @Observable
 final class ShelfModel {
     var query = ""
+    var showSettings = false
     var filter: ShelfFilter = .all
     var selectedID: String? { didSet { ShelfPanelController.shared.quickLookSelectionChanged() } }
     var focusSearch = 0
@@ -175,6 +177,7 @@ final class ShelfModel {
 
     func reset() {
         query = ""
+        showSettings = false
         filter = .all
         selectedID = ClipStore.shared.items.first?.id
     }
