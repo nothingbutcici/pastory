@@ -1,5 +1,12 @@
 import AppKit
+import CryptoKit
 import Observation
+
+/// Stable across launches (Swift's `hashValue` is randomly seeded per process).
+func stableHash(_ data: Data) -> Int {
+    let digest = SHA256.hash(data: data)
+    return digest.withUnsafeBytes { Int(truncatingIfNeeded: $0.load(as: UInt64.self)) }
+}
 
 /// ~/Library/Application Support/Snip Clip/
 ///   index.json       metadata, newest first
@@ -87,7 +94,7 @@ final class ClipStore {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
         let data = Data(text.utf8)
         guard data.count <= Self.maxTextBytes else { return nil }
-        let hash = data.hashValue
+        let hash = stableHash(data)
         if let dup = dedupe(hash: hash) { return dup }
         var kind = ClipKind.text
         if let url = URL(string: text.trimmingCharacters(in: .whitespacesAndNewlines)),
@@ -107,7 +114,7 @@ final class ClipStore {
 
     @discardableResult
     func insertImage(png: Data, source: Source, ocrText: String? = nil) -> ClipItem? {
-        let hash = png.hashValue
+        let hash = stableHash(png)
         if let dup = dedupe(hash: hash) { return dup }
         guard let cg = Screenshotter.image(fromPNG: png) else { return nil }
         var item = ClipItem(id: UUID().uuidString, kind: .image, createdAt: Date(),
@@ -135,7 +142,7 @@ final class ClipStore {
     func insertFiles(_ urls: [URL], source: Source) -> ClipItem? {
         let paths = urls.map(\.path)
         guard !paths.isEmpty, let data = try? JSONEncoder().encode(paths) else { return nil }
-        let hash = data.hashValue
+        let hash = stableHash(data)
         if let dup = dedupe(hash: hash) { return dup }
         let names = urls.map(\.lastPathComponent)
         let snippet = names.count <= 3 ? names.joined(separator: "\n") : names.prefix(3).joined(separator: "\n") + "\n… 共 \(names.count) 项"
@@ -179,7 +186,7 @@ final class ClipStore {
         items[i].hasRTF = false
         items[i].snippet = ClipItem.snippet(ofText: text)
         items[i].byteCount = data.count
-        items[i].contentHash = data.hashValue
+        items[i].contentHash = stableHash(data)
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
         items[i].kind = (URL(string: t).flatMap(\.scheme).map { ["http", "https"].contains($0) } ?? false) && !t.contains("\n") ? .url : .text
         save()
@@ -197,7 +204,7 @@ final class ClipStore {
         items[i].pixelWidth = cg.width
         items[i].pixelHeight = cg.height
         items[i].byteCount = png.count
-        items[i].contentHash = png.hashValue
+        items[i].contentHash = stableHash(png)
         save()
         if Preferences.shared.ocrImages {
             Task.detached(priority: .utility) {

@@ -61,8 +61,11 @@ struct ShelfView: View {
             Spacer()
             // 今日暂存: the two rules that matter, under the mascot.
             VStack(alignment: .leading, spacing: 10) {
-                if let m = Theme.mascot { Image(nsImage: m).resizable().scaledToFit().frame(width: 44, height: 44) }
-                Text("今日暂存").font(.system(size: 15, weight: .bold)).foregroundStyle(Color.shelfInk).padding(.top, 2)
+                HStack(spacing: 10) {
+                    if let m = Theme.mascot { Image(nsImage: m).resizable().scaledToFit().frame(width: 40, height: 40) }
+                    Text("今日暂存").font(.system(size: 15, weight: .bold)).foregroundStyle(Color.shelfInk)
+                }
+                .padding(.bottom, 2)
                 rule(icon: "pin.fill", tint: Color.purple, "Pin 一下长期保存")
                 rule(icon: "clock", tint: Color.purple, "未 Pin 内容定时清空")
             }

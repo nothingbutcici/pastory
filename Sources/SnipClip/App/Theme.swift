@@ -47,10 +47,14 @@ enum Theme {
     static let logo: NSImage? = resource("Logo.png")
     /// The mascot on the shelf sidebar.
     static let mascot: NSImage? = resource("Mascot.png")
-    /// Menu bar glyph: the logo's clip strokes as a template image.
+    /// Menu bar glyph (designer's folded-P asset, 1x + 2x). Template: macOS tints it for light / dark menu bars.
     static let menuIcon: NSImage? = {
-        guard let img = resource("MenuIcon@2x.png") ?? resource("MenuIcon.png") else { return nil }
-        img.size = CGSize(width: 18, height: 18)
+        guard let base = resource("MenuIcon.png") else { return nil }
+        let img = NSImage(size: CGSize(width: 20, height: 20))
+        for rep in base.representations { img.addRepresentation(rep) }
+        if let hi = resource("MenuIcon@2x.png") {
+            for rep in hi.representations { rep.size = CGSize(width: 20, height: 20); img.addRepresentation(rep) }
+        }
         img.isTemplate = true
         return img
     }()

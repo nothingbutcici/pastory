@@ -81,7 +81,9 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
   框选时只显示尺寸角标，没有十字线和提示文字。选完立刻整屏取图（重新枚举窗口把遮罩排除掉），之后出现的工具条不会进图。
   ⏎ 或双击 = 复制到剪贴板并进货架；⌘Z 撤销一笔。
 - 视觉：深色浮岛（都带淡格纹，`Theme.drawIsland`）+ 淡紫强调（`App/Theme.swift` 统一取色；荧光绿只剩 logo 和货架「已复制」），
-  logo 在 `Resources/Logo.png`（绿夹子版），面包人在 `Resources/Mascot.png`（原图棋盘格是画进去的，用局部纹理 + 边缘泛洪抠的）。
+  logo 在 `Resources/Logo.png`（P 字紫版，透明底），面包人在 `Resources/Mascot.png`（黄色，夹子染成品牌紫；
+  原图棋盘格是画进去的，用局部纹理 + 边缘泛洪抠的），菜单栏图标 `Resources/MenuIcon(@2x).png` 来自设计稿
+  `Project/codex相关/cc tools visual identity/.../pastory-menubar*.png`，作为 template 使用。
   录屏控制条、录屏预览窗（自绘播放条）、文本 / 图片编辑窗都是同一套。
 - 框选完成后屏幕顶部出品牌条：logo · Snip Clip · [截屏 │ 录屏] · ✕，默认截屏；点录屏进录制流程。
   选区是荧光绿框 + 8 个手柄，拖手柄可以改选区（截图是整屏取一次再按选区裁，拖手柄只是重新裁，标注位置不动），
