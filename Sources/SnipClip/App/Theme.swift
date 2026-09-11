@@ -24,7 +24,7 @@ enum Theme {
     static let creamInk = NSColor(srgbRed: 0.13, green: 0.12, blue: 0.11, alpha: 1)
     static let purple = NSColor(srgbRed: 0.71, green: 0.64, blue: 0.95, alpha: 1)       // #B5A3F2
     static let yellow = NSColor(srgbRed: 0.97, green: 0.84, blue: 0.45, alpha: 1)       // #F7D673 mascot yellow
-    static let paleYellow = NSColor(srgbRed: 0.98, green: 0.91, blue: 0.66, alpha: 1)   // #FAE8A8 「已复制」
+    static let paleYellow = NSColor(srgbRed: 0.99, green: 0.95, blue: 0.80, alpha: 1)   // #FCF2CC 「已复制」
     static let paleGreen = NSColor(srgbRed: 0.72, green: 0.89, blue: 0.70, alpha: 1)    // #B8E3B3 「已复制」
     static let onPurple = NSColor(srgbRed: 0.12, green: 0.09, blue: 0.20, alpha: 1)
     // Kind tags: low-saturation outline colours; the label itself stays gray
