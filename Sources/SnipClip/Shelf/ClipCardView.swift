@@ -9,6 +9,7 @@ struct ClipCardView: View {
     let onCopy: () -> Void
     let onCopyAndClose: () -> Void
     let onPreview: () -> Void
+    let onEdit: () -> Void
 
     static let width: CGFloat = 268
 
@@ -160,11 +161,15 @@ struct ClipCardView: View {
         return String(format: "%02d:%02d", s / 60, s % 60)
     }
 
-    /// 预览 · Pin · (保存，仅图片 / 录屏) · 删除
+    /// 编辑（文本 / 链接 / 图片）或预览（录屏 / 文件） · Pin · (保存，仅图片 / 录屏) · 删除
     private var actions: some View {
         HStack {
             Spacer()
-            action("eye", "预览完整内容", onPreview)
+            if item.kind == .text || item.kind == .url || item.kind == .image {
+                action("pencil", item.kind == .image ? "编辑标注" : "编辑文字", onEdit)
+            } else {
+                action("eye", "预览", onPreview)
+            }
             Spacer()
             action("pin", "Pin 住，不会被自动清理", active: item.pinned) { ClipStore.shared.togglePin(item.id) }
             Spacer()

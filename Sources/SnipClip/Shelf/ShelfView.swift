@@ -95,7 +95,7 @@ struct ShelfView: View {
             Spacer()
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass").font(.system(size: 14)).foregroundStyle(Color.shelfMuted)
-                TextField("搜索剪贴板", text: $model.query)
+                TextField("", text: $model.query, prompt: Text("搜索剪贴板").foregroundStyle(Color.shelfMuted))
                     .textFieldStyle(.plain).font(.system(size: 14)).foregroundStyle(Color.shelfInk).focused($searchFocused)
                 if !model.query.isEmpty {
                     Button { model.query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Color.shelfMuted) }
@@ -133,7 +133,8 @@ struct ShelfView: View {
                         ClipCardView(item: item, selected: item.id == model.selectedID, onClipboard: item.id == ClipStore.shared.items.first?.id,
                                      onCopy: { model.copy(item) },
                                      onCopyAndClose: { model.copyAndClose(item) },
-                                     onPreview: { model.selectedID = item.id; model.previewSelected() })
+                                     onPreview: { model.selectedID = item.id; model.previewSelected() },
+                                     onEdit: { model.selectedID = item.id; model.edit(item) })
                             .id(item.id)
                             .contextMenu { menu(for: item) }
                     }
@@ -191,6 +192,9 @@ struct ShelfView: View {
     private func menu(for item: ClipItem) -> some View {
         Button("复制") { model.copy(item) }
         Button("复制并关闭") { model.copyAndClose(item) }
+        if item.kind == .text || item.kind == .url || item.kind == .image {
+            Button("编辑") { model.selectedID = item.id; model.edit(item) }
+        }
         Button("预览") { model.selectedID = item.id; model.previewSelected() }
         Button(item.pinned ? "取消 Pin" : "Pin") { ClipStore.shared.togglePin(item.id) }
         Button("保存到本地…") { Exporter.export(item) }

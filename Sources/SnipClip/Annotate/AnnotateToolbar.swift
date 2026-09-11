@@ -16,8 +16,11 @@ final class AnnotateToolbar: NSView {
     static let red = Theme.red
     static let green = Theme.lime
 
-    init(canvas: AnnotateView) {
+    private let doneTitle: String
+
+    init(canvas: AnnotateView, doneTitle: String = "复制") {
         self.canvas = canvas
+        self.doneTitle = doneTitle
         subBar = SubBar(canvas: canvas)
         super.init(frame: .zero)
         Theme.island(self)
@@ -74,15 +77,15 @@ final class AnnotateToolbar: NSView {
         cancel.contentTintColor = Self.red
         stack.addArrangedSubview(cancel)
         // ✓ 复制 — lime pill
-        let done = NSButton(title: " 复制", image: NSImage(systemSymbolName: "checkmark", accessibilityDescription: nil)!
+        let done = NSButton(title: " " + doneTitle, image: NSImage(systemSymbolName: "checkmark", accessibilityDescription: nil)!
             .withSymbolConfiguration(.init(pointSize: 14, weight: .bold))!, target: self, action: #selector(done))
         done.isBordered = false
         done.imagePosition = .imageLeading
         done.imageHugsTitle = true
         done.contentTintColor = Theme.onLime
-        done.attributedTitle = NSAttributedString(string: " 复制", attributes: [
+        done.attributedTitle = NSAttributedString(string: " " + doneTitle, attributes: [
             .foregroundColor: Theme.onLime, .font: NSFont.systemFont(ofSize: 15, weight: .bold)])
-        done.toolTip = "完成 ⏎ · 复制到剪贴板"
+        done.toolTip = doneTitle == "复制" ? "完成 ⏎ · 复制到剪贴板" : "\(doneTitle) ⏎"
         done.wantsLayer = true
         done.layer?.backgroundColor = Theme.lime.cgColor
         done.layer?.cornerRadius = 10

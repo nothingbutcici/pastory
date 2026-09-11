@@ -202,6 +202,15 @@ final class ShelfModel {
     }
     func copySelected() { if let s = selected { copyAndClose(s) } }
     func previewSelected() { ShelfPanelController.shared.toggleQuickLook() }
+
+    /// Text → our editor window; image → the annotation editor. Saving rewrites the item and copies it.
+    func edit(_ item: ClipItem) {
+        switch item.kind {
+        case .text, .url: TextEditorWindow.open(item)
+        case .image: ImageEditorWindow.open(item)
+        default: previewSelected()
+        }
+    }
     func pinSelected() { if let s = selected { ClipStore.shared.togglePin(s.id) } }
     func exportSelected() { if let s = selected { Exporter.export(s) } }
     func deleteSelected() {

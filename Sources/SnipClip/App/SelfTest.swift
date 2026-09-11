@@ -18,6 +18,17 @@ enum SelfTest {
             case "ocr": ok = ocr(path: rest.first)
             case "clipboard": ok = await clipboard(seconds: Int(rest.first ?? "10") ?? 10)
             case "shelf": ok = await renderShelf(out: rest.first ?? "snipclip-shelf.png")
+            case "editors":
+                await seedStore()
+                let out = rest.first ?? "snipclip-editor.png"
+                var okAll = true
+                if let t = ClipStore.shared.items.first(where: { $0.kind == .text }), let v = TextEditorWindow.debugView(t) {
+                    okAll = snapshot(v, to: URL(fileURLWithPath: out).deletingPathExtension().appendingPathExtension("text.png").path) && okAll
+                }
+                if let im = ClipStore.shared.items.first(where: { $0.kind == .image }), let v = ImageEditorWindow.debugView(im) {
+                    okAll = snapshot(v, to: URL(fileURLWithPath: out).deletingPathExtension().appendingPathExtension("image.png").path) && okAll
+                }
+                ok = okAll
             case "retention": ok = retention()
             case "gif": ok = await gif()
             case "pbfiles":

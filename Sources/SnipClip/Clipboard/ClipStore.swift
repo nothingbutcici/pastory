@@ -170,6 +170,43 @@ final class ClipStore {
         return item
     }
 
+    /// Edited text: rewrite the payload, keep id / pin / position.
+    func updateText(_ id: String, text: String) {
+        guard let i = items.firstIndex(where: { $0.id == id }) else { return }
+        let data = Data(text.utf8)
+        do { try data.write(to: payloadURL(items[i]), options: .atomic) } catch { return }
+        try? FileManager.default.removeItem(at: rtfURL(items[i]))
+        items[i].hasRTF = false
+        items[i].snippet = ClipItem.snippet(ofText: text)
+        items[i].byteCount = data.count
+        items[i].contentHash = data.hashValue
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        items[i].kind = (URL(string: t).flatMap(\.scheme).map { ["http", "https"].contains($0) } ?? false) && !t.contains("\n") ? .url : .text
+        save()
+    }
+
+    /// Edited image: new PNG + thumbnail, OCR again in the background.
+    func updateImage(_ id: String, png: Data) {
+        guard let i = items.firstIndex(where: { $0.id == id }), let cg = Screenshotter.image(fromPNG: png) else { return }
+        do { try png.write(to: payloadURL(items[i]), options: .atomic) } catch { return }
+        if let t = Screenshotter.thumbnail(cg, maxPixels: 640), let td = Screenshotter.pngData(t) {
+            try? td.write(to: thumbURL(items[i]), options: .atomic)
+        }
+        thumbCache[id] = nil
+        items[i].snippet = "\(cg.width)×\(cg.height)"
+        items[i].pixelWidth = cg.width
+        items[i].pixelHeight = cg.height
+        items[i].byteCount = png.count
+        items[i].contentHash = png.hashValue
+        save()
+        if Preferences.shared.ocrImages {
+            Task.detached(priority: .utility) {
+                let text = try? OCR.recognize(cg)
+                await MainActor.run { ClipStore.shared.setOCR(text, for: id) }
+            }
+        }
+    }
+
     /// Same payload as the newest item → just bump it.
     private func dedupe(hash: Int) -> ClipItem? {
         guard let first = items.first, first.contentHash == hash else { return nil }
