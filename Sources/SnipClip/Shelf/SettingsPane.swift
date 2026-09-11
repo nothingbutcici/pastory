@@ -58,9 +58,8 @@ struct SettingsPane: View {
                                 .overlay(Capsule().stroke(Color.shelfBorder, lineWidth: 1))
                             }
                             row("当日清理时间") {
-                                HourWheel(hour: $prefs.cleanupHour)
+                                HourWheel(hour: $prefs.cleanupHour, enabled: prefs.retentionDays != 0)
                                     .opacity(prefs.retentionDays == 0 ? 0.35 : 1)
-                                    .allowsHitTesting(prefs.retentionDays != 0)
                             }
                             row("图片自动识别文字（可按文字搜图）") { Toggle("", isOn: $prefs.ocrImages).labelsHidden().toggleStyle(.switch).tint(Color.purple) }
                             row("暂停同步至剪贴板") { Toggle("", isOn: $prefs.paused).labelsHidden().toggleStyle(.switch).tint(Color.purple) }
@@ -99,7 +98,10 @@ struct SettingsPane: View {
                             row("屏幕录制权限（截图、录屏需要）") {
                                 HStack(spacing: 8) {
                                     Text(Permissions.hasScreenRecording ? "已授权" : "未授权")
-                                        .font(.system(size: 12)).foregroundStyle(Permissions.hasScreenRecording ? Color.purple : Color(nsColor: Theme.tagMP4))
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundStyle(Permissions.hasScreenRecording ? Color.purple : Color(nsColor: Theme.tagMP4))
+                                        .padding(.horizontal, 7).padding(.vertical, 2)
+                                        .overlay(Capsule().stroke((Permissions.hasScreenRecording ? Color.purple : Color(nsColor: Theme.tagMP4)).opacity(0.7), lineWidth: 1))
                                     pill("系统设置") { Permissions.openSettings("Privacy_ScreenCapture") }
                                 }
                             }
@@ -189,34 +191,38 @@ struct SettingsPane: View {
 /// One-line hour control: scroll up / down over it (trackpad or wheel) to change; tiny ▲▼ for clicking.
 struct HourWheel: View {
     @Binding var hour: Int
+    var enabled: Bool = true
     var body: some View {
         HStack(spacing: 8) {
             Text(String(format: "%02d:00", hour))
                 .font(.system(size: 13.5, weight: .semibold).monospacedDigit()).foregroundStyle(Color.shelfInk)
                 .frame(width: 58)
             VStack(spacing: 0) {
-                Button { hour = (hour + 23) % 24 } label: { Image(systemName: "chevron.up").font(.system(size: 8, weight: .bold)).frame(width: 18, height: 11) }
-                Button { hour = (hour + 1) % 24 } label: { Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold)).frame(width: 18, height: 11) }
+                Button { if enabled { hour = (hour + 23) % 24 } } label: { Image(systemName: "chevron.up").font(.system(size: 8, weight: .bold)).frame(width: 18, height: 11) }
+                Button { if enabled { hour = (hour + 1) % 24 } } label: { Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold)).frame(width: 18, height: 11) }
             }
             .buttonStyle(.plain).foregroundStyle(Color.shelfMuted)
         }
         .padding(.leading, 12).padding(.trailing, 6).padding(.vertical, 5)
         .background(Color.black.opacity(0.25), in: Capsule())
         .overlay(Capsule().stroke(Color.shelfBorder, lineWidth: 1))
-        .overlay(ScrollSteps { step in hour = (hour + step + 24) % 24 }.allowsHitTesting(true))
+        .overlay(ScrollSteps(enabled: enabled) { step in hour = (hour + step + 24) % 24 })
         .help("上下滑动或点箭头调整")
     }
 }
 
 /// Transparent view that turns scroll-wheel motion into +1 / -1 steps.
 struct ScrollSteps: NSViewRepresentable {
+    var enabled: Bool = true
     let onStep: (Int) -> Void
-    func makeNSView(context: Context) -> StepView { let v = StepView(); v.onStep = onStep; return v }
-    func updateNSView(_ v: StepView, context: Context) { v.onStep = onStep }
+    func makeNSView(context: Context) -> StepView { let v = StepView(); v.onStep = onStep; v.enabled = enabled; return v }
+    func updateNSView(_ v: StepView, context: Context) { v.onStep = onStep; v.enabled = enabled }
     final class StepView: NSView {
         var onStep: ((Int) -> Void)?
+        var enabled = true
         private var acc: CGFloat = 0
         override func scrollWheel(with event: NSEvent) {
+            guard enabled else { return }
             guard event.momentumPhase.isEmpty else { return }      // inertia from scrolling the page must not turn the dial
             acc += event.scrollingDeltaY
             let threshold: CGFloat = event.hasPreciseScrollingDeltas ? 18 : 1

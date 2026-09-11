@@ -63,6 +63,8 @@ struct ShortcutRecorder: View {
     @State private var flagsMonitor: Any?
     @State private var resignObserver: Any?
     @State private var clickMonitor: Any?
+    @State private var keyLossObserver: Any?
+    @State private var lastCancel = Date.distantPast
     @State private var sawModifiers = false
     @State private var sawKey = false
 
@@ -70,10 +72,13 @@ struct ShortcutRecorder: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            if let notice, !capturing { Text(notice).font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.tagMP4)) }
-            else if taken, !capturing { Text("被其他应用占用").font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.tagMP4)) }
+            if let notice, !capturing { Text(notice).font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.purpleLight)) }
+            else if taken, !capturing { Text("被其他应用占用").font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.purpleLight)) }
             HStack(spacing: 6) {
-                Button { capturing ? stop(nil) : startCapture() } label: {
+                Button {
+                    // The click-anywhere monitor already cancelled on mouse-down; do not re-arm on the mouse-up.
+                    if !capturing, Date().timeIntervalSince(lastCancel) > 0.4 { startCapture() }
+                } label: {
                     Text(capturing ? "按下组合键" : shortcut.display)
                         .font(.system(size: 13, weight: .medium).monospaced())
                         .foregroundStyle(capturing ? Color.onPurple : (shortcut.isSet ? Color.purple : Color.shelfMuted))
@@ -124,14 +129,21 @@ struct ShortcutRecorder: View {
             let mods = event.modifierFlags.intersection([.command, .shift, .option, .control])
             if !mods.isEmpty { sawModifiers = true; sawKey = false }
             else if sawModifiers, !sawKey, capturing {
-                swallowed()
+                notice = "没收到按键。如果对方应用弹出来了，说明这个组合已被它占用"
             }
             return event
         }
         // Feishu / WeChat screenshot hotkeys bring their own UI to the front, so we never even see the
         // modifiers come back up. Losing active status mid-recording with no key received means the same thing.
         resignObserver = NotificationCenter.default.addObserver(forName: NSApplication.didResignActiveNotification, object: nil, queue: .main) { _ in
-            if capturing, !sawKey { swallowed() }
+            if capturing, sawModifiers, !sawKey { swallowed() }
+        }
+        // The shelf itself going away (clicked another app) must end recording, or our hotkeys stay suspended.
+        keyLossObserver = NotificationCenter.default.addObserver(forName: NSWindow.didResignKeyNotification, object: nil, queue: .main) { n in
+            let isShelf = (n.object as? NSWindow) is ShelfPanel
+            MainActor.assumeIsolated {
+                if capturing, isShelf, !ShelfPanelController.shared.holdOpen { stop(nil) }
+            }
         }
     }
 
@@ -151,7 +163,10 @@ struct ShortcutRecorder: View {
         if let flagsMonitor { NSEvent.removeMonitor(flagsMonitor) }
         if let resignObserver { NotificationCenter.default.removeObserver(resignObserver) }
         if let clickMonitor { NSEvent.removeMonitor(clickMonitor) }
+        if let keyLossObserver { NotificationCenter.default.removeObserver(keyLossObserver) }
+        keyLossObserver = nil
         clickMonitor = nil
+        if newValue == nil { lastCancel = Date() }
         monitor = nil
         flagsMonitor = nil
         resignObserver = nil

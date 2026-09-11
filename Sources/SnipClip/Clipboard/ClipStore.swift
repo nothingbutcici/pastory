@@ -76,10 +76,13 @@ final class ClipStore {
         init(from decoder: Decoder) throws { value = try? T(from: decoder) }
     }
 
+    /// Set when the index could not be read at launch. While it is set nothing is ever written back,
+    /// because a replace-all save from an empty in-memory list would wipe the table.
+    private(set) var loadFailed = false
+
     private func load() {
         do {
             let d = try ClipDB(url: dbURL)
-            db = d
             var rows = try d.loadAll()
             // First run on a store from the JSON era: import, then retire the file.
             if rows.isEmpty, let data = try? Data(contentsOf: indexURL) {
@@ -89,11 +92,17 @@ final class ClipStore {
                     try d.saveAll(legacy)
                     rows = legacy
                 }
-                try? FileManager.default.moveItem(at: indexURL, to: root.appendingPathComponent("index.migrated.json"))
+                let f = DateFormatter(); f.dateFormat = "yyyyMMdd-HHmmss"
+                try? FileManager.default.moveItem(at: indexURL, to: root.appendingPathComponent("index.migrated.\(f.string(from: Date())).json"))
             }
+            db = d
             items = rows
+            loadFailed = false
         } catch {
+            db = nil
             items = []
+            loadFailed = true
+            lastSaveFailed = true
             reportStorageFailure(error)
         }
     }
@@ -104,10 +113,12 @@ final class ClipStore {
 
     @discardableResult
     private func save() -> Bool {
+        guard !loadFailed, let db else { lastSaveFailed = true; return false }    // never write over a table we could not read
         do {
-            if db == nil { db = try ClipDB(url: dbURL) }
-            try db?.saveAll(items)
+            try db.saveAll(items)
+            let recovered = lastSaveFailed
             lastSaveFailed = false
+            if recovered { Retention.reschedule() }
             return true
         } catch {
             lastSaveFailed = true
@@ -116,14 +127,18 @@ final class ClipStore {
         }
     }
 
+    /// Shown once, and never from inside the singleton's initializer (a modal there can re-enter `shared` and deadlock).
     private func reportStorageFailure(_ error: Error) {
         guard !warnedSaveFailure else { return }
         warnedSaveFailure = true
-        let a = NSAlert()
-        a.messageText = "Pastory 读写不了存储目录"
-        a.informativeText = "\(root.path)\n\n\(error.localizedDescription)\n\n之后的记录、Pin、删除可能没有保存。检查磁盘空间。"
-        NSApp.activate(ignoringOtherApps: true)
-        a.runModal()
+        let path = root.path, msg = error.localizedDescription
+        DispatchQueue.main.async {
+            let a = NSAlert()
+            a.messageText = "Pastory 读写不了存储目录"
+            a.informativeText = "\(path)\n\n\(msg)\n\n在修好之前不会写入任何改动，也不会清理。检查磁盘空间后重新打开 Pastory。"
+            NSApp.activate(ignoringOtherApps: true)
+            a.runModal()
+        }
     }
 
     func payloadURL(_ item: ClipItem) -> URL { itemsDir.appendingPathComponent(item.fileName) }
@@ -198,10 +213,10 @@ final class ClipStore {
         }
         prepend(item)
         if ocrText == nil, Preferences.shared.ocrImages {
-            let id = item.id
+            let id = item.id, expected = hash
             Task.detached(priority: .utility) {
                 let text = try? OCR.recognize(cg)
-                await MainActor.run { ClipStore.shared.setOCR(text, for: id) }
+                await MainActor.run { ClipStore.shared.setOCR(text, for: id, ifHash: expected) }
             }
         }
         item.ocrText = ocrText
@@ -278,9 +293,10 @@ final class ClipStore {
         items[i].contentHash = stableHash(png)
         save()
         if Preferences.shared.ocrImages {
+            let expected = stableHash(png)
             Task.detached(priority: .utility) {
                 let text = try? OCR.recognize(cg)
-                await MainActor.run { ClipStore.shared.setOCR(text, for: id) }
+                await MainActor.run { ClipStore.shared.setOCR(text, for: id, ifHash: expected) }
             }
         }
     }
@@ -311,7 +327,8 @@ final class ClipStore {
     func togglePin(_ id: String) {
         guard let i = items.firstIndex(where: { $0.id == id }) else { return }
         items[i].pinned.toggle()
-        save()
+        guard save() else { items[i].pinned.toggle(); return }      // UI must not claim a pin the disk does not have
+        if !items[i].pinned { Retention.reschedule() }             // an un-pinned old item may be the next to expire
     }
 
     /// Self-test only.
@@ -328,8 +345,9 @@ final class ClipStore {
         save()
     }
 
-    func setOCR(_ text: String?, for id: String) {
-        guard let i = items.firstIndex(where: { $0.id == id }) else { return }
+    /// Only applies if the item still holds the image the OCR ran on.
+    func setOCR(_ text: String?, for id: String, ifHash hash: Int) {
+        guard let i = items.firstIndex(where: { $0.id == id }), items[i].contentHash == hash else { return }
         items[i].ocrText = text
         save()
     }
@@ -337,16 +355,17 @@ final class ClipStore {
     func remove(_ id: String) {
         guard let i = items.firstIndex(where: { $0.id == id }) else { return }
         let item = items.remove(at: i)
+        guard save() else { items.insert(item, at: i); return }    // index first; files only once the index agrees
         deleteFiles(item)
-        save()
     }
 
     func removeAll(where pred: (ClipItem) -> Bool) {
         let gone = items.filter(pred)
         guard !gone.isEmpty else { return }
+        let before = items
         items.removeAll(where: pred)
+        guard save() else { items = before; return }
         gone.forEach(deleteFiles)
-        save()
     }
 
     private func deleteFiles(_ item: ClipItem) {

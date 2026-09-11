@@ -13,6 +13,7 @@ final class ClipDB {
         guard sqlite3_open_v2(url.path, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, nil) == SQLITE_OK else {
             throw Self.error(db, "open")
         }
+        sqlite3_busy_timeout(db, 3000)          // a second instance or a slow disk waits instead of failing
         try exec("PRAGMA journal_mode=WAL")
         try exec("PRAGMA synchronous=NORMAL")
         try exec("""
@@ -70,7 +71,7 @@ final class ClipDB {
             try exec("DELETE FROM items")
             var stmt: OpaquePointer?
             let sql = """
-                INSERT INTO items (id, kind, created_at, source_bundle, source_name, snippet, ocr_text, pinned, ext, has_rtf,
+                INSERT OR REPLACE INTO items (id, kind, created_at, source_bundle, source_name, snippet, ocr_text, pinned, ext, has_rtf,
                                    pixel_w, pixel_h, byte_count, duration, title, content_hash)
                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """

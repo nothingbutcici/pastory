@@ -63,19 +63,11 @@ final class HotKeyCenter {
     func isAvailable(_ shortcut: Shortcut) -> Bool {
         guard shortcut.isSet else { return true }
         installHandlerIfNeeded()
-        let held = refs.filter { $0.value.ref != nil }
-        var ownsSame = false
-        for (name, entry) in refs {
-            _ = name
-            if let s = shortcuts[name], s == shortcut { ownsSame = true }
-            _ = entry
-        }
-        if ownsSame { return true }
+        if shortcuts.values.contains(shortcut) { return true }     // one of ours, not "taken"
         var ref: EventHotKeyRef?
         let id = EventHotKeyID(signature: OSType(0x534E_434C), id: 0xFFFF)
         let status = RegisterEventHotKey(shortcut.keyCode, shortcut.carbonModifiers, id, GetApplicationEventTarget(), 0, &ref)
         if status == noErr, let ref { UnregisterEventHotKey(ref); return true }
-        _ = held
         return false
     }
 

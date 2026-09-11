@@ -68,6 +68,7 @@ enum Retention {
         let p = Preferences.shared
         let hour = p.cleanupHour, days = p.retentionDays
         guard days > 0 else { return }                              // never: no timer at all
+        guard !ClipStore.shared.lastSaveFailed else { return }      // re-armed by the store once a save succeeds
         // Earliest expiry among unpinned items; nothing unpinned → nothing to schedule.
         let moments = ClipStore.shared.items.filter { !$0.pinned }.compactMap { expiryMoment(of: $0, cleanupHour: hour, retentionDays: days) }
         guard let earliest = moments.min() else { return }
