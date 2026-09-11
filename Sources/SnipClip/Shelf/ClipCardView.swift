@@ -176,9 +176,12 @@ struct ClipCardView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
-    /// [✓ 已复制] on its own line (when this is on the clipboard), then "类型 · 备注".
+    /// One row: "类型 · 备注" on the left, [✓ 已复制] flush right when this is on the clipboard.
     private var captionRow: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        HStack(spacing: 8) {
+            Text(note.map { "\(kindLabel) · \($0)" } ?? kindLabel)
+                .font(.system(size: 13)).foregroundStyle(Color.shelfMuted).lineLimit(1)
+            Spacer(minLength: 0)
             if onClipboard {
                 HStack(spacing: 4) {
                     Image(systemName: "checkmark").font(.system(size: 10, weight: .bold))
@@ -188,10 +191,7 @@ struct ClipCardView: View {
                 .padding(.horizontal, 10).padding(.vertical, 4)
                 .background(Color(nsColor: Theme.paleYellow), in: Capsule())
             }
-            Text(note.map { "\(kindLabel) · \($0)" } ?? kindLabel)
-                .font(.system(size: 13)).foregroundStyle(Color.shelfMuted).lineLimit(1)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
         .padding(.top, 12)
         .padding(.bottom, 12)
