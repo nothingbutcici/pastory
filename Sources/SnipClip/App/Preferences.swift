@@ -68,6 +68,8 @@ final class Preferences {
     enum Key {
         static let hotkeyCapture = "hotkeyCapture"
         static let hotkeyShelf = "hotkeyShelf"
+        static let hotkeySearch = "hotkeySearch"
+        static let storeDir = "storeDir"
         static let retentionDays = "retentionDays"
         static let cleanupHour = "cleanupHour"
         static let exportDir = "exportDir"
@@ -79,6 +81,7 @@ final class Preferences {
         d.register(defaults: [
             Key.hotkeyCapture: Shortcut(keyCode: 1, carbonModifiers: UInt32(optionKey | cmdKey)).encoded,  // ⌥⌘S（⌃⌘A 被微信占用）
             Key.hotkeyShelf: Shortcut(keyCode: 9, carbonModifiers: UInt32(shiftKey | cmdKey)).encoded,     // ⇧⌘V
+            Key.hotkeySearch: Shortcut(keyCode: 3, carbonModifiers: UInt32(optionKey | cmdKey)).encoded,   // ⌥⌘F
             Key.retentionDays: 1,
             Key.cleanupHour: 4,
             Key.monitoringPaused: false,
@@ -104,6 +107,12 @@ final class Preferences {
     }
     var monitoringPaused: Bool { get { d.bool(forKey: Key.monitoringPaused) } set { d.set(newValue, forKey: Key.monitoringPaused) } }
     var ocrImages: Bool { get { d.bool(forKey: Key.ocrImages) } set { d.set(newValue, forKey: Key.ocrImages) } }
+
+    /// Where the clipboard store lives; nil = ~/Library/Application Support/Snip Clip.
+    var customStoreDir: String? {
+        get { d.string(forKey: Key.storeDir) }
+        set { d.set(newValue, forKey: Key.storeDir) }
+    }
 
     var customExportDir: String? {
         get { d.string(forKey: Key.exportDir) }

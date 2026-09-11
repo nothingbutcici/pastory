@@ -37,7 +37,7 @@ final class HotKeyCenter {
         failed.remove(name)
         guard shortcut.isSet else { return true }
         let ok = bindRaw(keyCode: shortcut.keyCode, modifiers: shortcut.carbonModifiers, name: name, action: action)
-        if !ok { failed.insert(name) }
+        if ok { shortcuts[name] = shortcut } else { failed.insert(name) }
         return ok
     }
 
@@ -58,7 +58,35 @@ final class HotKeyCenter {
         return true
     }
 
+    /// Can this combo be registered right now (i.e. no other app holds it)? Registers and releases immediately.
+    /// Our own bindings are released around the probe so they do not count as "taken".
+    func isAvailable(_ shortcut: Shortcut) -> Bool {
+        guard shortcut.isSet else { return true }
+        installHandlerIfNeeded()
+        let held = refs.filter { $0.value.ref != nil }
+        var ownsSame = false
+        for (name, entry) in refs {
+            _ = name
+            if let s = shortcuts[name], s == shortcut { ownsSame = true }
+            _ = entry
+        }
+        if ownsSame { return true }
+        var ref: EventHotKeyRef?
+        let id = EventHotKeyID(signature: OSType(0x534E_434C), id: 0xFFFF)
+        let status = RegisterEventHotKey(shortcut.keyCode, shortcut.carbonModifiers, id, GetApplicationEventTarget(), 0, &ref)
+        if status == noErr, let ref { UnregisterEventHotKey(ref); return true }
+        _ = held
+        return false
+    }
+
+    /// Which of our own bindings already uses this combo (for "和「截图」重复" messages).
+    func ownerName(of shortcut: Shortcut) -> String? {
+        shortcuts.first { $0.value == shortcut }?.key
+    }
+    private var shortcuts: [String: Shortcut] = [:]
+
     func unbind(_ name: String) {
+        shortcuts[name] = nil
         guard let entry = refs.removeValue(forKey: name) else { return }
         UnregisterEventHotKey(entry.ref)
         actions.removeValue(forKey: entry.id)

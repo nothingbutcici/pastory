@@ -19,6 +19,13 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
 
     func toggle() { isVisible ? hide() : show() }
 
+    /// Open (if needed) with the search box focused.
+    func showSearch() {
+        if !isVisible { show() }
+        model.showSettings = false
+        model.focusSearch += 1
+    }
+
     func show() {
         let p = panel ?? makePanel()
         panel = p

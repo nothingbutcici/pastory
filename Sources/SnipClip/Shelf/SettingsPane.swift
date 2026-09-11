@@ -5,6 +5,7 @@ struct SettingsPane: View {
     @Bindable var model: ShelfModel
     @State private var prefs = PrefsMirror()
     @State private var cleared = false
+    @State private var storeError: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -36,6 +37,7 @@ struct SettingsPane: View {
                         section("快捷键") {
                             row("截图") { ShortcutRecorder(key: Preferences.Key.hotkeyCapture) }
                             row("显示 / 隐藏剪贴板") { ShortcutRecorder(key: Preferences.Key.hotkeyShelf) }
+                            row("搜索剪贴板") { ShortcutRecorder(key: Preferences.Key.hotkeySearch) }
                         }
                         section("剪贴板") {
                             row("未 Pin 的内容保留") {
@@ -85,7 +87,16 @@ struct SettingsPane: View {
                                     pill("系统设置") { Permissions.openSettings("Privacy_ScreenCapture") }
                                 }
                             }
-                            row("存储位置") { pill("在 Finder 中打开") { NSWorkspace.shared.open(ClipStore.shared.root) } }
+                        }
+                        section("剪贴板内容存放位置") {
+                            row((ClipStore.shared.root.path as NSString).abbreviatingWithTildeInPath) {
+                                HStack(spacing: 8) {
+                                    if Preferences.shared.customStoreDir != nil { pill("默认") { relocateStore(to: nil) } }
+                                    pill("选择…") { chooseStoreFolder() }
+                                    pill("在 Finder 中打开") { NSWorkspace.shared.open(ClipStore.shared.root) }
+                                }
+                            }
+                            if let e = storeError { Text(e).font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.tagMP4)).padding(.horizontal, 16) }
                         }
                     }
                 }
@@ -136,6 +147,23 @@ struct SettingsPane: View {
         .buttonStyle(.plain)
         .disabled(disabled)
         .opacity(disabled ? 0.5 : 1)
+    }
+
+    private func chooseStoreFolder() {
+        let shelf = ShelfPanelController.shared
+        shelf.holdOpen = true
+        defer { shelf.holdOpen = false; shelf.refocus() }
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.canCreateDirectories = true
+        panel.prompt = "用这个文件夹"
+        panel.message = "现有内容会复制过去；原文件夹保留，可以自己删。"
+        NSApp.activate(ignoringOtherApps: true)
+        if panel.runModal() == .OK, let url = panel.url { relocateStore(to: url) }
+    }
+
+    private func relocateStore(to url: URL?) {
+        do { try ClipStore.shared.relocate(to: url); storeError = nil }
+        catch { storeError = "搬不过去：\(error.localizedDescription)" }
     }
 
     private func chooseFolder() {

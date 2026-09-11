@@ -1,4 +1,5 @@
 import AppKit
+import Carbon.HIToolbox
 import Observation
 import ServiceManagement
 import SwiftUI
@@ -43,18 +44,29 @@ final class PrefsMirror {
     }
 }
 
-/// Click, press a combo. ⎋ cancels, ⌫ clears.
+/// Click, press a combo. ⎋ cancels, ⌫ clears. A combo held by another app, or already used by one of
+/// our own shortcuts, is refused on the spot and the old value stays.
 struct ShortcutRecorder: View {
     let key: String
-    var bindingName: String { key == Preferences.Key.hotkeyCapture ? "capture" : "shelf" }
+    var bindingName: String {
+        switch key {
+        case Preferences.Key.hotkeyCapture: return "capture"
+        case Preferences.Key.hotkeySearch: return "search"
+        default: return "shelf"
+        }
+    }
     @State private var shortcut: Shortcut = .none
     @State private var capturing = false
     @State private var monitor: Any?
     @State private var taken = false
+    @State private var notice: String?
+
+    private static let names = ["capture": "截图", "shelf": "剪贴板", "search": "搜索剪贴板"]
 
     var body: some View {
         HStack(spacing: 8) {
-            if taken, !capturing { Text("被其他应用占用").font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.tagMP4)) }
+            if let notice, !capturing { Text(notice).font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.tagMP4)) }
+            else if taken, !capturing { Text("被其他应用占用").font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.tagMP4)) }
             Button { capturing ? stop(nil) : startCapture() } label: {
                 Text(capturing ? "按下组合键…" : shortcut.display)
                     .font(.system(size: 13, weight: .medium).monospaced())
@@ -88,6 +100,24 @@ struct ShortcutRecorder: View {
         monitor = nil
         capturing = false
         guard let newValue else { return }
+        notice = nil
+        if newValue.isSet {
+            let m = newValue.carbonModifiers
+            let onlyCmd = m == UInt32(cmdKey), onlyShift = m == UInt32(shiftKey), cmdShift = m == UInt32(cmdKey | shiftKey)
+            let isFKey = KeyCodeNames.name(for: newValue.keyCode).hasPrefix("F")
+            if (onlyCmd || onlyShift || cmdShift) && !isFKey {
+                notice = "\(newValue.display) 会抢走所有应用里的这个快捷键，请加上 ⌥ 或 ⌃"
+                return
+            }
+            if let owner = HotKeyCenter.shared.ownerName(of: newValue), owner != bindingName {
+                notice = "和「\(Self.names[owner] ?? owner)」重复，换一个"
+                return
+            }
+            if !HotKeyCenter.shared.isAvailable(newValue) {
+                notice = "\(newValue.display) 被其他应用占用，换一个"
+                return
+            }
+        }
         shortcut = newValue
         Preferences.shared.setShortcut(newValue, for: key)
         NotificationCenter.default.post(name: .shortcutsChanged, object: nil)

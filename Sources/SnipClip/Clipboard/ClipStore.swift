@@ -18,31 +18,84 @@ final class ClipStore {
     static let shared = ClipStore()
 
     private(set) var items: [ClipItem] = []
-    let root: URL
-    private let itemsDir: URL
-    private let thumbsDir: URL
-    private let shareDir: URL
+    private(set) var root: URL
+    private var itemsDir: URL
+    private var thumbsDir: URL
+    private var shareDir: URL
     private var indexURL: URL { root.appendingPathComponent("index.json") }
+
+    /// The real location — unless SNIPCLIP_STORE is set, in which case that sandbox is "default" too,
+    /// so self-tests (relocate back to default included) can never touch the user's data.
+    static var defaultRoot: URL {
+        if let env = ProcessInfo.processInfo.environment["SNIPCLIP_STORE"], !env.isEmpty {
+            return URL(fileURLWithPath: env, isDirectory: true)
+        }
+        return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Snip Clip", isDirectory: true)
+    }
     private var thumbCache: [String: NSImage] = [:]
     static let maxTextBytes = 20 * 1024 * 1024
 
     init(root: URL? = nil) {
         let fm = FileManager.default
+        let base: URL
         if let root {
-            self.root = root
-        } else if let env = ProcessInfo.processInfo.environment["SNIPCLIP_STORE"], !env.isEmpty {
-            self.root = URL(fileURLWithPath: env, isDirectory: true)
+            base = root
+        } else if ProcessInfo.processInfo.environment["SNIPCLIP_STORE"].map({ !$0.isEmpty }) == true {
+            base = Self.defaultRoot
+        } else if let custom = Preferences.shared.customStoreDir, !custom.isEmpty {
+            base = URL(fileURLWithPath: custom, isDirectory: true)
         } else {
-            self.root = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("Snip Clip", isDirectory: true)
+            base = Self.defaultRoot
         }
-        itemsDir = self.root.appendingPathComponent("items", isDirectory: true)
-        thumbsDir = self.root.appendingPathComponent("thumbs", isDirectory: true)
-        shareDir = self.root.appendingPathComponent("share", isDirectory: true)
-        for d in [self.root, itemsDir, thumbsDir, shareDir] where !fm.fileExists(atPath: d.path) {
+        self.root = base
+        itemsDir = base.appendingPathComponent("items", isDirectory: true)
+        thumbsDir = base.appendingPathComponent("thumbs", isDirectory: true)
+        shareDir = base.appendingPathComponent("share", isDirectory: true)
+        _ = fm
+        ensureDirs()
+        load()
+    }
+
+    private func ensureDirs() {
+        let fm = FileManager.default
+        for d in [root, itemsDir, thumbsDir, shareDir] where !fm.fileExists(atPath: d.path) {
             try? fm.createDirectory(at: d, withIntermediateDirectories: true)
         }
-        load()
+    }
+
+    /// Move the whole store to another folder (nil = back to the default). Existing files are copied over
+    /// first, then the app switches to the new place; the old folder is left as-is for the user to delete.
+    func relocate(to newRoot: URL?) throws {
+        let fm = FileManager.default
+        let target = newRoot ?? Self.defaultRoot
+        guard target.standardizedFileURL != root.standardizedFileURL else { return }
+        try fm.createDirectory(at: target, withIntermediateDirectories: true)
+        for name in ["items", "thumbs"] {
+            let src = root.appendingPathComponent(name), dst = target.appendingPathComponent(name)
+            try? fm.createDirectory(at: dst, withIntermediateDirectories: true)
+            for f in (try? fm.contentsOfDirectory(atPath: src.path)) ?? [] where !fm.fileExists(atPath: dst.appendingPathComponent(f).path) {
+                try fm.copyItem(at: src.appendingPathComponent(f), to: dst.appendingPathComponent(f))
+            }
+        }
+        // Merge: what is already at the target (an older store) plus what we carry over, newest first, no duplicate ids.
+        var merged = items
+        if let data = try? Data(contentsOf: target.appendingPathComponent("index.json")) {
+            let dec = JSONDecoder(); dec.dateDecodingStrategy = .iso8601
+            let theirs = (try? dec.decode([ClipItem].self, from: data)) ?? []
+            let ids = Set(merged.map(\.id))
+            merged += theirs.filter { !ids.contains($0.id) }
+            merged.sort { $0.createdAt > $1.createdAt }
+        }
+        Preferences.shared.customStoreDir = newRoot?.path
+        root = target
+        itemsDir = target.appendingPathComponent("items", isDirectory: true)
+        thumbsDir = target.appendingPathComponent("thumbs", isDirectory: true)
+        shareDir = target.appendingPathComponent("share", isDirectory: true)
+        ensureDirs()
+        thumbCache.removeAll()
+        items = merged
+        save()
     }
 
     // MARK: - Persistence

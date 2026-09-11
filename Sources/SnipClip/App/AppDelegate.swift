@@ -46,6 +46,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if !HotKeyCenter.shared.bind(p.shortcut(Preferences.Key.hotkeyShelf), name: "shelf", action: {
             MainActor.assumeIsolated { ShelfPanelController.shared.toggle() }
         }) { taken.append("剪贴板 \(p.shortcut(Preferences.Key.hotkeyShelf).display)") }
+        if !HotKeyCenter.shared.bind(p.shortcut(Preferences.Key.hotkeySearch), name: "search", action: {
+            MainActor.assumeIsolated { ShelfPanelController.shared.showSearch() }
+        }) { taken.append("搜索剪贴板 \(p.shortcut(Preferences.Key.hotkeySearch).display)") }
         NotificationCenter.default.post(name: .shortcutBindingChanged, object: nil)
         guard !taken.isEmpty else { return }
         let alert = NSAlert()
@@ -65,6 +68,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         add(menu, "截图", #selector(menuCapture), hint: p.shortcut(Preferences.Key.hotkeyCapture))
         add(menu, ShelfPanelController.shared.isVisible ? "隐藏剪贴板" : "显示剪贴板", #selector(menuShelf),
             hint: p.shortcut(Preferences.Key.hotkeyShelf))
+        add(menu, "搜索剪贴板", #selector(menuSearch), hint: p.shortcut(Preferences.Key.hotkeySearch))
         menu.addItem(.separator())
         let pause = add(menu, "暂停记录剪贴板", #selector(menuTogglePause))
         pause.state = p.monitoringPaused ? .on : .off
@@ -118,6 +122,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func menuCapture() { CaptureCoordinator.shared.start() }
     @objc private func menuShelf() { ShelfPanelController.shared.toggle() }
+    @objc private func menuSearch() { ShelfPanelController.shared.showSearch() }
     @objc private func menuTogglePause() { Preferences.shared.monitoringPaused.toggle() }
     @objc private func menuOpenStore() { NSWorkspace.shared.open(ClipStore.shared.root) }
     @objc private func menuSettings() { SettingsWindowController.shared.show() }
