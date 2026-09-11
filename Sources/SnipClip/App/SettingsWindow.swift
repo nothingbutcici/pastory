@@ -72,15 +72,22 @@ struct ShortcutRecorder: View {
             if let notice, !capturing { Text(notice).font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.tagMP4)) }
             else if taken, !capturing { Text("被其他应用占用").font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.tagMP4)) }
             Button { capturing ? stop(nil) : startCapture() } label: {
-                Text(capturing ? "按下组合键…" : shortcut.display)
+                Text(capturing ? "按下组合键，⌫ 清除" : shortcut.display)
                     .font(.system(size: 13, weight: .medium).monospaced())
-                    .foregroundStyle(capturing ? Color.onPurple : Color.shelfInk)
+                    .foregroundStyle(capturing ? Color.onPurple : (shortcut.isSet ? Color.shelfInk : Color.shelfMuted))
                     .frame(minWidth: 110)
                     .padding(.horizontal, 12).padding(.vertical, 7)
                     .background(capturing ? Color.purple : Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(taken ? Color(nsColor: Theme.tagMP4) : Color.shelfBorder, lineWidth: 1))
             }
             .buttonStyle(.plain)
+            // Not everyone wants every shortcut: clear it and the action stays reachable from the menu.
+            if shortcut.isSet, !capturing {
+                Button { stop(Shortcut.none) } label: {
+                    Image(systemName: "xmark.circle.fill").font(.system(size: 14)).foregroundStyle(Color.shelfMuted)
+                }
+                .buttonStyle(.plain).help("不设快捷键")
+            }
         }
         .onAppear { shortcut = Preferences.shared.shortcut(key); refreshTaken() }
         .onDisappear { stop(nil) }
