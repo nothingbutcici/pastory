@@ -63,8 +63,9 @@ struct ClipCardView: View {
             HStack(spacing: 8) {
                 Image(systemName: "tag").font(.system(size: 12)).foregroundStyle(Color.purple)
                 ZStack(alignment: .leading) {
-                    if draftTitle.isEmpty {
-                        Text("输入标题，⏎ 保存").font(.system(size: 14, weight: .medium)).foregroundColor(Color.shelfMuted).allowsHitTesting(false)
+                    // Hidden while focused so IME composition never overlaps it.
+                    if draftTitle.isEmpty && !titleFocused {
+                        Text("输入标题").font(.system(size: 14, weight: .medium)).foregroundColor(Color.shelfMuted).allowsHitTesting(false)
                     }
                     TextField("", text: $draftTitle)
                         .textFieldStyle(.plain).font(.system(size: 14.5, weight: .semibold))
@@ -72,16 +73,17 @@ struct ClipCardView: View {
                         .focused($titleFocused)
                         .onSubmit { ClipStore.shared.setTitle(draftTitle, for: item.id); renaming = false }
                 }
-                Button { renaming = false } label: {
-                    Image(systemName: "xmark.circle.fill").font(.system(size: 14)).foregroundStyle(Color.shelfMuted)
+                Button { ClipStore.shared.setTitle(draftTitle, for: item.id); renaming = false } label: {
+                    Image(systemName: "checkmark.circle.fill").font(.system(size: 15)).foregroundStyle(Color.purple)
                 }
-                .buttonStyle(.plain).help("取消 ⎋")
+                .buttonStyle(.plain).help("保存 ⏎")
             }
             .padding(.horizontal, 10).padding(.vertical, 6)
             .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.purple.opacity(0.7), lineWidth: 1))
             .padding(.horizontal, 14).padding(.bottom, 10)
             .onAppear { draftTitle = item.title ?? ""; titleFocused = true }
+            .onChange(of: titleFocused) { _, f in if !f, renaming { renaming = false } }   // clicked elsewhere = never mind
         } else if let t = item.title, !t.isEmpty {
             HStack(spacing: 6) {
                 Image(systemName: "tag.fill").font(.system(size: 11)).foregroundStyle(Color.purple)
@@ -266,7 +268,7 @@ struct ClipCardView: View {
         Button(action: act) {
             Image(systemName: active ? "pin.fill" : symbol)
                 .font(.system(size: 19, weight: .regular))
-                .foregroundStyle(Color.white)
+                .foregroundStyle(active ? Color.black : Color.white)
                 .frame(width: 44, height: 38)
                 .background(active ? Color.purple : Color.clear, in: RoundedRectangle(cornerRadius: 9))
                 .contentShape(Rectangle())
