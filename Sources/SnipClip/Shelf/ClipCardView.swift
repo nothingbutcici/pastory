@@ -127,9 +127,9 @@ struct ClipCardView: View {
                     Image(systemName: "checkmark").font(.system(size: 10, weight: .bold))
                     Text("已复制").font(.system(size: 12.5, weight: .semibold))
                 }
-                .foregroundStyle(Color.onPurple)
+                .foregroundStyle(Color(nsColor: Theme.onLime))
                 .padding(.horizontal, 10).padding(.vertical, 4)
-                .background(Color.purple, in: Capsule())
+                .background(Color.lime, in: Capsule())
             }
             Text(note.map { "\(kindLabel) · \($0)" } ?? kindLabel)
                 .font(.system(size: 13)).foregroundStyle(Color.shelfMuted).lineLimit(1)

@@ -57,15 +57,12 @@ struct ShelfView: View {
             navRow(icon: "clipboard", "剪贴板", active: !model.showSettings) { model.showSettings = false }
             navRow(icon: "gearshape", "设置", active: model.showSettings) { model.showSettings = true }
             Spacer()
-            HStack(alignment: .center, spacing: 10) {
-                if let m = Theme.mascot { Image(nsImage: m).resizable().scaledToFit().frame(width: 56, height: 56) }
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 5) {
-                        Image(systemName: "pin.fill").font(.system(size: 11)).foregroundStyle(Color.lime)
-                        Text("Pin 后").font(.system(size: 13)).foregroundStyle(Color.shelfInk)
-                    }
-                    Text("一直保留").font(.system(size: 13)).foregroundStyle(Color.shelfMuted)
-                }
+            // 今日暂存: the two rules that matter, under the mascot.
+            VStack(alignment: .leading, spacing: 10) {
+                if let m = Theme.mascot { Image(nsImage: m).resizable().scaledToFit().frame(width: 60, height: 60) }
+                Text("今日暂存").font(.system(size: 15, weight: .bold)).foregroundStyle(Color.shelfInk).padding(.top, 2)
+                rule(icon: "pin.fill", tint: Color.lime, "Pin 后一直保留")
+                rule(icon: "clock", tint: Color.purple, retentionShort)
             }
             .padding(.horizontal, 22)
             .padding(.bottom, 22)
@@ -82,69 +79,71 @@ struct ShelfView: View {
                 Text(title).font(.system(size: 16, weight: active ? .semibold : .medium))
                 Spacer(minLength: 0)
             }
-            .foregroundStyle(active ? Color.lime : Color.shelfInk)
+            .foregroundStyle(active ? Color.purple : Color.shelfInk)
             .padding(.horizontal, 22)
             .frame(height: 54)
             .frame(maxWidth: .infinity)
-            .background(active ? Color.lime.opacity(0.16) : Color.clear)
+            .background(active ? Color.purple.opacity(0.22) : Color.clear)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 
-    private var retentionText: String {
+    private var retentionShort: String {
         let d = Preferences.shared.retentionDays
-        return d <= 1 ? "未 Pin 的内容次日 04:00 清理" : "未 Pin 的内容 \(d) 天后 04:00 清理"
+        return d <= 1 ? "未 Pin 次日 04:00 清理" : "未 Pin \(d) 天后清理"
     }
 
-    // MARK: Header — title + note, search, close; then the filter pills
+    private func rule(icon: String, tint: Color, _ text: String) -> some View {
+        HStack(spacing: 9) {
+            Image(systemName: icon).font(.system(size: 11, weight: .semibold)).foregroundStyle(tint)
+                .frame(width: 22, height: 22)
+                .background(tint.opacity(0.16), in: RoundedRectangle(cornerRadius: 6))
+            Text(text).font(.system(size: 13)).foregroundStyle(Color.shelfInk).lineLimit(1).minimumScaleFactor(0.85)
+        }
+    }
+
+    // MARK: Header — filter pills, search, close on one row
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 14) {
-                Text("今日暂存").font(.system(size: 22, weight: .bold)).foregroundStyle(Color.shelfInk)
-                Text(retentionText).font(.system(size: 13.5)).foregroundStyle(Color.shelfMuted)
-                Spacer()
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass").font(.system(size: 14)).foregroundStyle(Color.shelfMuted)
-                    ZStack(alignment: .leading) {
-                        if model.query.isEmpty && !searchFocused {
-                            Text("搜索剪贴板").font(.system(size: 14)).foregroundColor(Color.shelfMuted).allowsHitTesting(false)
-                        }
-                        TextField("", text: $model.query)
-                            .textFieldStyle(.plain).font(.system(size: 14))
-                            .foregroundColor(Color.shelfInk).tint(Color.purple)
-                            .focused($searchFocused)
-                    }
-                    if !model.query.isEmpty {
-                        Button { model.query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Color.shelfMuted) }
-                            .buttonStyle(.plain)
-                    }
+        HStack(spacing: 10) {
+            ForEach(ShelfFilter.allCases) { f in
+                let on = model.filter == f
+                Button { model.filter = f } label: {
+                    Text(f.rawValue)
+                        .font(.system(size: 14.5, weight: on ? .semibold : .medium))
+                        .foregroundStyle(on ? Color.onPurple : Color.shelfInk)
+                        .padding(.horizontal, 22).padding(.vertical, 9)
+                        .background(on ? Color.purple : Color.shelfCard, in: Capsule())
+                        .overlay(Capsule().stroke(on ? Color.clear : Color.shelfBorder, lineWidth: 1))
                 }
-                .padding(.horizontal, 14).padding(.vertical, 8)
-                .background(Color.shelfCard, in: Capsule())
-                .overlay(Capsule().stroke(Color.shelfBorder, lineWidth: 1))
-                .frame(width: 300)
-                Button { ShelfPanelController.shared.hide() } label: {
-                    Image(systemName: "xmark").font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.shelfInk).frame(width: 36, height: 36)
-                }
-                .buttonStyle(.plain).help("关闭 ⎋")
+                .buttonStyle(.plain)
             }
-            HStack(spacing: 10) {
-                ForEach(ShelfFilter.allCases) { f in
-                    let on = model.filter == f
-                    Button { model.filter = f } label: {
-                        Text(f.rawValue)
-                            .font(.system(size: 14.5, weight: on ? .semibold : .medium))
-                            .foregroundStyle(on ? Color(nsColor: Theme.onLime) : Color.shelfInk)
-                            .padding(.horizontal, 22).padding(.vertical, 9)
-                            .background(on ? Color.lime : Color.shelfCard, in: Capsule())
-                            .overlay(Capsule().stroke(on ? Color.clear : Color.shelfBorder, lineWidth: 1))
+            Spacer()
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass").font(.system(size: 14)).foregroundStyle(Color.shelfMuted)
+                ZStack(alignment: .leading) {
+                    if model.query.isEmpty && !searchFocused {
+                        Text("搜索剪贴板").font(.system(size: 14)).foregroundColor(Color.shelfMuted).allowsHitTesting(false)
                     }
-                    .buttonStyle(.plain)
+                    TextField("", text: $model.query)
+                        .textFieldStyle(.plain).font(.system(size: 14))
+                        .foregroundColor(Color.shelfInk).tint(Color.purple)
+                        .focused($searchFocused)
                 }
-                Spacer()
+                if !model.query.isEmpty {
+                    Button { model.query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Color.shelfMuted) }
+                        .buttonStyle(.plain)
+                }
             }
+            .padding(.horizontal, 14).padding(.vertical, 8)
+            .background(Color.shelfCard, in: Capsule())
+            .overlay(Capsule().stroke(Color.shelfBorder, lineWidth: 1))
+            .frame(width: 300)
+            Button { ShelfPanelController.shared.hide() } label: {
+                Image(systemName: "xmark").font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.shelfInk).frame(width: 36, height: 36)
+            }
+            .buttonStyle(.plain).help("关闭 ⎋")
         }
         .padding(.top, 18)
         .padding(.bottom, 14)
