@@ -242,7 +242,7 @@ enum SelfTest {
         let model = ShelfPanelController.shared.model
         model.reset()
         let host = NSHostingView(rootView: ShelfView(model: model))
-        host.frame = CGRect(x: 0, y: 0, width: 1440, height: 420)
+        host.frame = CGRect(x: 0, y: 0, width: 1600, height: 560)
         // Needs a window for materials + layout to resolve.
         let w = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
         w.contentView = host

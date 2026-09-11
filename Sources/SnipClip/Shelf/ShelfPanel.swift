@@ -23,7 +23,7 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
         let p = panel ?? makePanel()
         panel = p
         let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main ?? NSScreen.screens[0]
-        let height = max(320, (screen.frame.height * 0.45).rounded())
+        let height = max(420, (screen.frame.height * 0.55).rounded())
         let target = CGRect(x: screen.frame.minX, y: screen.frame.minY, width: screen.frame.width, height: height)
         let start = target.offsetBy(dx: 0, dy: -height)
         model.reset()
@@ -145,7 +145,7 @@ final class ShelfPanel: NSPanel, QLPreviewPanelDataSource, QLPreviewPanelDelegat
 }
 
 enum ShelfFilter: String, CaseIterable, Identifiable {
-    case all = "全部", pinned = "固定", images = "图片", videos = "录屏", text = "文本"
+    case all = "全部", pinned = "Pin", images = "图片", videos = "录屏", text = "文本"
     var id: String { rawValue }
 }
 

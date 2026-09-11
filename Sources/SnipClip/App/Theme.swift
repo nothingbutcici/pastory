@@ -12,6 +12,14 @@ enum Theme {
     static let red = NSColor(srgbRed: 0.90, green: 0.28, blue: 0.30, alpha: 1)         // #E5484D
     static let cornerRadius: CGFloat = 14
 
+    // Shelf (light)
+    static let shelfBG = NSColor(srgbRed: 0.95, green: 0.96, blue: 0.94, alpha: 1)      // #F2F5F0
+    static let shelfSide = NSColor(srgbRed: 0.93, green: 0.96, blue: 0.87, alpha: 1)    // #EDF5DE
+    static let shelfInk = NSColor(srgbRed: 0.12, green: 0.13, blue: 0.11, alpha: 1)
+    static let shelfMuted = NSColor(srgbRed: 0.45, green: 0.47, blue: 0.43, alpha: 1)
+    static let shelfBorder = NSColor(srgbRed: 0.86, green: 0.88, blue: 0.84, alpha: 1)
+    static let limeSoft = NSColor(srgbRed: 0.91, green: 0.98, blue: 0.75, alpha: 1)     // #E8F9BF
+
     static func shadow() -> NSShadow {
         let s = NSShadow()
         s.shadowColor = NSColor(calibratedWhite: 0, alpha: 0.35)
