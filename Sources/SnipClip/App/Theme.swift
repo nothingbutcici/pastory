@@ -12,13 +12,19 @@ enum Theme {
     static let red = NSColor(srgbRed: 0.90, green: 0.28, blue: 0.30, alpha: 1)         // #E5484D
     static let cornerRadius: CGFloat = 14
 
-    // Shelf (light)
-    static let shelfBG = NSColor(srgbRed: 0.95, green: 0.96, blue: 0.94, alpha: 1)      // #F2F5F0
-    static let shelfSide = NSColor(srgbRed: 0.93, green: 0.96, blue: 0.87, alpha: 1)    // #EDF5DE
-    static let shelfInk = NSColor(srgbRed: 0.12, green: 0.13, blue: 0.11, alpha: 1)
-    static let shelfMuted = NSColor(srgbRed: 0.45, green: 0.47, blue: 0.43, alpha: 1)
-    static let shelfBorder = NSColor(srgbRed: 0.86, green: 0.88, blue: 0.84, alpha: 1)
-    static let limeSoft = NSColor(srgbRed: 0.91, green: 0.98, blue: 0.75, alpha: 1)     // #E8F9BF
+    // Shelf (dark, lavender accent)
+    static let shelfBG = NSColor(srgbRed: 0.094, green: 0.094, blue: 0.106, alpha: 1)   // #18181B
+    static let shelfSide = NSColor(srgbRed: 0.118, green: 0.118, blue: 0.133, alpha: 1) // #1E1E22
+    static let shelfCard = NSColor(srgbRed: 0.137, green: 0.137, blue: 0.157, alpha: 1) // #232328
+    static let shelfBorder = NSColor(srgbRed: 0.20, green: 0.20, blue: 0.23, alpha: 1)  // #33333A
+    static let shelfInk = NSColor(calibratedWhite: 0.96, alpha: 1)
+    static let shelfMuted = NSColor(srgbRed: 0.62, green: 0.62, blue: 0.66, alpha: 1)   // #9E9EA8
+    static let cream = NSColor(srgbRed: 0.95, green: 0.93, blue: 0.89, alpha: 1)        // #F2EDE3 content paper
+    static let creamInk = NSColor(srgbRed: 0.13, green: 0.12, blue: 0.11, alpha: 1)
+    static let purple = NSColor(srgbRed: 0.71, green: 0.64, blue: 0.95, alpha: 1)       // #B5A3F2
+    static let onPurple = NSColor(srgbRed: 0.12, green: 0.09, blue: 0.20, alpha: 1)
+    static let mint = NSColor(srgbRed: 0.47, green: 0.76, blue: 0.50, alpha: 1)         // #79C280 pinned / check
+    static let amber = NSColor(srgbRed: 0.95, green: 0.82, blue: 0.55, alpha: 1)        // #F2D08C video badge
 
     static func shadow() -> NSShadow {
         let s = NSShadow()

@@ -2,12 +2,18 @@ import SwiftUI
 
 extension Color {
     static let lime = Color(nsColor: Theme.lime)
-    static let limeSoft = Color(nsColor: Theme.limeSoft)
     static let shelfBG = Color(nsColor: Theme.shelfBG)
     static let shelfSide = Color(nsColor: Theme.shelfSide)
+    static let shelfCard = Color(nsColor: Theme.shelfCard)
     static let shelfInk = Color(nsColor: Theme.shelfInk)
     static let shelfMuted = Color(nsColor: Theme.shelfMuted)
     static let shelfBorder = Color(nsColor: Theme.shelfBorder)
+    static let cream = Color(nsColor: Theme.cream)
+    static let creamInk = Color(nsColor: Theme.creamInk)
+    static let purple = Color(nsColor: Theme.purple)
+    static let onPurple = Color(nsColor: Theme.onPurple)
+    static let mint = Color(nsColor: Theme.mint)
+    static let amber = Color(nsColor: Theme.amber)
 }
 
 struct ShelfView: View {
@@ -30,7 +36,7 @@ struct ShelfView: View {
         .background(Color.shelfBG)
         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 22, topTrailingRadius: 22))
         .overlay(alignment: .top) {
-            UnevenRoundedRectangle(topLeadingRadius: 22, topTrailingRadius: 22).stroke(Color.black.opacity(0.06), lineWidth: 1)
+            UnevenRoundedRectangle(topLeadingRadius: 22, topTrailingRadius: 22).stroke(Color.white.opacity(0.08), lineWidth: 1)
         }
         .onChange(of: model.focusSearch) { _, _ in searchFocused = true }
     }
@@ -45,21 +51,24 @@ struct ShelfView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.top, 26)
-            .padding(.bottom, 34)
-            Text("剪贴板").font(.system(size: 13)).foregroundStyle(Color.shelfMuted)
-            Text("今日暂存").font(.system(size: 26, weight: .bold)).foregroundStyle(Color.shelfInk).padding(.top, 2)
-            Text("未 Pin 内容\n\(retentionText)").font(.system(size: 13)).foregroundStyle(Color.shelfMuted).lineSpacing(3).padding(.top, 14)
+            .padding(.bottom, 38)
+            Text("今日暂存").font(.system(size: 27, weight: .bold)).foregroundStyle(Color.shelfInk)
+            Text("未 Pin 内容\n\(retentionText)").font(.system(size: 13.5)).foregroundStyle(Color.shelfMuted).lineSpacing(4).padding(.top, 14)
             Spacer()
-            HStack(spacing: 6) {
-                Image(systemName: "pin.fill").font(.system(size: 12)).foregroundStyle(Color.shelfInk)
-                Text("Pin 后一直保留").font(.system(size: 13)).foregroundStyle(Color.shelfMuted)
+            // Mascot goes here once the asset arrives.
+            HStack(spacing: 7) {
+                Image(systemName: "pin.fill").font(.system(size: 12)).foregroundStyle(Color.mint)
+                Text("Pin 后一直保留").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.shelfInk)
             }
-            .padding(.bottom, 26)
+            .padding(.horizontal, 14).padding(.vertical, 9)
+            .background(Color.shelfCard, in: RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.shelfBorder, lineWidth: 1))
+            .padding(.bottom, 24)
         }
         .padding(.horizontal, 26)
-        .frame(width: 200, alignment: .leading)
+        .frame(width: 210, alignment: .leading)
         .background(Color.shelfSide)
-        .overlay(alignment: .trailing) { Rectangle().fill(Color.black.opacity(0.05)).frame(width: 1) }
+        .overlay(alignment: .trailing) { Rectangle().fill(Color.white.opacity(0.06)).frame(width: 1) }
     }
 
     private var retentionText: String {
@@ -75,10 +84,10 @@ struct ShelfView: View {
                 let on = model.filter == f
                 Button { model.filter = f } label: {
                     Text(f.rawValue)
-                        .font(.system(size: 14, weight: on ? .semibold : .medium))
-                        .foregroundStyle(Color.shelfInk)
+                        .font(.system(size: 14.5, weight: on ? .semibold : .medium))
+                        .foregroundStyle(on ? Color.onPurple : Color.shelfInk)
                         .padding(.horizontal, 22).padding(.vertical, 9)
-                        .background(on ? Color.lime : Color.white, in: Capsule())
+                        .background(on ? Color.purple : Color.shelfCard, in: Capsule())
                         .overlay(Capsule().stroke(on ? Color.clear : Color.shelfBorder, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
@@ -94,8 +103,8 @@ struct ShelfView: View {
                 }
             }
             .padding(.horizontal, 14).padding(.vertical, 9)
-            .background(Color.white, in: RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.shelfBorder, lineWidth: 1))
+            .background(Color.shelfCard, in: Capsule())
+            .overlay(Capsule().stroke(Color.shelfBorder, lineWidth: 1))
             .frame(width: 350)
             Button { SettingsWindowController.shared.show() } label: {
                 HStack(spacing: 6) {
@@ -164,8 +173,8 @@ struct ShelfView: View {
                 .buttonStyle(.plain).foregroundStyle(Color.shelfMuted)
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    Capsule().fill(Color.black.opacity(0.06))
-                    Capsule().fill(Color.black.opacity(0.18))
+                    Capsule().fill(Color.white.opacity(0.07))
+                    Capsule().fill(Color.white.opacity(0.28))
                         .frame(width: max(40, geo.size.width * scrollVisible))
                         .offset(x: (geo.size.width - max(40, geo.size.width * scrollVisible)) * scrollFraction)
                 }
@@ -173,7 +182,6 @@ struct ShelfView: View {
             .frame(height: 6)
             Button { model.move(3) } label: { Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)) }
                 .buttonStyle(.plain).foregroundStyle(Color.shelfMuted)
-            Text("点按复制 · 双击复制并关闭").font(.system(size: 13)).foregroundStyle(Color.shelfMuted).padding(.leading, 12)
         }
         .padding(.top, 14)
         .padding(.bottom, 18)

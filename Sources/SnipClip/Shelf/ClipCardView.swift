@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// One shelf card: app + time, the content, a caption, and three big actions. Tapping copies.
+/// One shelf card: dark frame, cream "paper" for the content, caption, three big actions. Tapping copies.
 struct ClipCardView: View {
     let item: ClipItem
     let selected: Bool
@@ -10,24 +10,24 @@ struct ClipCardView: View {
     let onCopyAndClose: () -> Void
     let onPreview: () -> Void
 
-    static let width: CGFloat = 260
+    static let width: CGFloat = 268
 
     var body: some View {
         VStack(spacing: 0) {
             header
-            content
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .clipped()
+            paper
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.horizontal, 14)
             captionRow
             Divider().overlay(Color.shelfBorder)
             actions
         }
         .frame(width: Self.width)
-        .background(Color.white)
+        .background(Color.shelfCard)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
-            .stroke(selected ? Color.lime : Color.shelfBorder, lineWidth: selected ? 2.5 : 1))
-        .shadow(color: .black.opacity(0.05), radius: 6, y: 2)
+            .stroke(selected ? Color.purple : Color.shelfBorder, lineWidth: selected ? 2.5 : 1))
+        .shadow(color: .black.opacity(selected ? 0.35 : 0.2), radius: 10, y: 3)
         .contentShape(RoundedRectangle(cornerRadius: 16))
         .onTapGesture(count: 2, perform: onCopyAndClose)
         .onTapGesture(count: 1, perform: onCopy)
@@ -40,89 +40,106 @@ struct ClipCardView: View {
                 else { Image(systemName: "doc.on.clipboard").font(.system(size: 14)).foregroundStyle(Color.shelfMuted) }
             }
             .frame(width: 32, height: 32)
+            .clipShape(RoundedRectangle(cornerRadius: 7))
             Text(item.sourceAppName ?? item.kind.label).font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.shelfInk).lineLimit(1)
             Spacer()
             Text(item.createdAt, style: .time).font(.system(size: 13).monospacedDigit()).foregroundStyle(Color.shelfMuted)
         }
         .padding(.horizontal, 16)
         .padding(.top, 14)
-        .padding(.bottom, 10)
+        .padding(.bottom, 12)
     }
 
+    /// Cream panel holding the content; images fill it edge to edge.
     @ViewBuilder
-    private var content: some View {
+    private var paper: some View {
         switch item.kind {
         case .image, .video:
-            if let img = ClipStore.shared.thumbnail(of: item) {
-                VStack(spacing: 0) {
-                    Image(nsImage: img)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(maxWidth: .infinity)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.shelfBorder, lineWidth: 1))
-                        .overlay {
-                            if item.kind == .video {
-                                ZStack {
-                                    Circle().fill(.black.opacity(0.55)).frame(width: 52, height: 52)
-                                    Image(systemName: "play.fill").font(.system(size: 20)).foregroundStyle(.white).offset(x: 2)
-                                }
-                            }
-                        }
-                        .overlay(alignment: .bottomLeading) {
-                            if item.kind == .video {
-                                Text("\(item.ext.uppercased()) · \(durationText)")
-                                    .font(.system(size: 12, weight: .semibold)).foregroundStyle(.white)
-                                    .padding(.horizontal, 9).padding(.vertical, 5)
-                                    .background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 7))
-                                    .padding(8)
-                            }
-                        }
-                    Spacer(minLength: 0)
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 12).fill(Color.cream)
+                if let img = ClipStore.shared.thumbnail(of: item) {
+                    VStack(spacing: 0) {
+                        Image(nsImage: img)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(maxWidth: .infinity)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                        Spacer(minLength: 0)
+                    }
+                    .padding(10)
+                } else {
+                    Image(systemName: item.kind == .video ? "film" : "photo").font(.largeTitle).foregroundStyle(Color.creamInk.opacity(0.3))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .padding(.horizontal, 14)
-            } else {
-                Image(systemName: item.kind == .video ? "film" : "photo").font(.largeTitle).foregroundStyle(Color.shelfMuted.opacity(0.4))
+                if item.kind == .video {
+                    ZStack {
+                        Circle().fill(.black.opacity(0.5)).frame(width: 54, height: 54)
+                        Image(systemName: "play.fill").font(.system(size: 20)).foregroundStyle(.white).offset(x: 2)
+                    }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    Text("\(item.ext.uppercased()) · \(durationText)")
+                        .font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.creamInk)
+                        .padding(.horizontal, 11).padding(.vertical, 6)
+                        .background(Color.amber, in: Capsule())
+                        .padding(10)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                }
             }
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         case .files:
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(item.snippet.split(separator: "\n").prefix(8), id: \.self) { line in
-                    HStack(spacing: 8) {
-                        Image(systemName: "doc.fill").font(.system(size: 13)).foregroundStyle(Color.shelfMuted)
-                        Text(line).font(.system(size: 14)).foregroundStyle(Color.shelfInk).lineLimit(1).truncationMode(.middle)
+            paperBox {
+                VStack(alignment: .leading, spacing: 9) {
+                    ForEach(item.snippet.split(separator: "\n").prefix(8), id: \.self) { line in
+                        HStack(spacing: 8) {
+                            Image(systemName: "doc.fill").font(.system(size: 13)).foregroundStyle(Color.creamInk.opacity(0.55))
+                            Text(line).font(.system(size: 14)).foregroundStyle(Color.creamInk).lineLimit(1).truncationMode(.middle)
+                        }
                     }
                 }
             }
-            .padding(.horizontal, 16).padding(.top, 2)
         case .url:
-            VStack(alignment: .leading, spacing: 6) {
-                if let host = URL(string: item.snippet)?.host { Text(host).font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.shelfInk) }
-                Text(item.snippet).font(.system(size: 14)).foregroundStyle(Color(nsColor: NSColor(srgbRed: 0.16, green: 0.52, blue: 0.94, alpha: 1))).lineLimit(6)
+            paperBox {
+                VStack(alignment: .leading, spacing: 6) {
+                    if let host = URL(string: item.snippet)?.host { Text(host).font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.creamInk) }
+                    Text(item.snippet).font(.system(size: 14)).foregroundStyle(Color(nsColor: NSColor(srgbRed: 0.20, green: 0.40, blue: 0.80, alpha: 1))).lineLimit(6)
+                }
             }
-            .padding(.horizontal, 16).padding(.top, 2)
         case .text:
-            Text(item.snippet)
-                .font(.system(size: 15))
-                .foregroundStyle(Color.shelfInk)
-                .lineSpacing(5)
-                .lineLimit(11)
-                .multilineTextAlignment(.leading)
-                .padding(.horizontal, 16).padding(.top, 2)
+            paperBox {
+                Text(item.snippet)
+                    .font(.system(size: 15))
+                    .foregroundStyle(Color.creamInk)
+                    .lineSpacing(5)
+                    .lineLimit(10)
+                    .multilineTextAlignment(.leading)
+            }
         }
+    }
+
+    private func paperBox<V: View>(@ViewBuilder _ content: () -> V) -> some View {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 12).fill(Color.cream)
+            content().padding(14)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     private var captionRow: some View {
         VStack(alignment: .leading, spacing: 8) {
             if onClipboard {
-                Text("已复制").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.shelfInk)
-                    .padding(.horizontal, 12).padding(.vertical, 5).background(Color.lime, in: Capsule())
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill").font(.system(size: 13)).foregroundStyle(Color.mint)
+                    Text("已复制").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.shelfInk)
+                }
+                .padding(.horizontal, 12).padding(.vertical, 6)
+                .background(Color.white.opacity(0.08), in: Capsule())
+                .overlay(Capsule().stroke(Color.shelfBorder, lineWidth: 1))
             }
-            Text(caption).font(.system(size: 13)).foregroundStyle(Color.shelfMuted).lineLimit(1)
+            Text(caption).font(.system(size: 13.5)).foregroundStyle(Color.shelfMuted).lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
-        .padding(.top, 10)
+        .padding(.top, 12)
         .padding(.bottom, 12)
     }
 
@@ -163,11 +180,11 @@ struct ClipCardView: View {
 
     private func action(_ symbol: String, _ tip: String, active: Bool = false, _ act: @escaping () -> Void) -> some View {
         Button(action: act) {
-            Image(systemName: symbol)
+            Image(systemName: active ? "pin.fill" : symbol)
                 .font(.system(size: 19, weight: .regular))
-                .foregroundStyle(Color.shelfInk)
-                .frame(width: 40, height: 36)
-                .background(active ? Color.lime : Color.clear, in: RoundedRectangle(cornerRadius: 8))
+                .foregroundStyle(active ? Color.onPurple : Color.shelfInk)
+                .frame(width: 44, height: 38)
+                .background(active ? Color.mint : Color.clear, in: RoundedRectangle(cornerRadius: 9))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
