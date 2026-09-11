@@ -87,9 +87,9 @@ struct ShelfView: View {
                 Button { model.filter = f } label: {
                     Text(f.rawValue)
                         .font(.system(size: 14.5, weight: on ? .semibold : .medium))
-                        .foregroundStyle(on ? Color.onPurple : Color.shelfInk)
+                        .foregroundStyle(on ? Color(nsColor: Theme.onLime) : Color.shelfInk)
                         .padding(.horizontal, 22).padding(.vertical, 9)
-                        .background(on ? Color.purple : Color.shelfCard, in: Capsule())
+                        .background(on ? Color.lime : Color.shelfCard, in: Capsule())
                         .overlay(Capsule().stroke(on ? Color.clear : Color.shelfBorder, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
