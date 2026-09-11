@@ -1,0 +1,266 @@
+import AppKit
+import ScreenCaptureKit
+import SwiftUI
+
+/// `--selftest capture <out.png>` · `--selftest ocr [in.png]` · `--selftest clipboard <seconds>`
+/// Set SNIPCLIP_STORE=<dir> to keep test items out of the real store.
+enum SelfTest {
+    @MainActor
+    static func handleCommandLine() -> Bool {
+        let args = CommandLine.arguments
+        guard let i = args.firstIndex(of: "--selftest"), i + 1 < args.count else { return false }
+        let cmd = args[i + 1]
+        let rest = Array(args[(i + 2)...])
+        Task { @MainActor in
+            var ok = false
+            switch cmd {
+            case "capture": ok = await capture(out: rest.first ?? "snipclip-capture.png")
+            case "ocr": ok = ocr(path: rest.first)
+            case "clipboard": ok = await clipboard(seconds: Int(rest.first ?? "10") ?? 10)
+            case "shelf": ok = renderShelf(out: rest.first ?? "snipclip-shelf.png")
+            case "retention": ok = retention()
+            case "annotate": ok = renderAnnotate(out: rest.first ?? "snipclip-annotate.png")
+            default: print("unknown selftest \(cmd)")
+            }
+            exit(ok ? 0 : 1)
+        }
+        return true
+    }
+
+    @MainActor
+    private static func capture(out: String) async -> Bool {
+        guard Permissions.hasScreenRecording else { print("no screen recording permission"); return false }
+        do {
+            let snap = try await ShareableSnapshot.fetch()
+            guard let screen = NSScreen.main, let display = snap.display(for: screen) else { print("no display"); return false }
+            let t0 = Date()
+            let img = try await Screenshotter.capture(.display(display), snapshot: snap)
+            let dt = Date().timeIntervalSince(t0)
+            guard let png = Screenshotter.pngData(img) else { print("png failed"); return false }
+            let url = URL(fileURLWithPath: out)
+            try png.write(to: url)
+            let name = (img.colorSpace?.name as String?) ?? "nil"
+            print("captured \(img.width)×\(img.height) in \(Int(dt * 1000)) ms, colorSpace=\(name), \(png.count) bytes → \(url.path)")
+            print("screen colorSpace=\((screen.colorSpace?.cgColorSpace?.name as String?) ?? "nil")")
+
+            // Reference: Apple's own screencapture of the same display, then compare samples.
+            let ref = url.deletingLastPathComponent().appendingPathComponent("snipclip-ref.png")
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+            let f = screen.frame
+            let cgY = CoordinateSpace.primaryHeight - f.maxY
+            p.arguments = ["-x", "-R", "\(Int(f.minX)),\(Int(cgY)),\(Int(f.width)),\(Int(f.height))", ref.path]
+            try p.run(); p.waitUntilExit()
+            guard let refData = try? Data(contentsOf: ref), let refImg = Screenshotter.image(fromPNG: refData) else {
+                print("screencapture reference unavailable (skipped comparison)"); return true
+            }
+            print("reference \(refImg.width)×\(refImg.height), colorSpace=\((refImg.colorSpace?.name as String?) ?? "nil")")
+            compare(img, refImg)
+            return true
+        } catch {
+            print("capture failed: \(error)")
+            return false
+        }
+    }
+
+    /// Both images decoded into the same 8-bit sRGB buffer; sample points, report the spread.
+    private static func compare(_ a: CGImage, _ b: CGImage) {
+        guard a.width == b.width, a.height == b.height else { print("size differs, skipped comparison"); return }
+        func raw(_ img: CGImage) -> [UInt8]? {
+            let w = img.width, h = img.height
+            var buf = [UInt8](repeating: 0, count: w * h * 4)
+            guard let ctx = CGContext(data: &buf, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
+                                      space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+            ctx.draw(img, in: CGRect(x: 0, y: 0, width: w, height: h))
+            return buf
+        }
+        guard let ra = raw(a), let rb = raw(b) else { return }
+        var rng = SystemRandomNumberGenerator()
+        var diffs: [Int] = []
+        for _ in 0..<2000 {
+            let i = Int.random(in: 0..<(a.width * a.height), using: &rng) * 4
+            let d = max(abs(Int(ra[i]) - Int(rb[i])), abs(Int(ra[i + 1]) - Int(rb[i + 1])), abs(Int(ra[i + 2]) - Int(rb[i + 2])))
+            diffs.append(d)
+        }
+        diffs.sort()
+        let over2 = diffs.filter { $0 > 2 }.count
+        print("pixel diff vs screencapture (2000 samples): median=\(diffs[1000]) p95=\(diffs[1900]) max=\(diffs.last!) samples>2: \(over2)")
+    }
+
+    private static func ocr(path: String?) -> Bool {
+        let image: CGImage
+        var expect: [String] = []
+        if let path, let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
+           let src = CGImageSourceCreateWithData(data as CFData, nil), let img = CGImageSourceCreateImageAtIndex(src, 0, nil) {
+            image = img
+        } else {
+            guard let img = renderSample() else { print("sample render failed"); return false }
+            image = img
+            expect = ["Snip Clip", "截图工具", "2026"]
+        }
+        do {
+            let t0 = Date()
+            let text = try OCR.recognize(image)
+            print("--- OCR (\(Int(Date().timeIntervalSince(t0) * 1000)) ms) ---\n\(text)\n---")
+            let missing = expect.filter { !text.contains($0) }
+            if !missing.isEmpty { print("missing: \(missing)"); return false }
+            return true
+        } catch {
+            print("ocr failed: \(error)"); return false
+        }
+    }
+
+    private static func renderSample() -> CGImage? {
+        let w = 900, h = 260
+        guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
+                                  space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        ctx.setFillColor(CGColor.white); ctx.fill(CGRect(x: 0, y: 0, width: w, height: h))
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(cgContext: ctx, flipped: false)
+        let lines = ["Snip Clip 是一个截图工具", "所有复制过的内容都留在货架里", "Made in 2026 · 中英混排 OK"]
+        for (i, s) in lines.enumerated() {
+            (s as NSString).draw(at: CGPoint(x: 40, y: 180 - i * 64), withAttributes: [
+                .font: NSFont.systemFont(ofSize: 40), .foregroundColor: NSColor.black])
+        }
+        NSGraphicsContext.restoreGraphicsState()
+        return ctx.makeImage()
+    }
+
+    /// Seeds items dated today / yesterday / 3 days ago (pinned + not), sweeps, checks survivors.
+    @MainActor
+    private static func retention() -> Bool {
+        let store = ClipStore.shared
+        store.removeAll { _ in true }
+        let src = ClipStore.Source(bundleID: nil, name: "test")
+        let day: TimeInterval = 86400
+        let now = Date()
+        func make(_ label: String, age: TimeInterval, pinned: Bool) {
+            guard let it = store.insertText("\(label) \(UUID().uuidString)", rtf: nil, source: src) else { return }
+            store.debugSetDate(now.addingTimeInterval(-age), for: it.id)
+            if pinned { store.togglePin(it.id) }
+        }
+        make("today", age: 3600, pinned: false)
+        make("yesterday", age: day + 3600, pinned: false)
+        make("yesterday-pinned", age: day + 3600, pinned: true)
+        make("3days", age: 3 * day, pinned: false)
+        Preferences.shared.retentionDays = 1
+        Retention.sweep(now: now)
+        let left = store.items.map { String($0.snippet.split(separator: " ")[0]) }.sorted()
+        print("retentionDays=1 survivors: \(left)")
+        let expect1 = ["today", "yesterday-pinned"]
+        // Edge: at 03:00 "yesterday" is still the same day → survives.
+        store.removeAll { _ in true }
+        var cal = Calendar.current
+        cal.timeZone = .current
+        let threeAM = cal.date(bySettingHour: 3, minute: 0, second: 0, of: now)!
+        make("lastnight", age: 0, pinned: false)
+        store.debugSetDate(threeAM.addingTimeInterval(-5 * 3600), for: store.items[0].id)   // 22:00 the evening before
+        Retention.sweep(now: threeAM)
+        let left2 = store.items.map { String($0.snippet.split(separator: " ")[0]) }
+        print("at 03:00, 22:00-last-night item survives: \(left2 == ["lastnight"])")
+        store.removeAll { _ in true }
+        let ok = left == expect1 && left2 == ["lastnight"]
+        print(ok ? "retention OK" : "retention FAILED (expected \(expect1))")
+        return ok
+    }
+
+    // MARK: Offscreen UI renders (no screen-recording permission needed)
+
+    @MainActor
+    private static func seedStore() {
+        let store = ClipStore.shared
+        guard store.items.isEmpty else { return }
+        let src = ClipStore.Source(bundleID: "com.apple.Safari", name: "Safari")
+        store.insertText("会议纪要 9/11\n1. VM 首发时间定 8/5\n2. Big @ 主打功能演示要重录\n3. 达人投放链接统一走 ?tc=", rtf: nil, source: ClipStore.Source(bundleID: "com.apple.Notes", name: "备忘录"))
+        store.insertText("https://github.com/nothingbutcici/session-library/pull/12", rtf: nil, source: src)
+        if let img = renderSample(), let png = Screenshotter.pngData(img) {
+            store.insertImage(png: png, source: CaptureCoordinator.source, ocrText: "Snip Clip 是一个截图工具")
+        }
+        store.insertFiles([URL(fileURLWithPath: "/Users/cici/Project/Claude/snip clip/README.md"),
+                           URL(fileURLWithPath: "/Users/cici/Project/Claude/snip clip/Package.swift")],
+                          source: ClipStore.Source(bundleID: "com.apple.finder", name: "Finder"))
+        store.insertText("const shelf = items.filter(i => i.pinned)\n  .map(render)\n  .join('')", rtf: nil, source: ClipStore.Source(bundleID: "com.microsoft.VSCode", name: "Code"))
+        if let first = store.items.last { store.togglePin(first.id) }
+    }
+
+    @MainActor
+    private static func snapshot(_ view: NSView, to out: String) -> Bool {
+        view.layoutSubtreeIfNeeded()
+        view.displayIfNeeded()
+        guard let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { print("no rep"); return false }
+        view.cacheDisplay(in: view.bounds, to: rep)
+        guard let png = rep.representation(using: .png, properties: [:]) else { return false }
+        do { try png.write(to: URL(fileURLWithPath: out)) } catch { print("write failed: \(error)"); return false }
+        print("rendered \(Int(view.bounds.width))×\(Int(view.bounds.height)) → \(out)")
+        return true
+    }
+
+    @MainActor
+    private static func renderShelf(out: String) -> Bool {
+        seedStore()
+        let model = ShelfPanelController.shared.model
+        model.reset()
+        let host = NSHostingView(rootView: ShelfView(model: model))
+        host.frame = CGRect(x: 0, y: 0, width: 1440, height: 420)
+        // Needs a window for materials + layout to resolve.
+        let w = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+        w.contentView = host
+        w.isReleasedWhenClosed = false
+        return snapshot(host, to: out)
+    }
+
+    @MainActor
+    private static func renderAnnotate(out: String) -> Bool {
+        guard let img = renderSample() else { return false }
+        let scale: CGFloat = 2
+        let rect = CGRect(x: 40, y: 80, width: CGFloat(img.width) / scale, height: CGFloat(img.height) / scale)
+        let stage = NSView(frame: CGRect(x: 0, y: 0, width: max(rect.width + 80, 760), height: rect.height + 160))
+        stage.wantsLayer = true
+        stage.layer?.backgroundColor = NSColor(calibratedWhite: 0.25, alpha: 1).cgColor
+        let canvas = AnnotateView(frame: rect, image: img)
+        stage.addSubview(canvas)
+        let bar = AnnotateToolbar(canvas: canvas)
+        bar.frame = CGRect(x: max(8, rect.maxX - bar.fittingSize.width), y: rect.minY - 48, width: bar.fittingSize.width, height: bar.fittingSize.height)
+        stage.addSubview(bar)
+        let w = NSWindow(contentRect: stage.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+        w.contentView = stage
+        w.isReleasedWhenClosed = false
+
+        let red = AnnotatePalette.colors[0], blue = AnnotatePalette.colors[3], yellow = AnnotatePalette.colors[1]
+        canvas.debugSet([
+            Annotation(tool: .rect, color: red, size: .medium, points: [CGPoint(x: 12, y: 8), CGPoint(x: 250, y: 44)]),
+            Annotation(tool: .arrow, color: blue, size: .thick, points: [CGPoint(x: 300, y: 110), CGPoint(x: 200, y: 50)]),
+            Annotation(tool: .ellipse, color: yellow, size: .thin, points: [CGPoint(x: 20, y: 60), CGPoint(x: 180, y: 100)]),
+            Annotation(tool: .pen, color: red, size: .medium, points: stride(from: 0, to: 120, by: 4).map { CGPoint(x: 260 + CGFloat($0), y: 90 + 10 * sin(CGFloat($0) / 8)) }),
+            Annotation(tool: .mosaic, color: red, size: .medium, points: [CGPoint(x: 20, y: 72), CGPoint(x: 200, y: 108)]),
+            Annotation(tool: .text, color: blue, size: .medium, points: [CGPoint(x: 240, y: 10)], text: "标注文字 Text"),
+            Annotation(tool: .badge, color: red, size: .medium, points: [CGPoint(x: 420, y: 30)], number: 1),
+            Annotation(tool: .badge, color: red, size: .medium, points: [CGPoint(x: 420, y: 70)], number: 2),
+        ])
+        guard snapshot(stage, to: out) else { return false }
+        // Also the flattened export, at full pixel size.
+        let flat = canvas.renderedImage()
+        let flatURL = URL(fileURLWithPath: out).deletingPathExtension().appendingPathExtension("flat.png")
+        if let png = Screenshotter.pngData(flat) { try? png.write(to: flatURL) }
+        print("flattened \(flat.width)×\(flat.height) colorSpace=\((flat.colorSpace?.name as String?) ?? "nil") → \(flatURL.path)")
+        return true
+    }
+
+    @MainActor
+    private static func clipboard(seconds: Int) async -> Bool {
+        print("store: \(ClipStore.shared.root.path)")
+        print("listening \(seconds)s — copy some text, an image, a file in Finder…")
+        var seen: [ClipItem] = []
+        ClipboardMonitor.shared.onChange = { item in
+            seen.append(item)
+            print("  + \(item.kind.rawValue.padding(toLength: 6, withPad: " ", startingAt: 0)) \(item.sourceAppName ?? "?")  \(item.snippet.replacingOccurrences(of: "\n", with: " ⏎ ").prefix(60))")
+        }
+        ClipboardMonitor.shared.start()
+        try? await Task.sleep(nanoseconds: UInt64(seconds) * 1_000_000_000)
+        ClipboardMonitor.shared.stop()
+        print("recorded \(seen.count) item(s); store now holds \(ClipStore.shared.items.count)")
+        return true
+    }
+}
