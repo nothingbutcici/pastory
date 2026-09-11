@@ -268,7 +268,7 @@ struct ClipCardView: View {
         Button(action: act) {
             Image(systemName: active ? "pin.fill" : symbol)
                 .font(.system(size: 19, weight: .regular))
-                .foregroundStyle(active ? Color.black : Color.white)
+                .foregroundStyle(Color.white)
                 .frame(width: 44, height: 38)
                 .background(active ? Color.purple : Color.clear, in: RoundedRectangle(cornerRadius: 9))
                 .contentShape(Rectangle())

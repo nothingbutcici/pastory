@@ -20,8 +20,8 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
 
     /// nil = no tool: clicks only select / move; nothing gets drawn.
     var tool: AnnotateTool? = nil { didSet { commitTextEditor(); window?.invalidateCursorRects(for: self); onStateChange?() } }
-    var color: NSColor = AnnotatePalette.colors[0] { didSet { applyToSelected { $0.color = color } } }
-    var size: StrokeSize = .s { didSet { applyToSelected { $0.size = size } } }
+    var color: NSColor = AnnotatePalette.colors[0] { didSet { applyToSelected { $0.color = color }; restyleEditor() } }
+    var size: StrokeSize = .s { didSet { applyToSelected { $0.size = size }; restyleEditor() } }
     private(set) var annotations: [Annotation] = [] { didSet { needsDisplay = true; onStateChange?() } }
     private var draft: Annotation?
     private(set) var selectedID: UUID? { didSet { needsDisplay = true; window?.invalidateCursorRects(for: self); onStateChange?() } }
@@ -252,6 +252,24 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
     }
 
     @objc private func editorReturn() { commitTextEditor() }
+
+    /// Colour / size picked while a text box is open: restyle the box live, including the field editor
+    /// (which keeps its own attributes) and any text already typed into it.
+    private func restyleEditor() {
+        guard let tf = editor else { return }
+        let font = HandFont.font(size: size.fontSize)
+        tf.font = font
+        tf.textColor = color
+        tf.frame.size.height = font.pointSize * 1.5
+        if let fe = tf.currentEditor() as? NSTextView {
+            fe.font = font
+            fe.textColor = color
+            fe.insertionPointColor = color
+            let all = NSRange(location: 0, length: fe.string.utf16.count)
+            fe.textStorage?.addAttributes([.foregroundColor: color, .font: font], range: all)
+            fe.typingAttributes = [.foregroundColor: color, .font: font]
+        }
+    }
 
     func commitTextEditor() {
         guard let tf = editor else { return }
