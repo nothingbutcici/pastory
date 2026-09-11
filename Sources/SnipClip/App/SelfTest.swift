@@ -187,7 +187,7 @@ enum SelfTest {
             print("gif: \(n) frames, \(first?.width ?? 0)×\(first?.height ?? 0), \(bytes / 1024) KB, encoded in \(ms) ms → \(gifURL.path)")
             let poster = await GIFEncoder.poster(movie: mov)
             print("poster: \(poster.map { "\($0.width)×\($0.height)" } ?? "nil"), duration \(await GIFEncoder.duration(movie: mov))s")
-            return n >= 22 && n <= 26 && poster != nil
+            return n >= 18 && n <= 22 && poster != nil   // 2 s at 10 fps
         } catch {
             print("gif selftest failed: \(error)"); return false
         }
