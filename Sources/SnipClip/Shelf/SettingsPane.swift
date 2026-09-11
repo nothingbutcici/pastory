@@ -180,6 +180,7 @@ struct ScrollSteps: NSViewRepresentable {
         var onStep: ((Int) -> Void)?
         private var acc: CGFloat = 0
         override func scrollWheel(with event: NSEvent) {
+            guard event.momentumPhase.isEmpty else { return }      // inertia from scrolling the page must not turn the dial
             acc += event.scrollingDeltaY
             let threshold: CGFloat = event.hasPreciseScrollingDeltas ? 18 : 1
             while acc >= threshold { acc -= threshold; onStep?(-1) }     // scroll up → earlier hour
