@@ -61,7 +61,7 @@ struct ShelfView: View {
             }
             HStack(spacing: 5) {
                 Image(systemName: "hand.tap").font(.system(size: 10))
-                Text("点一下卡片即复制")
+                Text("点一下卡片即复制 · 空格预览")
             }
             .font(.caption).foregroundStyle(.secondary)
             .padding(.horizontal, 8).padding(.vertical, 4)
@@ -70,7 +70,7 @@ struct ShelfView: View {
             Picker("", selection: $model.filter) {
                 ForEach(ShelfFilter.allCases) { Text($0.rawValue).tag($0) }
             }
-            .pickerStyle(.segmented).labelsHidden().frame(width: 230)
+            .pickerStyle(.segmented).labelsHidden().frame(width: 280)
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary).font(.system(size: 11))
                 TextField("搜索内容、识别文字、来源", text: $model.query)
@@ -100,6 +100,7 @@ struct ShelfView: View {
     @ViewBuilder
     private func menu(for item: ClipItem) -> some View {
         Button("复制") { model.copy(item) }
+        Button("预览（空格）") { model.selectedID = item.id; ShelfPanelController.shared.toggleQuickLook() }
         Button(item.pinned ? "取消固定" : "固定") { ClipStore.shared.togglePin(item.id) }
         Button("保存到本地…") { Exporter.export(item) }
         if item.kind == .files {

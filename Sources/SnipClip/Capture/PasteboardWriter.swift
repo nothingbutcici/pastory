@@ -34,15 +34,14 @@ enum PasteboardWriter {
         commit([item])
     }
 
+    /// Files the way Finder copies them: NSURL objects plus the legacy filenames list.
+    /// Chat apps (WeChat included) look for the latter; a bare public.file-url pastes as text there.
     static func writeFiles(_ urls: [URL], itemID: String) {
-        var items: [NSPasteboardItem] = []
-        for (i, url) in urls.enumerated() {
-            let item = NSPasteboardItem()
-            item.setString(url.absoluteString, forType: .fileURL)
-            if i == 0 { item.setString(itemID, forType: marker) }
-            items.append(item)
-        }
-        commit(items)
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.writeObjects(urls as [NSURL])
+        pb.setPropertyList(urls.map(\.path), forType: NSPasteboard.PasteboardType("NSFilenamesPboardType"))
+        pb.setString(itemID, forType: marker)
     }
 
     private static func commit(_ items: [NSPasteboardItem]) {

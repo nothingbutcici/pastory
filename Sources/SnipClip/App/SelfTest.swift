@@ -20,6 +20,12 @@ enum SelfTest {
             case "shelf": ok = await renderShelf(out: rest.first ?? "snipclip-shelf.png")
             case "retention": ok = retention()
             case "gif": ok = await gif()
+            case "pbfiles":
+                PasteboardWriter.writeFiles([URL(fileURLWithPath: rest.first ?? "/Users/cici/Project/Claude/snip clip/README.md")], itemID: "test")
+                print((NSPasteboard.general.types ?? []).map(\.rawValue).joined(separator: "\n"))
+                let urls = NSPasteboard.general.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL]
+                print("readObjects → \(urls?.map(\.lastPathComponent) ?? [])")
+                ok = (urls?.count ?? 0) == 1
             case "annotate": ok = renderAnnotate(out: rest.first ?? "snipclip-annotate.png")
             default: print("unknown selftest \(cmd)")
             }

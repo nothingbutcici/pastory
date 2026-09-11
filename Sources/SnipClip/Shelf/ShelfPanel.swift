@@ -1,5 +1,6 @@
 import AppKit
 import Carbon.HIToolbox
+import Quartz
 import SwiftUI
 
 /// Bottom drawer, Paste-style. Non-activating: the app you were in keeps focus,
@@ -83,14 +84,59 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
         case kVK_ANSI_S where !typing || cmd: model.exportSelected(); return true
         case kVK_Delete where !typing: model.deleteSelected(); return true
         case kVK_ANSI_F where cmd: model.focusSearch += 1; return true
+        case kVK_Space where !typing: toggleQuickLook(); return true
         default: return false
         }
     }
+
+    // MARK: Quick Look (space)
+
+    /// File to preview for the selected card: the payload itself, or the first file of a files item.
+    var quickLookURL: URL? {
+        guard let item = model.selectedItem else { return nil }
+        if item.kind == .files { return ClipStore.shared.fileURLs(of: item).first }
+        return ClipStore.shared.payloadURL(item)
+    }
+
+    func toggleQuickLook() {
+        guard let ql = QLPreviewPanel.shared() else { return }
+        if ql.isVisible { ql.orderOut(nil); return }
+        guard quickLookURL != nil else { return }
+        holdOpen = true
+        ql.makeKeyAndOrderFront(nil)
+    }
+
+    func quickLookSelectionChanged() {
+        if let ql = QLPreviewPanel.shared(), ql.isVisible { ql.reloadData() }
+    }
 }
 
-final class ShelfPanel: NSPanel {
+final class ShelfPanel: NSPanel, QLPreviewPanelDataSource, QLPreviewPanelDelegate {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
+
+    // Quick Look asks the key window's responder chain who wants the panel.
+    override func acceptsPreviewPanelControl(_ panel: QLPreviewPanel!) -> Bool { true }
+    override func beginPreviewPanelControl(_ panel: QLPreviewPanel!) {
+        panel.dataSource = self
+        panel.delegate = self
+    }
+    override func endPreviewPanelControl(_ panel: QLPreviewPanel!) {
+        panel.dataSource = nil
+        panel.delegate = nil
+        let c = ShelfPanelController.shared
+        c.holdOpen = false
+        c.refocus()
+    }
+    func numberOfPreviewItems(in panel: QLPreviewPanel!) -> Int { ShelfPanelController.shared.quickLookURL == nil ? 0 : 1 }
+    func previewPanel(_ panel: QLPreviewPanel!, previewItemAt index: Int) -> (any QLPreviewItem)! {
+        ShelfPanelController.shared.quickLookURL as NSURL?
+    }
+    /// Arrow keys keep working while the preview is up.
+    func previewPanel(_ panel: QLPreviewPanel!, handle event: NSEvent!) -> Bool {
+        guard event.type == .keyDown else { return false }
+        return ShelfPanelController.shared.handle(event)
+    }
     /// Shortcuts are handled before the responder chain so the search field cannot swallow ⏎ / ⎋.
     override func sendEvent(_ event: NSEvent) {
         if event.type == .keyDown, ShelfPanelController.shared.handle(event) { return }
@@ -99,7 +145,7 @@ final class ShelfPanel: NSPanel {
 }
 
 enum ShelfFilter: String, CaseIterable, Identifiable {
-    case all = "全部", pinned = "固定", images = "图片 / 录屏", text = "文本"
+    case all = "全部", pinned = "固定", images = "图片", videos = "录屏", text = "文本"
     var id: String { rawValue }
 }
 
@@ -108,7 +154,7 @@ enum ShelfFilter: String, CaseIterable, Identifiable {
 final class ShelfModel {
     var query = ""
     var filter: ShelfFilter = .all
-    var selectedID: String?
+    var selectedID: String? { didSet { ShelfPanelController.shared.quickLookSelectionChanged() } }
     var focusSearch = 0
 
     var items: [ClipItem] {
@@ -117,7 +163,8 @@ final class ShelfModel {
             switch filter {
             case .all: break
             case .pinned: if !item.pinned { return false }
-            case .images: if item.kind != .image && item.kind != .video { return false }
+            case .images: if item.kind != .image { return false }
+            case .videos: if item.kind != .video { return false }
             case .text: if item.kind != .text && item.kind != .url { return false }
             }
             guard !q.isEmpty else { return true }
@@ -141,6 +188,7 @@ final class ShelfModel {
     }
 
     private var selected: ClipItem? { items.first { $0.id == selectedID } ?? items.first }
+    var selectedItem: ClipItem? { selected }
 
     func copy(_ item: ClipItem) {
         ClipStore.shared.copyToPasteboard(item)

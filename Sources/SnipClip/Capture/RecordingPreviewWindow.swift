@@ -2,7 +2,7 @@ import AppKit
 import AVKit
 
 /// Plays the fresh recording on loop so you can judge it before it goes anywhere.
-/// Buttons: 丢弃 · 保存为 GIF · 复制 MP4（默认）.
+/// Buttons: 丢弃 · 复制为 GIF · 复制为 MP4（默认）. Closes as soon as the copy is done.
 @MainActor
 final class RecordingPreviewWindow: NSObject, NSWindowDelegate {
     private let window: NSWindow
@@ -52,13 +52,13 @@ final class RecordingPreviewWindow: NSObject, NSWindowDelegate {
         info.font = NSFont.systemFont(ofSize: 12)
         info.textColor = NSColor(calibratedWhite: 1, alpha: 0.7)
         info.lineBreakMode = .byTruncatingTail
-        info.stringValue = String(format: "%d 秒 · %d×%d · 循环播放中", Int(duration.rounded()), Int(pixelSize.width), Int(pixelSize.height))
+        info.stringValue = ""      // only used for conversion progress
         info.translatesAutoresizingMaskIntoConstraints = false
         bar.addSubview(info)
 
         let discard = pill("丢弃", tint: NSColor(calibratedWhite: 1, alpha: 0.75), filled: false, action: #selector(discardTapped))
-        let gif = pill(duration > 30 ? "保存为 GIF（会很大）" : "保存为 GIF", tint: NSColor(srgbRed: 0.35, green: 0.80, blue: 0.45, alpha: 1), filled: false, action: #selector(gifTapped))
-        let mp4 = pill("复制 MP4  ⏎", tint: AnnotatePalette.accent, filled: true, action: #selector(mp4Tapped))
+        let gif = pill(duration > 30 ? "复制为 GIF（会很大）" : "复制为 GIF", tint: NSColor(srgbRed: 0.35, green: 0.80, blue: 0.45, alpha: 1), filled: false, action: #selector(gifTapped))
+        let mp4 = pill("复制为 MP4  ⏎", tint: AnnotatePalette.accent, filled: true, action: #selector(mp4Tapped))
         mp4.keyEquivalent = "\r"
         buttons = [discard, gif, mp4]
         let stack = NSStackView(views: buttons)
@@ -106,13 +106,6 @@ final class RecordingPreviewWindow: NSObject, NSWindowDelegate {
     func setBusy(_ text: String) {
         info.stringValue = text
         buttons.forEach { $0.isEnabled = false; $0.alphaValue = 0.4 }
-    }
-
-    /// Final line, then the window goes away on its own.
-    func setDone(_ text: String) {
-        info.stringValue = text
-        player.pause()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { [weak self] in self?.close() }
     }
 
     func close() {
