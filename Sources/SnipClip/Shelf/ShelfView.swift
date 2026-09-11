@@ -12,8 +12,6 @@ extension Color {
     static let creamInk = Color(nsColor: Theme.creamInk)
     static let purple = Color(nsColor: Theme.purple)
     static let onPurple = Color(nsColor: Theme.onPurple)
-    static let mint = Color(nsColor: Theme.mint)
-    static let amber = Color(nsColor: Theme.amber)
 }
 
 struct ShelfView: View {
@@ -57,7 +55,7 @@ struct ShelfView: View {
             Spacer()
             // Mascot goes here once the asset arrives.
             HStack(spacing: 7) {
-                Image(systemName: "pin.fill").font(.system(size: 12)).foregroundStyle(Color.mint)
+                Image(systemName: "pin.fill").font(.system(size: 12)).foregroundStyle(Color.lime)
                 Text("Pin 后一直保留").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.shelfInk)
             }
             .padding(.horizontal, 14).padding(.vertical, 9)

@@ -78,12 +78,6 @@ struct ClipCardView: View {
                         Image(systemName: "play.fill").font(.system(size: 20)).foregroundStyle(.white).offset(x: 2)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    Text("\(item.ext.uppercased()) · \(durationText)")
-                        .font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.creamInk)
-                        .padding(.horizontal, 11).padding(.vertical, 6)
-                        .background(Color.amber, in: Capsule())
-                        .padding(10)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -129,14 +123,18 @@ struct ClipCardView: View {
         VStack(alignment: .leading, spacing: 8) {
             if onClipboard {
                 HStack(spacing: 6) {
-                    Image(systemName: "checkmark.circle.fill").font(.system(size: 13)).foregroundStyle(Color.mint)
+                    Image(systemName: "checkmark.circle.fill").font(.system(size: 13)).foregroundStyle(Color.lime)
                     Text("已复制").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.shelfInk)
                 }
                 .padding(.horizontal, 12).padding(.vertical, 6)
                 .background(Color.white.opacity(0.08), in: Capsule())
                 .overlay(Capsule().stroke(Color.shelfBorder, lineWidth: 1))
             }
-            Text(caption).font(.system(size: 13.5)).foregroundStyle(Color.shelfMuted).lineLimit(1)
+            Text(caption)
+                .font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.creamInk)
+                .padding(.horizontal, 11).padding(.vertical, 5)
+                .background(Color(nsColor: tagColor), in: Capsule())
+                .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
@@ -150,7 +148,17 @@ struct ClipCardView: View {
         case .text: return "文本 · \(charCount) 字"
         case .url: return "链接"
         case .files: return "文件 · \(item.snippet.split(separator: "\n").count) 项"
-        case .video: return "录屏 · \(durationText)"
+        case .video: return "\(item.ext.uppercased()) · \(durationText)"
+        }
+    }
+
+    private var tagColor: NSColor {
+        switch item.kind {
+        case .image: return Theme.tagImage
+        case .text: return Theme.tagText
+        case .url: return Theme.tagLink
+        case .files: return Theme.tagFiles
+        case .video: return item.ext == "gif" ? Theme.tagGIF : Theme.tagMP4
         }
     }
 
@@ -187,9 +195,9 @@ struct ClipCardView: View {
         Button(action: act) {
             Image(systemName: active ? "pin.fill" : symbol)
                 .font(.system(size: 19, weight: .regular))
-                .foregroundStyle(active ? Color.onPurple : Color.shelfInk)
+                .foregroundStyle(active ? Color(nsColor: Theme.onLime) : Color.shelfInk)
                 .frame(width: 44, height: 38)
-                .background(active ? Color.mint : Color.clear, in: RoundedRectangle(cornerRadius: 9))
+                .background(active ? Color.lime : Color.clear, in: RoundedRectangle(cornerRadius: 9))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

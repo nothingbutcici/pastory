@@ -69,7 +69,8 @@ final class TextEditorWindow: NSObject, NSWindowDelegate {
         count.font = NSFont.systemFont(ofSize: 12)
         count.textColor = Theme.shelfMuted
         let cancel = pill("取消", fill: Theme.shelfCard, ink: Theme.shelfInk, action: #selector(cancelTapped))
-        let save = pill("保存并复制  ⌘⏎", fill: Theme.purple, ink: Theme.onPurple, action: #selector(saveTapped))
+        let save = pill("保存并复制", fill: Theme.lime, ink: Theme.onLime, action: #selector(saveTapped))
+        save.toolTip = "⌘⏎"
         save.keyEquivalent = "\r"
         save.keyEquivalentModifierMask = [.command]
         let buttons = NSStackView(views: [cancel, save])
