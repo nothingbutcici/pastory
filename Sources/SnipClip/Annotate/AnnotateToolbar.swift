@@ -11,10 +11,10 @@ final class AnnotateToolbar: NSView {
     let subBar: SubBar
 
     static let ink = Theme.text
-    static let selectedBG = Theme.lime
-    static let selectedInk = Theme.onLime
+    static let selectedBG = Theme.purple
+    static let selectedInk = Theme.onPurple
     static let red = Theme.red
-    static let green = Theme.lime
+    static let green = Theme.purple
 
     private let doneTitle: String
 
@@ -68,32 +68,20 @@ final class AnnotateToolbar: NSView {
         ocrBtn.widthAnchor.constraint(equalToConstant: 112).isActive = true
         stack.addArrangedSubview(ocrBtn)
         stack.addArrangedSubview(Self.divider())
+        // Function group: 撤销 · 取消 · 完成 — plain glyphs, all purple, no boxes.
         undoButton = Self.iconButton(NSImage(systemSymbolName: "arrow.uturn.backward", accessibilityDescription: nil)!
-            .withSymbolConfiguration(.init(pointSize: 15, weight: .medium))!, tip: "撤销 ⌘Z", target: self, action: #selector(undo))
+            .withSymbolConfiguration(.init(pointSize: 16, weight: .medium))!, tip: "撤销 ⌘Z", target: self, action: #selector(undo))
+        undoButton.contentTintColor = Theme.purple
         stack.addArrangedSubview(undoButton)
-        stack.addArrangedSubview(Self.divider())
         let cancel = Self.iconButton(NSImage(systemSymbolName: "xmark", accessibilityDescription: nil)!
-            .withSymbolConfiguration(.init(pointSize: 16, weight: .semibold))!, tip: "取消 ⎋", target: self, action: #selector(cancel))
-        cancel.contentTintColor = Self.red
+            .withSymbolConfiguration(.init(pointSize: 17, weight: .semibold))!, tip: "取消 ⎋", target: self, action: #selector(cancel))
+        cancel.contentTintColor = Theme.purple
         stack.addArrangedSubview(cancel)
-        // ✓ 复制 — lime pill
-        let done = NSButton(title: " " + doneTitle, image: NSImage(systemSymbolName: "checkmark", accessibilityDescription: nil)!
-            .withSymbolConfiguration(.init(pointSize: 14, weight: .bold))!, target: self, action: #selector(done))
-        done.isBordered = false
-        done.imagePosition = .imageLeading
-        done.imageHugsTitle = true
-        done.contentTintColor = Theme.onLime
-        done.attributedTitle = NSAttributedString(string: " " + doneTitle, attributes: [
-            .foregroundColor: Theme.onLime, .font: NSFont.systemFont(ofSize: 15, weight: .bold)])
-        done.toolTip = doneTitle == "复制" ? "完成 ⏎ · 复制到剪贴板" : "\(doneTitle) ⏎"
-        done.wantsLayer = true
-        done.layer?.backgroundColor = Theme.lime.cgColor
-        done.layer?.cornerRadius = 10
-        done.translatesAutoresizingMaskIntoConstraints = false
-        done.heightAnchor.constraint(equalToConstant: 40).isActive = true
-        done.widthAnchor.constraint(equalToConstant: 104).isActive = true
+        let done = Self.iconButton(NSImage(systemSymbolName: "checkmark", accessibilityDescription: nil)!
+            .withSymbolConfiguration(.init(pointSize: 17, weight: .bold))!,
+            tip: doneTitle == "复制" ? "完成 ⏎ · 复制到剪贴板" : "\(doneTitle) ⏎", target: self, action: #selector(done))
+        done.contentTintColor = Theme.purple
         stack.addArrangedSubview(done)
-        stack.setCustomSpacing(8, after: cancel)
     }
 
     static func iconButton(_ image: NSImage, tip: String, target: AnyObject, action: Selector) -> NSButton {
@@ -118,7 +106,7 @@ final class AnnotateToolbar: NSView {
 
     private func refresh() {
         undoButton.isEnabled = canvas.canUndo
-        undoButton.alphaValue = canvas.canUndo ? 1 : 0.3
+        undoButton.alphaValue = canvas.canUndo ? 1 : 0.35
         let active = canvas.activeKind
         for (t, b) in toolButtons {
             let on = t == active

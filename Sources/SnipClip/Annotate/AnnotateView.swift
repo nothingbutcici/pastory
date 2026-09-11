@@ -20,7 +20,7 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
 
     /// nil = no tool: clicks only select / move; nothing gets drawn.
     var tool: AnnotateTool? = nil { didSet { commitTextEditor(); window?.invalidateCursorRects(for: self); onStateChange?() } }
-    var color: NSColor = AnnotatePalette.colors[1] { didSet { applyToSelected { $0.color = color } } }
+    var color: NSColor = AnnotatePalette.colors[0] { didSet { applyToSelected { $0.color = color } } }
     var size: StrokeSize = .m { didSet { applyToSelected { $0.size = size } } }
     private(set) var annotations: [Annotation] = [] { didSet { needsDisplay = true; onStateChange?() } }
     private var draft: Annotation?

@@ -274,13 +274,23 @@ final class OverlayView: NSView {
         guard let ctx = NSGraphicsContext.current else { return }
         NSColor(calibratedWhite: 0, alpha: 0.5).setFill()
         bounds.fill()
+        // Faint graph-paper grid on the mask, same as the shelf.
+        let grid = NSBezierPath()
+        let step: CGFloat = 28
+        var gx = bounds.minX.truncatingRemainder(dividingBy: step)
+        while gx <= bounds.maxX { grid.move(to: CGPoint(x: gx, y: bounds.minY)); grid.line(to: CGPoint(x: gx, y: bounds.maxY)); gx += step }
+        var gy = bounds.minY.truncatingRemainder(dividingBy: step)
+        while gy <= bounds.maxY { grid.move(to: CGPoint(x: bounds.minX, y: gy)); grid.line(to: CGPoint(x: bounds.maxX, y: gy)); gy += step }
+        grid.lineWidth = 1
+        NSColor(calibratedWhite: 1, alpha: 0.05).setStroke()
+        grid.stroke()
         let hole: CGRect? = held ? heldRect : (controller?.mode == .window ? hoveredRectInView : selectionRect)
         guard let hole else { return }
         ctx.compositingOperation = .copy
         NSColor.clear.setFill()
         hole.fill()
         ctx.compositingOperation = .sourceOver
-        Theme.lime.setStroke()
+        Theme.purple.setStroke()
         let path = NSBezierPath(rect: hole.insetBy(dx: -1, dy: -1))
         path.lineWidth = 2
         path.stroke()
@@ -288,7 +298,7 @@ final class OverlayView: NSView {
             for h in handles(hole) {
                 let s = Self.handleSize
                 let sq = CGRect(x: h.x - s / 2, y: h.y - s / 2, width: s, height: s)
-                Theme.lime.setFill()
+                Theme.purple.setFill()
                 NSBezierPath(roundedRect: sq, xRadius: 1.5, yRadius: 1.5).fill()
                 NSColor(calibratedWhite: 0, alpha: 0.35).setStroke()
                 let o = NSBezierPath(roundedRect: sq.insetBy(dx: -0.5, dy: -0.5), xRadius: 2, yRadius: 2)

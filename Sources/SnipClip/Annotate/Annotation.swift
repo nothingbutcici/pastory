@@ -153,16 +153,17 @@ struct Annotation: Identifiable {
 }
 
 enum AnnotatePalette {
+    /// Low-saturation set; purple first and default.
     static let colors: [NSColor] = [
-        NSColor(srgbRed: 0.11, green: 0.11, blue: 0.12, alpha: 1),   // ink
-        NSColor(srgbRed: 0.88, green: 0.20, blue: 0.20, alpha: 1),   // red
-        NSColor(srgbRed: 0.96, green: 0.62, blue: 0.04, alpha: 1),   // orange
-        NSColor(srgbRed: 0.16, green: 0.65, blue: 0.27, alpha: 1),   // green
-        NSColor(srgbRed: 0.09, green: 0.47, blue: 0.95, alpha: 1),   // blue
-        NSColor(srgbRed: 0.56, green: 0.42, blue: 1.00, alpha: 1),   // purple
+        Theme.purple,                                                 // purple (default)
+        NSColor(srgbRed: 0.80, green: 0.40, blue: 0.38, alpha: 1),   // dusty red
+        NSColor(srgbRed: 0.87, green: 0.62, blue: 0.36, alpha: 1),   // dusty orange
+        NSColor(srgbRed: 0.45, green: 0.68, blue: 0.47, alpha: 1),   // dusty green
+        NSColor(srgbRed: 0.38, green: 0.55, blue: 0.82, alpha: 1),   // dusty blue
+        NSColor(srgbRed: 0.13, green: 0.13, blue: 0.14, alpha: 1),   // ink
         .white,
     ]
-    static let accent = Theme.lime
+    static let accent = Theme.purple
 }
 
 extension NSColor {

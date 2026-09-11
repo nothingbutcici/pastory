@@ -299,7 +299,7 @@ enum SelfTest {
         w.contentView = stage
         w.isReleasedWhenClosed = false
 
-        let ink = AnnotatePalette.colors[0], red = AnnotatePalette.colors[1], blue = AnnotatePalette.colors[4], orange = AnnotatePalette.colors[2]
+        let ink = AnnotatePalette.colors[5], red = AnnotatePalette.colors[1], blue = AnnotatePalette.colors[4], orange = AnnotatePalette.colors[2]
         canvas.debugSet([
             Annotation(tool: .rect, color: red, size: .m, points: [CGPoint(x: 12, y: 8), CGPoint(x: 250, y: 44)]),
             Annotation(tool: .arrow, color: blue, size: .l, points: [CGPoint(x: 300, y: 118), CGPoint(x: 215, y: 52)]),

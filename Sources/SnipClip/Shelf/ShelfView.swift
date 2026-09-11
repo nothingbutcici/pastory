@@ -108,9 +108,9 @@ struct ShelfView: View {
 
     private func rule(icon: String, tint: Color, _ text: String) -> some View {
         HStack(spacing: 9) {
-            Image(systemName: icon).font(.system(size: 11, weight: .semibold)).foregroundStyle(tint)
+            Image(systemName: icon).font(.system(size: 11, weight: .semibold)).foregroundStyle(.white)
                 .frame(width: 22, height: 22)
-                .background(tint.opacity(0.16), in: RoundedRectangle(cornerRadius: 6))
+                .background(tint.opacity(0.35), in: RoundedRectangle(cornerRadius: 6))
             Text(text).font(.system(size: 13)).foregroundStyle(Color.shelfInk).lineLimit(1).minimumScaleFactor(0.85)
         }
     }

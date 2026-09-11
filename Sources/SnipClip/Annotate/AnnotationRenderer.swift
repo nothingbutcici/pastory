@@ -179,7 +179,7 @@ enum AnnotationRenderer {
     /// Selection chrome (live view only): dashed box for boxes/text/pen, handles, and a delete bubble.
     static func drawSelection(_ a: Annotation, in ctx: CGContext) {
         ctx.saveGState()
-        ctx.setStrokeColor(Theme.lime.cgColor)
+        ctx.setStrokeColor(Theme.purple.cgColor)
         ctx.setLineWidth(1)
         if a.tool != .arrow && a.tool != .line {
             ctx.setLineDash(phase: 0, lengths: [4, 3])

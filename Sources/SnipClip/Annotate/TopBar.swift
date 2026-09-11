@@ -82,10 +82,10 @@ final class TopBar: NSView {
     private func style(active: NSButton) {
         for b in [shot, rec] {
             let on = b === active
-            b.layer?.backgroundColor = on ? Theme.lime.cgColor : nil
-            b.contentTintColor = on ? Theme.onLime : Theme.text
+            b.layer?.backgroundColor = on ? Theme.purple.cgColor : nil
+            b.contentTintColor = on ? Theme.onPurple : Theme.text
             b.attributedTitle = NSAttributedString(string: " " + b.title.trimmingCharacters(in: .whitespaces), attributes: [
-                .foregroundColor: on ? Theme.onLime : Theme.text,
+                .foregroundColor: on ? Theme.onPurple : Theme.text,
                 .font: NSFont.systemFont(ofSize: 14.5, weight: .semibold),
             ])
         }
