@@ -131,8 +131,8 @@ struct ClipCardView: View {
                 .padding(.horizontal, 10).padding(.vertical, 4)
                 .background(Color.lime, in: Capsule())
             }
-            Text(note == nil ? kindLabel : "\(kindLabel) ·").font(.system(size: 13)).foregroundStyle(Color.shelfMuted)
-            if let note { tag(note, color: Color.shelfMuted.opacity(0.6), ink: Color.shelfMuted) }
+            tag(kindLabel, color: Color(nsColor: tagColor))
+            if let note { Text(note).font(.system(size: 13)).foregroundStyle(Color.shelfMuted).lineLimit(1) }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)

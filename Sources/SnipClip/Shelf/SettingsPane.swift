@@ -39,13 +39,24 @@ struct SettingsPane: View {
                         }
                         section("剪贴板") {
                             row("未 Pin 的内容保留") {
-                                Picker("", selection: $prefs.retentionDays) {
-                                    Text("到次日 04:00").tag(1); Text("3 天").tag(3); Text("7 天").tag(7); Text("30 天").tag(30)
+                                HStack(spacing: 4) {
+                                    ForEach([(1, "次日 04:00"), (3, "3 天"), (7, "7 天"), (30, "30 天")], id: \.0) { days, label in
+                                        let on = prefs.retentionDays == days
+                                        Button { prefs.retentionDays = days } label: {
+                                            Text(label).font(.system(size: 12.5, weight: on ? .semibold : .medium))
+                                                .foregroundStyle(on ? Color.onPurple : Color.shelfInk)
+                                                .padding(.horizontal, 11).padding(.vertical, 6)
+                                                .background(on ? Color.purple : Color.white.opacity(0.06), in: Capsule())
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
                                 }
-                                .labelsHidden().frame(width: 150)
+                                .padding(3)
+                                .background(Color.black.opacity(0.25), in: Capsule())
+                                .overlay(Capsule().stroke(Color.shelfBorder, lineWidth: 1))
                             }
-                            row("图片自动识别文字（可按文字搜图）") { Toggle("", isOn: $prefs.ocrImages).labelsHidden().toggleStyle(.switch).tint(Color.lime) }
-                            row("暂停记录") { Toggle("", isOn: $prefs.paused).labelsHidden().toggleStyle(.switch).tint(Color.lime) }
+                            row("图片自动识别文字（可按文字搜图）") { Toggle("", isOn: $prefs.ocrImages).labelsHidden().toggleStyle(.switch).tint(Color.purple) }
+                            row("暂停记录") { Toggle("", isOn: $prefs.paused).labelsHidden().toggleStyle(.switch).tint(Color.purple) }
                             row("\(ClipStore.shared.items.count) 项，其中 Pin \(ClipStore.shared.items.filter(\.pinned).count) 项") {
                                 pill(cleared ? "已清空" : "清空未 Pin 的", disabled: cleared) {
                                     ClipStore.shared.removeAll { !$0.pinned }
@@ -64,12 +75,12 @@ struct SettingsPane: View {
                             }
                         }
                         section("系统") {
-                            row("登录时启动") { Toggle("", isOn: $prefs.launchAtLogin).labelsHidden().toggleStyle(.switch).tint(Color.lime) }
+                            row("登录时启动") { Toggle("", isOn: $prefs.launchAtLogin).labelsHidden().toggleStyle(.switch).tint(Color.purple) }
                             if let e = prefs.loginError { Text(e).font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.tagMP4)).padding(.horizontal, 16) }
                             row("屏幕录制权限（截图、录屏需要）") {
                                 HStack(spacing: 8) {
                                     Text(Permissions.hasScreenRecording ? "已授权" : "未授权")
-                                        .font(.system(size: 12)).foregroundStyle(Permissions.hasScreenRecording ? Color.lime : Color(nsColor: Theme.tagMP4))
+                                        .font(.system(size: 12)).foregroundStyle(Permissions.hasScreenRecording ? Color.purple : Color(nsColor: Theme.tagMP4))
                                     pill("系统设置") { Permissions.openSettings("Privacy_ScreenCapture") }
                                 }
                             }

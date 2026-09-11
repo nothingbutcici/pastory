@@ -108,7 +108,7 @@ struct ShelfView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass").font(.system(size: 14)).foregroundStyle(Color.shelfMuted)
                     ZStack(alignment: .leading) {
-                        if model.query.isEmpty {
+                        if model.query.isEmpty && !searchFocused {
                             Text("搜索剪贴板").font(.system(size: 14)).foregroundColor(Color.shelfMuted).allowsHitTesting(false)
                         }
                         TextField("", text: $model.query)

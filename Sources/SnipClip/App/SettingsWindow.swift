@@ -57,10 +57,10 @@ struct ShortcutRecorder: View {
             Button { capturing ? stop(nil) : startCapture() } label: {
                 Text(capturing ? "按下组合键…" : shortcut.display)
                     .font(.system(size: 13, weight: .medium).monospaced())
-                    .foregroundStyle(capturing ? Color(nsColor: Theme.onLime) : Color.shelfInk)
+                    .foregroundStyle(capturing ? Color.onPurple : Color.shelfInk)
                     .frame(minWidth: 110)
                     .padding(.horizontal, 12).padding(.vertical, 7)
-                    .background(capturing ? Color.lime : Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+                    .background(capturing ? Color.purple : Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(taken ? Color(nsColor: Theme.tagMP4) : Color.shelfBorder, lineWidth: 1))
             }
             .buttonStyle(.plain)
