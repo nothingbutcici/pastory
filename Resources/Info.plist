@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>Snip Clip</string>
+    <string>Pastory</string>
     <key>CFBundleDisplayName</key>
-    <string>Snip Clip</string>
+    <string>Pastory</string>
     <key>CFBundleExecutable</key>
-    <string>Snip Clip</string>
+    <string>Pastory</string>
     <key>CFBundleIdentifier</key>
     <string>com.cici.snipclip</string>
     <key>CFBundleInfoDictionaryVersion</key>

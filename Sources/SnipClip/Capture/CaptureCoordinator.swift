@@ -10,7 +10,7 @@ final class CaptureCoordinator: AnnotateDelegate {
     private var fullScale: CGFloat = 2
     private var recording: RecordingSession?
     private(set) var isBusy = false
-    static let source = ClipStore.Source(bundleID: "com.cici.snipclip", name: "Snip Clip")
+    static let source = ClipStore.Source(bundleID: "com.cici.snipclip", name: "Pastory")
 
     private init() {}
 

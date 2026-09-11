@@ -26,7 +26,7 @@ final class TopBar: NSView {
         logo.translatesAutoresizingMaskIntoConstraints = false
         logo.widthAnchor.constraint(equalToConstant: 32).isActive = true
         logo.heightAnchor.constraint(equalToConstant: 32).isActive = true
-        let name = NSTextField(labelWithString: "Snip Clip")
+        let name = NSTextField(labelWithString: "Pastory")
         name.font = NSFont.systemFont(ofSize: 17, weight: .bold)
         name.textColor = Theme.text
         let brand = NSStackView(views: [logo, name])

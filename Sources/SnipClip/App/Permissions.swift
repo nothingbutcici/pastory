@@ -21,8 +21,8 @@ enum Permissions {
         _ = requestScreenRecording()
         if hasScreenRecording { return true }
         let alert = NSAlert()
-        alert.messageText = "Snip Clip 还没有屏幕录制权限"
-        alert.informativeText = "打开「系统设置 › 隐私与安全性 › 屏幕录制」，勾选 Snip Clip，然后重新启动。"
+        alert.messageText = "Pastory 还没有屏幕录制权限"
+        alert.informativeText = "打开「系统设置 › 隐私与安全性 › 屏幕录制」，勾选 Pastory，然后重新启动。"
         alert.addButton(withTitle: "打开系统设置")
         alert.addButton(withTitle: "取消")
         NSApp.activate(ignoringOtherApps: true)

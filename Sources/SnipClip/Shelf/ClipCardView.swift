@@ -62,18 +62,26 @@ struct ClipCardView: View {
         if renaming {
             HStack(spacing: 8) {
                 Image(systemName: "tag").font(.system(size: 12)).foregroundStyle(Color.purple)
-                TextField("", text: $draftTitle, prompt: Text("输入标题").foregroundStyle(Color.shelfMuted))
-                    .textFieldStyle(.plain).font(.system(size: 14.5, weight: .semibold))
-                    .foregroundColor(Color.shelfInk).tint(Color.purple)
-                    .focused($titleFocused)
-                    .onSubmit { ClipStore.shared.setTitle(draftTitle, for: item.id); renaming = false }
+                ZStack(alignment: .leading) {
+                    if draftTitle.isEmpty {
+                        Text("输入标题，⏎ 保存").font(.system(size: 14, weight: .medium)).foregroundColor(Color.shelfMuted).allowsHitTesting(false)
+                    }
+                    TextField("", text: $draftTitle)
+                        .textFieldStyle(.plain).font(.system(size: 14.5, weight: .semibold))
+                        .foregroundColor(Color.shelfInk).tint(Color.purple)
+                        .focused($titleFocused)
+                        .onSubmit { ClipStore.shared.setTitle(draftTitle, for: item.id); renaming = false }
+                }
+                Button { renaming = false } label: {
+                    Image(systemName: "xmark.circle.fill").font(.system(size: 14)).foregroundStyle(Color.shelfMuted)
+                }
+                .buttonStyle(.plain).help("取消 ⎋")
             }
             .padding(.horizontal, 10).padding(.vertical, 6)
             .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.purple.opacity(0.7), lineWidth: 1))
             .padding(.horizontal, 14).padding(.bottom, 10)
             .onAppear { draftTitle = item.title ?? ""; titleFocused = true }
-            .onChange(of: titleFocused) { _, f in if !f, renaming { ClipStore.shared.setTitle(draftTitle, for: item.id); renaming = false } }
         } else if let t = item.title, !t.isEmpty {
             HStack(spacing: 6) {
                 Image(systemName: "tag.fill").font(.system(size: 11)).foregroundStyle(Color.purple)

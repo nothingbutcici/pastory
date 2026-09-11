@@ -1,4 +1,4 @@
-# Snip Clip
+# Pastory（代号 Snip Clip）
 
 macOS 菜单栏工具，截图 + 剪贴板货架合一。截图直接进剪贴板即可 ⌘V 发出去；
 所有复制过的内容（含截图）留在底部滑出的半屏货架里，可回看、固定、存到本地，
@@ -49,8 +49,8 @@ build/               构建产物，不进 git
 ## 构建
 
 ```bash
-./build.sh                      # 产出 build/Snip Clip.app
-open "build/Snip Clip.app"
+./build.sh                      # 产出 build/Pastory.app（bundle id 仍是 com.cici.snipclip，权限不丢）
+open "build/Pastory.app"
 ```
 
 签名顺序：钥匙串里有「Snip Clip Dev」用它；没有就复用 cc record 的「CC Record Dev」（同一台机器、同一用途，
@@ -60,7 +60,7 @@ open "build/Snip Clip.app"
 ## 自测
 
 ```bash
-BIN="./build/Snip Clip.app/Contents/MacOS/Snip Clip"
+BIN="./build/Pastory.app/Contents/MacOS/Pastory"
 "$BIN" --selftest capture <out.png>    # 截主屏全图，打印色彩空间；再用系统 screencapture 抽样比像素
 "$BIN" --selftest ocr [in.png]         # 不给路径则自绘一张中英文图，识别后核对关键词
 SNIPCLIP_STORE=/tmp/x "$BIN" --selftest clipboard 10   # 监听 10 秒，打印期间记录到的条目

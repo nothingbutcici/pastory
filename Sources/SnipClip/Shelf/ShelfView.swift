@@ -51,7 +51,7 @@ struct ShelfView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 12) {
                 if let logo = Theme.logo { Image(nsImage: logo).resizable().scaledToFit().frame(width: 56, height: 56) }
-                Text("Snip Clip").font(.system(size: 22, weight: .bold)).foregroundStyle(Color.shelfInk)
+                Text("Pastory").font(.system(size: 22, weight: .bold)).foregroundStyle(Color.shelfInk)
             }
             .padding(.horizontal, 22)
             .padding(.top, 22)
@@ -175,7 +175,8 @@ struct ShelfView: View {
                 LazyHStack(alignment: .top, spacing: 14) {
                     ForEach(items) { item in
                         ClipCardView(item: item, selected: item.id == model.selectedID, onClipboard: item.id == ClipStore.shared.items.first?.id,
-                                     renaming: Binding(get: { model.renamingID == item.id }, set: { model.renamingID = $0 ? item.id : nil }),
+                                     renaming: Binding(get: { model.renamingID == item.id },
+                                                       set: { if $0 { model.selectedID = item.id; model.renamingID = item.id } else if model.renamingID == item.id { model.renamingID = nil } }),
                                      onCopy: { model.copy(item) },
                                      onCopyAndClose: { model.copyAndClose(item) },
                                      onPreview: { model.selectedID = item.id; model.previewSelected() },

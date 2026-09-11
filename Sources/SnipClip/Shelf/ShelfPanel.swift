@@ -70,11 +70,15 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
     // MARK: Keys (only while visible)
 
     fileprivate func handle(_ event: NSEvent) -> Bool {
+        // A title box is open: everything goes to it, ⎋ closes it.
+        if model.renamingID != nil {
+            if Int(event.keyCode) == kVK_Escape { model.renamingID = nil; return true }
+            return false
+        }
         let typing = panel?.firstResponder is NSTextView
         let cmd = event.modifierFlags.contains(.command)
         switch Int(event.keyCode) {
         case kVK_Escape:
-            if model.renamingID != nil { model.renamingID = nil; return true }
             if typing, !model.query.isEmpty { model.query = ""; return true }
             if model.showSettings { model.showSettings = false; return true }
             hide(); return true
@@ -159,7 +163,12 @@ final class ShelfModel {
     /// Card whose title is being edited inline.
     var renamingID: String?
     var filter: ShelfFilter = .all
-    var selectedID: String? { didSet { ShelfPanelController.shared.quickLookSelectionChanged() } }
+    var selectedID: String? {
+        didSet {
+            ShelfPanelController.shared.quickLookSelectionChanged()
+            if let r = renamingID, r != selectedID { renamingID = nil }     // moving on cancels an open title box
+        }
+    }
     var focusSearch = 0
     /// Card order is frozen while the shelf is open, so copying (which bumps the item in the store)
     /// does not make cards jump around. Rebuilt on every show.

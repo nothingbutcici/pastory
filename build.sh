@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds "Snip Clip.app". SIGN_ID=<Developer ID> keeps the screen-recording
+# Builds "Pastory.app". SIGN_ID=<Developer ID> keeps the screen-recording
 # permission across rebuilds; the ad-hoc default resets it every time.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -20,10 +20,10 @@ fi
 swift build -c "$CONFIG"
 BIN="$(swift build -c "$CONFIG" --show-bin-path)/SnipClip"
 
-APP="build/Snip Clip.app"
+APP="build/Pastory.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN" "$APP/Contents/MacOS/Snip Clip"
+cp "$BIN" "$APP/Contents/MacOS/Pastory"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 for f in AppIcon.icns Logo.png Mascot.png; do
     [ -f "Resources/$f" ] && cp "Resources/$f" "$APP/Contents/Resources/$f"

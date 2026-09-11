@@ -10,7 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if SelfTest.handleCommandLine() { return }
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusItem.button?.image = NSImage(systemSymbolName: "scissors", accessibilityDescription: "Snip Clip")
+        statusItem.button?.image = NSImage(systemSymbolName: "scissors", accessibilityDescription: "Pastory")
         statusItem.button?.image?.isTemplate = true
         menu.delegate = self
         statusItem.button?.target = self
@@ -71,7 +71,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         add(menu, "打开存储文件夹", #selector(menuOpenStore))
         menu.addItem(.separator())
         add(menu, "设置…", #selector(menuSettings), keyEquivalent: ",")
-        add(menu, "退出 Snip Clip", #selector(menuQuit), keyEquivalent: "q")
+        add(menu, "退出 Pastory", #selector(menuQuit), keyEquivalent: "q")
     }
 
     /// Menu-bar apps get no menu for free; without an Edit menu, ⌘V/⌘C are dead in every text field.
@@ -79,7 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let main = NSMenu()
         let appItem = NSMenuItem()
         let appMenu = NSMenu()
-        let quitItem = NSMenuItem(title: "退出 Snip Clip", action: #selector(menuQuit), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: "退出 Pastory", action: #selector(menuQuit), keyEquivalent: "q")
         quitItem.target = self
         appMenu.addItem(quitItem)
         appItem.submenu = appMenu
