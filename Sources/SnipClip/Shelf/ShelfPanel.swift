@@ -23,7 +23,7 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
         let p = panel ?? makePanel()
         panel = p
         let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main ?? NSScreen.screens[0]
-        let height = max(380, (screen.frame.height * 0.36).rounded())
+        let height = max(420, (screen.frame.height * 0.55).rounded())
         let target = CGRect(x: screen.frame.minX, y: screen.frame.minY, width: screen.frame.width, height: height)
         let start = target.offsetBy(dx: 0, dy: -height)
         model.reset()
