@@ -51,7 +51,11 @@ final class ImageEditorWindow: NSObject, NSWindowDelegate, AnnotateDelegate {
         window.center()
 
         let content = GridBackdropView(frame: rect)
-        canvas = AnnotateView(frame: CGRect(x: ((rect.width - canvasSize.width) / 2).rounded(), y: barH + 20, width: canvasSize.width, height: canvasSize.height), image: image)
+        let canvasFrame = CGRect(x: ((rect.width - canvasSize.width) / 2).rounded(), y: barH + 20, width: canvasSize.width, height: canvasSize.height)
+        // A light frame + shadow behind the picture, so a dark image still reads against the dark ground.
+        let border = CanvasFrameView(frame: canvasFrame.insetBy(dx: -2, dy: -2))
+        content.addSubview(border)
+        canvas = AnnotateView(frame: canvasFrame, image: image)
         canvas.delegate = self
         content.addSubview(canvas)
         toolbar = AnnotateToolbar(canvas: canvas, doneTitle: "保存")
@@ -88,4 +92,21 @@ final class ImageEditorWindow: NSObject, NSWindowDelegate, AnnotateDelegate {
         Self.open[item.id] = nil
         ShelfPanelController.shared.show()
     }
+}
+
+/// Thin light outline with a soft shadow; marks where the canvas ends.
+final class CanvasFrameView: NSView {
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        layer?.borderWidth = 1.5
+        layer?.borderColor = NSColor(calibratedWhite: 1, alpha: 0.35).cgColor
+        layer?.cornerRadius = 3
+        shadow = NSShadow()
+        shadow?.shadowColor = NSColor(calibratedWhite: 0, alpha: 0.6)
+        shadow?.shadowBlurRadius = 18
+        shadow?.shadowOffset = CGSize(width: 0, height: -4)
+        layer?.backgroundColor = NSColor(calibratedWhite: 1, alpha: 0.06).cgColor
+    }
+    required init?(coder: NSCoder) { fatalError() }
 }
