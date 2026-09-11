@@ -119,39 +119,52 @@ struct ClipCardView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
-    /// One row: outlined kind tag on the left, solid lime 已复制 on the right when this is on the clipboard.
+    /// One left-aligned row: [✓ 已复制] [类型] [备注]
     private var captionRow: some View {
-        HStack(spacing: 8) {
-            Text(caption)
-                .font(.system(size: 12.5, weight: .regular)).foregroundStyle(Color.shelfMuted)
-                .padding(.horizontal, 10).padding(.vertical, 4)
-                .overlay(Capsule().stroke(Color(nsColor: tagColor), lineWidth: 1))
-                .lineLimit(1)
-            Spacer(minLength: 0)
+        HStack(spacing: 6) {
             if onClipboard {
-                HStack(spacing: 5) {
-                    ZStack {
-                        Circle().fill(.white).frame(width: 14, height: 14)
-                        Image(systemName: "checkmark").font(.system(size: 8, weight: .heavy)).foregroundStyle(.black)
-                    }
-                    Text("已复制").font(.system(size: 12.5, weight: .semibold)).foregroundStyle(Color(nsColor: Theme.onLime))
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark").font(.system(size: 10, weight: .bold))
+                    Text("已复制").font(.system(size: 12.5, weight: .semibold))
                 }
-                .padding(.leading, 6).padding(.trailing, 11).padding(.vertical, 4)
+                .foregroundStyle(Color(nsColor: Theme.onLime))
+                .padding(.horizontal, 10).padding(.vertical, 4)
                 .background(Color.lime, in: Capsule())
             }
+            tag(kindLabel, color: Color(nsColor: tagColor))
+            if let note { tag(note, color: Color.shelfMuted.opacity(0.7), ink: Color.shelfMuted) }
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
         .padding(.top, 12)
         .padding(.bottom, 12)
     }
 
-    private var caption: String {
+    private func tag(_ text: String, color: Color, ink: Color? = nil) -> some View {
+        Text(text)
+            .font(.system(size: 12.5)).foregroundStyle(ink ?? color)
+            .padding(.horizontal, 10).padding(.vertical, 4)
+            .overlay(Capsule().stroke(color, lineWidth: 1))
+            .lineLimit(1)
+    }
+
+    private var kindLabel: String {
         switch item.kind {
-        case .image: return "图片 · \(item.snippet.replacingOccurrences(of: "×", with: " × "))"
-        case .text: return "文本 · \(charCount) 字"
+        case .image: return "图片"
+        case .text: return "文本"
         case .url: return "链接"
-        case .files: return "文件 · \(item.snippet.split(separator: "\n").count) 项"
-        case .video: return "\(item.ext.uppercased()) · \(durationText)"
+        case .files: return "文件"
+        case .video: return item.ext.uppercased()
+        }
+    }
+
+    private var note: String? {
+        switch item.kind {
+        case .image: return item.snippet.replacingOccurrences(of: "×", with: " × ")
+        case .text: return "\(charCount) 字"
+        case .url: return nil
+        case .files: return "\(item.snippet.split(separator: "\n").count) 项"
+        case .video: return durationText
         }
     }
 

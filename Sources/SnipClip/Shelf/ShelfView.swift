@@ -43,11 +43,11 @@ struct ShelfView: View {
 
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
-            VStack(spacing: 8) {
-                if let logo = Theme.logo { Image(nsImage: logo).resizable().scaledToFit().frame(width: 72, height: 72) }
+            // Everything in the sidebar hangs off the same left edge.
+            VStack(alignment: .leading, spacing: 10) {
+                if let logo = Theme.logo { Image(nsImage: logo).resizable().scaledToFit().frame(width: 64, height: 64) }
                 Text("Snip Clip").font(.system(size: 20, weight: .bold)).foregroundStyle(Color.shelfInk)
             }
-            .frame(maxWidth: .infinity)
             .padding(.top, 26)
             .padding(.bottom, 38)
             Text("今日暂存").font(.system(size: 27, weight: .bold)).foregroundStyle(Color.shelfInk)
@@ -55,7 +55,7 @@ struct ShelfView: View {
             Spacer()
             if let m = Theme.mascot {
                 Image(nsImage: m).resizable().scaledToFit().frame(width: 132, height: 132)
-                    .frame(maxWidth: .infinity)
+                    .padding(.leading, -6)
                     .padding(.bottom, 14)
             }
             HStack(spacing: 7) {
