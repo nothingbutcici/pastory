@@ -1,14 +1,14 @@
 import AppKit
 
 /// White island under the selection, Excalidraw-style:
-/// select · rect · ellipse · arrow · line · pen · text · mosaic │ colors │ S M L · dashed │ 识别文字 · undo │ ✕ ✓
+/// rect · ellipse · arrow · line · pen · text · mosaic │ colors │ S M L · dashed │ 识别文字 │ ✕ ✓
+/// No select tool and no undo button: clicking a drawn element selects it (drag, handles, ✕), ⌘Z still undoes.
 final class AnnotateToolbar: NSView {
     private unowned let canvas: AnnotateView
     private var toolButtons: [AnnotateTool: NSButton] = [:]
     private var colorButtons: [NSButton] = []
     private var sizeButtons: [StrokeSize: NSButton] = [:]
     private var dashButton: NSButton!
-    private var undoButton: NSButton!
     private let stack = NSStackView()
 
     private static let ink = NSColor(srgbRed: 0.11, green: 0.11, blue: 0.12, alpha: 1)
@@ -101,8 +101,6 @@ final class AnnotateToolbar: NSView {
         stack.addArrangedSubview(dashButton)
         stack.addArrangedSubview(divider())
         stack.addArrangedSubview(textButton("识别文字", action: #selector(ocr)))
-        undoButton = iconButton(NSImage(systemSymbolName: "arrow.uturn.backward", accessibilityDescription: nil)!, tip: "撤销 ⌘Z", action: #selector(undo))
-        stack.addArrangedSubview(undoButton)
         stack.addArrangedSubview(divider())
         let cancel = iconButton(NSImage(systemSymbolName: "xmark", accessibilityDescription: nil)!, tip: "取消 ⎋", action: #selector(cancel))
         stack.addArrangedSubview(cancel)
@@ -170,8 +168,6 @@ final class AnnotateToolbar: NSView {
         }
         dashButton.layer?.backgroundColor = canvas.dashed ? Self.selectedBG.cgColor : nil
         dashButton.contentTintColor = canvas.dashed ? Self.selectedInk : Self.ink
-        undoButton.isEnabled = canvas.canUndo
-        undoButton.alphaValue = canvas.canUndo ? 1 : 0.3
     }
 
     @objc private func pickTool(_ sender: NSButton) { canvas.tool = AnnotateTool.allCases[sender.tag] }
@@ -179,7 +175,6 @@ final class AnnotateToolbar: NSView {
     @objc private func pickSize(_ sender: NSButton) { canvas.size = StrokeSize(rawValue: sender.tag) ?? .m }
     @objc private func toggleDash() { canvas.dashed.toggle() }
     @objc private func ocr() { canvas.requestOCR() }
-    @objc private func undo() { canvas.undo() }
     @objc private func cancel() { canvas.cancel() }
     @objc private func done() { canvas.finish() }
 
@@ -191,11 +186,6 @@ final class AnnotateToolbar: NSView {
 enum ToolIcons {
     static func image(for tool: AnnotateTool) -> NSImage {
         switch tool {
-        case .select: return make { p in
-            p.move(to: CGPoint(x: 4, y: 3)); p.line(to: CGPoint(x: 4, y: 15)); p.line(to: CGPoint(x: 7.2, y: 12.2))
-            p.line(to: CGPoint(x: 9.5, y: 16.5)); p.line(to: CGPoint(x: 11.5, y: 15.5)); p.line(to: CGPoint(x: 9.3, y: 11.3))
-            p.line(to: CGPoint(x: 13.5, y: 11)); p.close()
-        }
         case .rect: return make { p in p.appendRoundedRect(CGRect(x: 2.5, y: 4, width: 13, height: 10), xRadius: 2.5, yRadius: 2.5) }
         case .ellipse: return make { p in p.appendOval(in: CGRect(x: 2.5, y: 3.5, width: 13, height: 11)) }
         case .arrow: return make { p in

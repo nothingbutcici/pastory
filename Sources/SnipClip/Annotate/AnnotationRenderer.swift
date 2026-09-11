@@ -33,8 +33,6 @@ enum AnnotationRenderer {
         if a.dashed { ctx.setLineDash(phase: 0, lengths: [a.size.lineWidth * 3.5, a.size.lineWidth * 3]) }
         var rng = Seeded(a.seed)
         switch a.tool {
-        case .select:
-            break
         case .rect:
             let r = a.rect
             let radius = min(12, min(r.width, r.height) * 0.2)
@@ -169,21 +167,47 @@ enum AnnotationRenderer {
         ctx.restoreGState()
     }
 
-    /// Dashed box + corner dots around the selected annotation (live view only).
+    static let handleRadius: CGFloat = 4.5
+    static let deleteRadius: CGFloat = 9
+
+    /// Where the little ✕ sits for a selected annotation: just outside its top-right corner.
+    static func deleteCenter(_ a: Annotation) -> CGPoint {
+        let r = a.bounds.insetBy(dx: -8, dy: -8)
+        return CGPoint(x: r.maxX + 4, y: r.minY - 4)
+    }
+
+    /// Selection chrome (live view only): dashed box for boxes/text/pen, handles, and a delete bubble.
     static func drawSelection(_ a: Annotation, in ctx: CGContext) {
-        let r = a.bounds.insetBy(dx: -6, dy: -6)
         ctx.saveGState()
         ctx.setStrokeColor(AnnotatePalette.accent.cgColor)
         ctx.setLineWidth(1)
-        ctx.setLineDash(phase: 0, lengths: [4, 3])
-        ctx.stroke(r)
-        ctx.setLineDash(phase: 0, lengths: [])
+        if a.tool != .arrow && a.tool != .line {
+            ctx.setLineDash(phase: 0, lengths: [4, 3])
+            ctx.stroke(a.bounds.insetBy(dx: -8, dy: -8))
+            ctx.setLineDash(phase: 0, lengths: [])
+        }
         ctx.setFillColor(NSColor.white.cgColor)
-        for p in [CGPoint(x: r.minX, y: r.minY), CGPoint(x: r.maxX, y: r.minY), CGPoint(x: r.minX, y: r.maxY), CGPoint(x: r.maxX, y: r.maxY)] {
-            let d = CGRect(x: p.x - 3.5, y: p.y - 3.5, width: 7, height: 7)
+        ctx.setLineWidth(1.5)
+        for p in a.handles {
+            let d = CGRect(x: p.x - handleRadius, y: p.y - handleRadius, width: 2 * handleRadius, height: 2 * handleRadius)
             ctx.fillEllipse(in: d)
             ctx.strokeEllipse(in: d)
         }
+        // Delete bubble.
+        let c = deleteCenter(a)
+        let d = CGRect(x: c.x - deleteRadius, y: c.y - deleteRadius, width: 2 * deleteRadius, height: 2 * deleteRadius)
+        ctx.setFillColor(NSColor.white.cgColor)
+        ctx.setStrokeColor(NSColor(calibratedWhite: 0, alpha: 0.18).cgColor)
+        ctx.setLineWidth(1)
+        ctx.fillEllipse(in: d)
+        ctx.strokeEllipse(in: d)
+        ctx.setStrokeColor(NSColor(srgbRed: 0.88, green: 0.20, blue: 0.20, alpha: 1).cgColor)
+        ctx.setLineWidth(1.6)
+        ctx.setLineCap(.round)
+        let k: CGFloat = 3.2
+        ctx.move(to: CGPoint(x: c.x - k, y: c.y - k)); ctx.addLine(to: CGPoint(x: c.x + k, y: c.y + k))
+        ctx.move(to: CGPoint(x: c.x + k, y: c.y - k)); ctx.addLine(to: CGPoint(x: c.x - k, y: c.y + k))
+        ctx.strokePath()
         ctx.restoreGState()
     }
 }

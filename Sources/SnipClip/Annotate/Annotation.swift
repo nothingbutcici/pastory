@@ -1,11 +1,10 @@
 import AppKit
 
 enum AnnotateTool: CaseIterable {
-    case select, rect, ellipse, arrow, line, pen, text, mosaic
+    case rect, ellipse, arrow, line, pen, text, mosaic
 
     var tip: String {
         switch self {
-        case .select: return "选择 / 移动  V"
         case .rect: return "矩形  R"
         case .ellipse: return "椭圆  O"
         case .arrow: return "箭头  A"
@@ -18,7 +17,6 @@ enum AnnotateTool: CaseIterable {
     /// Single-key shortcut (Excalidraw-style).
     var key: Character {
         switch self {
-        case .select: return "v"
         case .rect: return "r"
         case .ellipse: return "o"
         case .arrow: return "a"
@@ -28,7 +26,6 @@ enum AnnotateTool: CaseIterable {
         case .mosaic: return "m"
         }
     }
-    var isShape: Bool { self != .select }
 }
 
 /// One size control for everything: stroke width for shapes, font size for text.
@@ -89,7 +86,8 @@ struct Annotation: Identifiable {
         points = points.map { CGPoint(x: $0.x + d.x, y: $0.y + d.y) }
     }
 
-    /// Generous hit test: near the stroke for open shapes, inside the box for the rest.
+    /// Hit test near the stroke (so you can still start a new shape inside an old rectangle);
+    /// mosaic and text hit anywhere inside.
     func hit(_ p: CGPoint) -> Bool {
         let slop: CGFloat = 8
         switch tool {
@@ -99,8 +97,46 @@ struct Annotation: Identifiable {
         case .pen:
             for i in 1..<max(1, points.count) where Self.distance(p, toSegment: points[i - 1], points[i]) <= slop { return true }
             return false
-        default:
+        case .rect:
+            let r = rect
+            return r.insetBy(dx: -slop, dy: -slop).contains(p) && !r.insetBy(dx: slop, dy: slop).contains(p)
+        case .ellipse:
+            let r = rect
+            let a = max(1, r.width / 2), b = max(1, r.height / 2)
+            let dx = (p.x - r.midX) / a, dy = (p.y - r.midY) / b
+            let d = sqrt(dx * dx + dy * dy)
+            return abs(d - 1) * min(a, b) <= slop
+        case .mosaic, .text:
             return bounds.insetBy(dx: -slop, dy: -slop).contains(p)
+        }
+    }
+
+    /// Draggable control points: both ends for lines, four corners for boxes, none for pen/text.
+    var handles: [CGPoint] {
+        switch tool {
+        case .arrow, .line:
+            guard points.count >= 2 else { return [] }
+            return [points[0], points[points.count - 1]]
+        case .rect, .ellipse, .mosaic:
+            let r = rect
+            return [CGPoint(x: r.minX, y: r.minY), CGPoint(x: r.maxX, y: r.minY), CGPoint(x: r.minX, y: r.maxY), CGPoint(x: r.maxX, y: r.maxY)]
+        case .pen, .text:
+            return []
+        }
+    }
+
+    /// Move handle `i` to `p`; the opposite side stays put.
+    mutating func setHandle(_ i: Int, to p: CGPoint) {
+        switch tool {
+        case .arrow, .line:
+            if i == 0 { points[0] = p } else { points[points.count - 1] = p }
+        case .rect, .ellipse, .mosaic:
+            let h = handles
+            guard h.count == 4 else { return }
+            let opposite = h[3 - i]
+            points = [opposite, p]
+        default:
+            break
         }
     }
 

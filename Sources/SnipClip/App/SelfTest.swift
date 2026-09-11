@@ -240,6 +240,9 @@ enum SelfTest {
             Annotation(tool: .text, color: ink, size: .s, points: [CGPoint(x: 300, y: 32)], text: "Hello Snip Clip"),
         ], select: 0)
         guard snapshot(stage, to: out) else { return false }
+        // Second frame: the arrow selected, to check endpoint handles.
+        canvas.debugSet(canvas.annotations, select: 1)
+        _ = snapshot(stage, to: URL(fileURLWithPath: out).deletingPathExtension().appendingPathExtension("arrow.png").path)
         // Also the flattened export, at full pixel size.
         let flat = canvas.renderedImage()
         let flatURL = URL(fileURLWithPath: out).deletingPathExtension().appendingPathExtension("flat.png")

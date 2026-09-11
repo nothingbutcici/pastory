@@ -9,22 +9,28 @@ protocol AnnotateDelegate: AnyObject {
 }
 
 /// The frozen capture with vector annotations on top. Flipped: y grows downward, like the image.
-/// Excalidraw rules: drawing a shape selects it and drops you back into the select tool,
-/// where you can drag things around; the pen stays active for multiple strokes.
+/// The current tool stays active. Clicking a drawn element selects it instead of drawing:
+/// drag to move, pull a handle to reshape, hit the ✕ bubble or ⌫ to delete, click selected text to edit it.
 final class AnnotateView: NSView, NSTextFieldDelegate {
     let image: CGImage
     private let nsImage: NSImage
     weak var delegate: AnnotateDelegate?
     var onStateChange: (() -> Void)?
 
-    var tool: AnnotateTool = .rect { didSet { commitTextEditor(); if tool != .select { selectedID = nil }; window?.invalidateCursorRects(for: self); onStateChange?() } }
+    var tool: AnnotateTool = .rect { didSet { commitTextEditor(); window?.invalidateCursorRects(for: self); onStateChange?() } }
     var color: NSColor = AnnotatePalette.colors[1] { didSet { applyToSelected { $0.color = color } } }
     var size: StrokeSize = .m { didSet { applyToSelected { $0.size = size } } }
     var dashed = false { didSet { applyToSelected { $0.dashed = dashed } } }
     private(set) var annotations: [Annotation] = [] { didSet { needsDisplay = true; onStateChange?() } }
     private var draft: Annotation?
     private(set) var selectedID: UUID? { didSet { needsDisplay = true; onStateChange?() } }
-    private var dragLast: CGPoint?
+
+    private enum Drag { case move(last: CGPoint), handle(Int) }
+    private var drag: Drag?
+    private var moved = false
+    /// Set when a click lands on already-selected text; becomes an edit if the mouse does not move.
+    private var pendingEdit: UUID?
+
     private var editor: NSTextField?
     private var editorAnchor: CGPoint = .zero
     private var editingID: UUID?
@@ -39,13 +45,11 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
 
     override var isFlipped: Bool { true }
     override var acceptsFirstResponder: Bool { true }
-    override func resetCursorRects() {
-        let c: NSCursor = tool == .select ? .arrow : (tool == .text ? .iBeam : .crosshair)
-        addCursorRect(bounds, cursor: c)
-    }
+    override func resetCursorRects() { addCursorRect(bounds, cursor: tool == .text ? .iBeam : .crosshair) }
 
     var canUndo: Bool { !annotations.isEmpty }
     var hasSelection: Bool { selectedID != nil }
+    private var selectedIndex: Int? { selectedID.flatMap { id in annotations.firstIndex { $0.id == id } } }
 
     func undo() {
         commitTextEditor()
@@ -60,7 +64,7 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
     }
 
     private func applyToSelected(_ change: (inout Annotation) -> Void) {
-        if let id = selectedID, let i = annotations.firstIndex(where: { $0.id == id }) { change(&annotations[i]) }
+        if let i = selectedIndex { change(&annotations[i]) }
         onStateChange?()
     }
 
@@ -77,7 +81,7 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
     /// Self-test only.
     func debugSet(_ list: [Annotation], select: Int? = nil) {
         annotations = list
-        if let select, list.indices.contains(select) { selectedID = list[select].id; tool = .select }
+        if let select, list.indices.contains(select) { selectedID = list[select].id }
     }
 
     // MARK: Drawing
@@ -88,7 +92,7 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
         let ppp = CGFloat(image.width) / bounds.width
         for a in annotations where a.id != editingID { AnnotationRenderer.draw(a, in: ctx, source: image, pixelsPerPoint: ppp) }
         if let draft { AnnotationRenderer.draw(draft, in: ctx, source: image, pixelsPerPoint: ppp) }
-        if let id = selectedID, let a = annotations.first(where: { $0.id == id }) { AnnotationRenderer.drawSelection(a, in: ctx) }
+        if let i = selectedIndex, editingID == nil { AnnotationRenderer.drawSelection(annotations[i], in: ctx) }
     }
 
     // MARK: Mouse
@@ -97,21 +101,33 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
         window?.makeFirstResponder(self)
         let p = convert(event.locationInWindow, from: nil)
         if editor != nil { commitTextEditor() }
-        switch tool {
-        case .select:
-            if let hitIndex = annotations.lastIndex(where: { $0.hit(p) }) {
-                let a = annotations[hitIndex]
-                if event.clickCount == 2, a.tool == .text { editText(a); return }
-                selectedID = a.id
-                dragLast = p
-            } else {
-                selectedID = nil
-                if event.clickCount == 2 { finish() }
+        moved = false
+        pendingEdit = nil
+
+        // 1. Chrome of the current selection: delete bubble, handles.
+        if let i = selectedIndex {
+            let a = annotations[i]
+            let c = AnnotationRenderer.deleteCenter(a)
+            if hypot(p.x - c.x, p.y - c.y) <= AnnotationRenderer.deleteRadius + 2 { deleteSelected(); return }
+            if let h = a.handles.firstIndex(where: { hypot(p.x - $0.x, p.y - $0.y) <= AnnotationRenderer.handleRadius + 4 }) {
+                drag = .handle(h)
+                return
             }
-        case .text:
+        }
+        // 2. An existing element under the cursor: select it (and maybe edit text).
+        if let hitIndex = annotations.lastIndex(where: { $0.hit(p) }) {
+            let a = annotations[hitIndex]
+            if a.tool == .text, selectedID == a.id || event.clickCount == 2 { pendingEdit = a.id }
+            selectedID = a.id
+            drag = .move(last: p)
+            return
+        }
+        // 3. Empty space: deselect; double-click finishes; otherwise start drawing.
+        if selectedID != nil { selectedID = nil; if event.clickCount == 2 { return } }
+        if event.clickCount == 2, draft == nil { finish(); return }
+        if tool == .text {
             beginTextEditor(at: p, text: "", replacing: nil)
-        default:
-            if event.clickCount == 2, draft == nil { finish(); return }
+        } else {
             draft = Annotation(tool: tool, color: color, size: size, dashed: dashed, points: [p, p])
         }
     }
@@ -119,28 +135,33 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
     override func mouseDragged(with event: NSEvent) {
         var p = convert(event.locationInWindow, from: nil)
         p.x = min(max(0, p.x), bounds.width); p.y = min(max(0, p.y), bounds.height)
+        moved = true
         if var d = draft {
             if d.tool == .pen { d.points.append(p) } else { d.points[1] = p }
             draft = d
             needsDisplay = true
-        } else if let last = dragLast, let id = selectedID, let i = annotations.firstIndex(where: { $0.id == id }) {
+            return
+        }
+        guard let i = selectedIndex, let drag else { return }
+        switch drag {
+        case .move(let last):
             annotations[i].translate(CGPoint(x: p.x - last.x, y: p.y - last.y))
-            dragLast = p
+            self.drag = .move(last: p)
+        case .handle(let h):
+            annotations[i].setHandle(h, to: p)
         }
     }
 
     override func mouseUp(with event: NSEvent) {
-        dragLast = nil
+        defer { drag = nil; pendingEdit = nil }
+        if let id = pendingEdit, !moved, let a = annotations.first(where: { $0.id == id }) { editText(a); return }
         guard let d = draft else { return }
         draft = nil
         let r = d.rect
         let big = d.tool == .pen ? d.points.count > 1 : (r.width > 2 || r.height > 2)
         guard big else { needsDisplay = true; return }
         annotations.append(d)
-        if d.tool != .pen {
-            tool = .select
-            selectedID = d.id
-        }
+        selectedID = d.tool == .pen ? nil : d.id
     }
 
     // MARK: Keys
@@ -150,7 +171,7 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
         switch Int(event.keyCode) {
         case kVK_Return, kVK_ANSI_KeypadEnter: finish(); return
         case kVK_Escape:
-            if selectedID != nil { selectedID = nil; tool = .select } else { cancel() }
+            if selectedID != nil { selectedID = nil } else { cancel() }
             return
         case kVK_ANSI_Z where cmd: undo(); return
         case kVK_Delete, kVK_ForwardDelete: deleteSelected(); return
@@ -212,14 +233,13 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
         let replacing = editingID
         editingID = nil
         if let replacing, let i = annotations.firstIndex(where: { $0.id == replacing }) {
-            if text.isEmpty { annotations.remove(at: i) } else { annotations[i].text = text; annotations[i].points = [editorAnchor] }
+            if text.isEmpty { annotations.remove(at: i); selectedID = nil } else { annotations[i].text = text; annotations[i].points = [editorAnchor] }
             needsDisplay = true
             return
         }
         if !text.isEmpty {
             let a = Annotation(tool: .text, color: color, size: size, points: [editorAnchor], text: text)
             annotations.append(a)
-            tool = .select
             selectedID = a.id
         }
     }
