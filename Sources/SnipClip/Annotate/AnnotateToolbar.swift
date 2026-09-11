@@ -1,7 +1,7 @@
 import AppKit
 
 /// White island under the selection, Excalidraw-style:
-/// rect · ellipse · arrow · line · pen · text · mosaic │ colors │ S M L · dashed │ 识别文字 │ ✕ ✓
+/// 录屏 │ rect · ellipse · arrow · line · pen · text · mosaic │ colors │ S M L · dashed │ 识别文字 │ ✕ ✓
 /// No select tool and no undo button: clicking a drawn element selects it (drag, handles, ✕), ⌘Z still undoes.
 final class AnnotateToolbar: NSView {
     private unowned let canvas: AnnotateView
@@ -47,6 +47,10 @@ final class AnnotateToolbar: NSView {
             stack.trailingAnchor.constraint(equalTo: trailingAnchor),
             stack.centerYAnchor.constraint(equalTo: centerYAnchor),
         ])
+        let rec = iconButton(ToolIcons.record(), tip: "录屏这块区域（MP4 / GIF）", action: #selector(record))
+        rec.contentTintColor = NSColor(srgbRed: 0.88, green: 0.20, blue: 0.20, alpha: 1)
+        stack.addArrangedSubview(rec)
+        stack.addArrangedSubview(divider())
         for t in AnnotateTool.allCases {
             let b = iconButton(ToolIcons.image(for: t), tip: t.tip, action: #selector(pickTool(_:)))
             b.tag = AnnotateTool.allCases.firstIndex(of: t)!
@@ -175,6 +179,7 @@ final class AnnotateToolbar: NSView {
     @objc private func pickSize(_ sender: NSButton) { canvas.size = StrokeSize(rawValue: sender.tag) ?? .m }
     @objc private func toggleDash() { canvas.dashed.toggle() }
     @objc private func ocr() { canvas.requestOCR() }
+    @objc private func record() { canvas.requestRecord() }
     @objc private func cancel() { canvas.cancel() }
     @objc private func done() { canvas.finish() }
 
@@ -216,6 +221,17 @@ enum ToolIcons {
             } }
             q.fill()
         }
+        }
+    }
+
+    /// Filled dot inside a ring: the record glyph.
+    static func record() -> NSImage {
+        make(fill: true) { p in
+            let ring = NSBezierPath(ovalIn: CGRect(x: 2.5, y: 2.5, width: 13, height: 13))
+            ring.lineWidth = 1.6
+            ring.stroke()
+            p.appendOval(in: CGRect(x: 6, y: 6, width: 6, height: 6))
+            p.fill()
         }
     }
 

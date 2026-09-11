@@ -13,7 +13,7 @@ build.sh             swift build → build/Snip Clip.app → codesign（自签�
 Resources/           Info.plist、entitlements、AppIcon.icns
 Sources/SnipClip/
   App/               入口、菜单栏、全局快捷键、权限、偏好、设置窗口
-  Capture/           ScreenCaptureKit 取图、框选覆盖层、坐标换算
+  Capture/           ScreenCaptureKit 取图、框选覆盖层、坐标换算、区域录屏（SCRecordingOutput → mp4，可转 GIF）
   Annotate/          截图标注：Excalidraw 风手绘渲染（选择/矩形/椭圆/箭头/直线/画笔/文字/马赛克），OCR 面板
   Clipboard/         NSPasteboard 监听、条目模型、JSON 索引 + 文件存储、保留期清理
   Shelf/             底部半屏货架：横向卡片、固定、保存到本地（Exporter 弹对话框）、搜索
@@ -35,6 +35,7 @@ build/               构建产物，不进 git
 | `items/<id>.txt` | 文本 / 链接正文；富文本另存 `<id>.rtf` |
 | `items/<id>.png` | 图片原图，带显示器色彩描述文件，不重编码 |
 | `items/<id>.json` | 文件条目：路径列表 |
+| `items/<id>.mp4` / `.gif` | 录屏本体 |
 | `thumbs/<id>.png` | 货架缩略图（长边 640 px） |
 
 不用 SQLite：条目量级是几百，Codable 读写整个索引就够。
@@ -66,6 +67,7 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest clipboard 10   # 监听 10 秒，打印�
 SNIPCLIP_STORE=/tmp/x "$BIN" --selftest retention      # 造今天 / 昨天 / 昨天固定 / 三天前，清理后核对存活
 SNIPCLIP_STORE=/tmp/x "$BIN" --selftest shelf <out.png>     # 离屏渲染货架面板（含 5 条样例）
 "$BIN" --selftest annotate <out.png>   # 离屏渲染标注画布 + 工具条，另存 <out>.flat.png 为合成结果
+"$BIN" --selftest gif                  # 合成 2 秒 mp4 → GIF，核对帧数与首帧
 ```
 
 后三个不需要屏幕录制权限，改 UI 后先看这两张图。
@@ -85,6 +87,10 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest shelf <out.png>     # 离屏渲染货架
 - **⇧⌘V 剪贴板**：底部滑出半屏货架，左 = 最新。单击卡片 = 复制回剪贴板并收起。
   ← → 选，⏎ 复制，P 固定，S 保存到本地（弹对话框选位置），⌫ 删除，⌘F 搜索，⎋ 关闭。
   卡片底栏常驻固定 / 保存 / 删除三个按钮，右键有完整菜单。
+- **录屏**：截图工具条最左边的红点。点了之后遮罩撤掉、选区外围留一圈紫框、下方一个小条（计时 / 停止 / 丢弃），
+  再按一次截图快捷键也是停止。30 帧 H.264、带光标、不录声音、上限 10 分钟。停止后选 MP4 或 GIF
+  （GIF 12 帧/秒、长边 800 像素，超过 30 秒会提示很大），文件进货架并以文件形式进剪贴板，可直接 ⌘V 发出去。
+  不做鼠标高亮、缩放、剪辑，那是 cc record 的事。
 - 菜单栏图标：左键开关货架，右键菜单（截图 / 暂停记录 / 打开存储文件夹 / 设置 / 退出）。
 - 设置：两个快捷键、保留期（默认到次日凌晨 4 点）、图片自动 OCR、保存位置、登录时启动。
 

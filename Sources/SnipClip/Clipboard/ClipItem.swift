@@ -1,7 +1,7 @@
 import Foundation
 
 enum ClipKind: String, Codable {
-    case text, url, image, files
+    case text, url, image, files, video
 
     var label: String {
         switch self {
@@ -9,6 +9,7 @@ enum ClipKind: String, Codable {
         case .url: return "链接"
         case .image: return "图片"
         case .files: return "文件"
+        case .video: return "录屏"
         }
     }
 }
@@ -23,12 +24,14 @@ struct ClipItem: Codable, Identifiable, Equatable {
     var snippet: String
     var ocrText: String?
     var pinned: Bool
-    /// Extension of items/<id>.<ext>: txt / png / json
+    /// Extension of items/<id>.<ext>: txt / png / json / mp4 / gif
     var ext: String
     var hasRTF: Bool
     var pixelWidth: Int?
     var pixelHeight: Int?
     var byteCount: Int
+    /// Seconds, for recordings.
+    var duration: Double?
     /// Hash of the payload, for de-duplicating back-to-back copies.
     var contentHash: Int
 

@@ -6,6 +6,7 @@ protocol AnnotateDelegate: AnyObject {
     func annotateDidFinish(_ image: CGImage)
     func annotateDidCancel()
     func annotateRequestOCR(_ image: CGImage)
+    func annotateRequestRecord()
 }
 
 /// The frozen capture with vector annotations on top. Flipped: y grows downward, like the image.
@@ -77,6 +78,7 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
     func finish() { delegate?.annotateDidFinish(renderedImage()) }
     func cancel() { delegate?.annotateDidCancel() }
     func requestOCR() { commitTextEditor(); delegate?.annotateRequestOCR(image) }
+    func requestRecord() { commitTextEditor(); delegate?.annotateRequestRecord() }
 
     /// Self-test only.
     func debugSet(_ list: [Annotation], select: Int? = nil) {

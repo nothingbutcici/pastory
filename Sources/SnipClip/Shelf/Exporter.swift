@@ -15,7 +15,7 @@ enum Exporter {
         NSApp.activate(ignoringOtherApps: true)
 
         switch item.kind {
-        case .image, .text, .url:
+        case .image, .text, .url, .video:
             let panel = NSSavePanel()
             panel.directoryURL = Preferences.shared.exportDirectory()
             panel.canCreateDirectories = true
@@ -23,6 +23,9 @@ enum Exporter {
             if item.kind == .image {
                 panel.nameFieldStringValue = "Snip \(stamp).png"
                 panel.allowedContentTypes = [.png]
+            } else if item.kind == .video {
+                panel.nameFieldStringValue = "Rec \(stamp).\(item.ext)"
+                panel.allowedContentTypes = [item.ext == "gif" ? .gif : .mpeg4Movie]
             } else {
                 panel.nameFieldStringValue = "Clip \(stamp).txt"
                 panel.allowedContentTypes = [.plainText]

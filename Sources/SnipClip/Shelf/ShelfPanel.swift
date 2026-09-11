@@ -99,7 +99,7 @@ final class ShelfPanel: NSPanel {
 }
 
 enum ShelfFilter: String, CaseIterable, Identifiable {
-    case all = "全部", pinned = "固定", images = "图片", text = "文本"
+    case all = "全部", pinned = "固定", images = "图片 / 录屏", text = "文本"
     var id: String { rawValue }
 }
 
@@ -117,7 +117,7 @@ final class ShelfModel {
             switch filter {
             case .all: break
             case .pinned: if !item.pinned { return false }
-            case .images: if item.kind != .image { return false }
+            case .images: if item.kind != .image && item.kind != .video { return false }
             case .text: if item.kind != .text && item.kind != .url { return false }
             }
             guard !q.isEmpty else { return true }

@@ -105,6 +105,9 @@ struct ShelfView: View {
         if item.kind == .files {
             Button("在 Finder 中显示") { NSWorkspace.shared.activateFileViewerSelecting(ClipStore.shared.fileURLs(of: item)) }
         }
+        if item.kind == .video {
+            Button("打开") { NSWorkspace.shared.open(ClipStore.shared.payloadURL(item)) }
+        }
         if item.kind == .image, let t = item.ocrText, !t.isEmpty {
             Button("复制识别出的文字") {
                 let it = ClipStore.shared.insertText(t, rtf: nil, source: CaptureCoordinator.source)

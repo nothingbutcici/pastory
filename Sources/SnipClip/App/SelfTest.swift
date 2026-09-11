@@ -17,8 +17,9 @@ enum SelfTest {
             case "capture": ok = await capture(out: rest.first ?? "snipclip-capture.png")
             case "ocr": ok = ocr(path: rest.first)
             case "clipboard": ok = await clipboard(seconds: Int(rest.first ?? "10") ?? 10)
-            case "shelf": ok = renderShelf(out: rest.first ?? "snipclip-shelf.png")
+            case "shelf": ok = await renderShelf(out: rest.first ?? "snipclip-shelf.png")
             case "retention": ok = retention()
+            case "gif": ok = await gif()
             case "annotate": ok = renderAnnotate(out: rest.first ?? "snipclip-annotate.png")
             default: print("unknown selftest \(cmd)")
             }
@@ -166,12 +167,44 @@ enum SelfTest {
         return ok
     }
 
+    /// Write a 2 s synthetic movie, encode to GIF, count frames.
+    @MainActor
+    private static func gif() async -> Bool {
+        let dir = FileManager.default.temporaryDirectory
+        let mov = dir.appendingPathComponent("snipclip-selftest.mp4")
+        let gifURL = dir.appendingPathComponent("snipclip-selftest.gif")
+        try? FileManager.default.removeItem(at: mov)
+        try? FileManager.default.removeItem(at: gifURL)
+        do {
+            try await SyntheticMovie.write(to: mov, size: CGSize(width: 640, height: 360), seconds: 2, fps: 30)
+            let t0 = Date()
+            try await GIFEncoder.encode(movie: mov, to: gifURL)
+            let ms = Int(Date().timeIntervalSince(t0) * 1000)
+            guard let src = CGImageSourceCreateWithURL(gifURL as CFURL, nil) else { print("gif unreadable"); return false }
+            let n = CGImageSourceGetCount(src)
+            let bytes = (try? FileManager.default.attributesOfItem(atPath: gifURL.path)[.size] as? Int) ?? 0
+            let first = CGImageSourceCreateImageAtIndex(src, 0, nil)
+            print("gif: \(n) frames, \(first?.width ?? 0)×\(first?.height ?? 0), \(bytes / 1024) KB, encoded in \(ms) ms → \(gifURL.path)")
+            let poster = await GIFEncoder.poster(movie: mov)
+            print("poster: \(poster.map { "\($0.width)×\($0.height)" } ?? "nil"), duration \(await GIFEncoder.duration(movie: mov))s")
+            return n >= 22 && n <= 26 && poster != nil
+        } catch {
+            print("gif selftest failed: \(error)"); return false
+        }
+    }
+
     // MARK: Offscreen UI renders (no screen-recording permission needed)
 
     @MainActor
-    private static func seedStore() {
+    private static func seedStore() async {
         let store = ClipStore.shared
         guard store.items.isEmpty else { return }
+        let mov = FileManager.default.temporaryDirectory.appendingPathComponent("snipclip-seed.mp4")
+        try? FileManager.default.removeItem(at: mov)
+        if (try? await SyntheticMovie.write(to: mov, size: CGSize(width: 1280, height: 720), seconds: 8, fps: 30)) != nil {
+            let poster = await GIFEncoder.poster(movie: mov)
+            store.insertVideo(tempFile: mov, poster: poster, duration: 8, source: CaptureCoordinator.source)
+        }
         let src = ClipStore.Source(bundleID: "com.apple.Safari", name: "Safari")
         store.insertText("会议纪要 9/11\n1. VM 首发时间定 8/5\n2. Big @ 主打功能演示要重录\n3. 达人投放链接统一走 ?tc=", rtf: nil, source: ClipStore.Source(bundleID: "com.apple.Notes", name: "备忘录"))
         store.insertText("https://github.com/nothingbutcici/session-library/pull/12", rtf: nil, source: src)
@@ -198,8 +231,8 @@ enum SelfTest {
     }
 
     @MainActor
-    private static func renderShelf(out: String) -> Bool {
-        seedStore()
+    private static func renderShelf(out: String) async -> Bool {
+        await seedStore()
         let model = ShelfPanelController.shared.model
         model.reset()
         let host = NSHostingView(rootView: ShelfView(model: model))

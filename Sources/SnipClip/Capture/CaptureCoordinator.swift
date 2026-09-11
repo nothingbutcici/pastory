@@ -5,12 +5,15 @@ import AppKit
 final class CaptureCoordinator: AnnotateDelegate {
     static let shared = CaptureCoordinator()
     private var snapshot: ShareableSnapshot?
+    private var pickedTarget: CaptureTarget?
+    private var recording: RecordingSession?
     private(set) var isBusy = false
     static let source = ClipStore.Source(bundleID: "com.cici.snipclip", name: "Snip Clip")
 
     private init() {}
 
     func start(mode: PickMode = .region) {
+        if let recording, recording.isRecording { recording.stop(); return }   // hotkey again = stop recording
         if isBusy { cancel(); return }      // pressing the hotkey again backs out
         guard Permissions.ensureScreenRecording() else { return }
         isBusy = true
@@ -31,6 +34,7 @@ final class CaptureCoordinator: AnnotateDelegate {
 
     private func picked(_ target: CaptureTarget?) {
         guard let target, let snapshot else { finish(); return }
+        pickedTarget = target
         Task { @MainActor in
             do {
                 let image = try await Screenshotter.capture(target, snapshot: snapshot)
@@ -42,7 +46,7 @@ final class CaptureCoordinator: AnnotateDelegate {
         }
     }
 
-    func cancel() { finish() }
+    func cancel() { if let recording { recording.cancel() } else { finish() } }
 
     // MARK: AnnotateDelegate
 
@@ -56,6 +60,19 @@ final class CaptureCoordinator: AnnotateDelegate {
 
     func annotateDidCancel() { finish() }
 
+    func annotateRequestRecord() {
+        guard let target = pickedTarget, let rect = SelectionOverlayController.shared.heldScreenRect else { finish(); return }
+        OCRPanelController.shared.close()
+        SelectionOverlayController.shared.release()
+        let session = RecordingSession(target: target, regionScreenRect: rect)
+        session.onFinish = { [weak self] in
+            self?.recording = nil
+            self?.finish()
+        }
+        recording = session
+        session.start()
+    }
+
     func annotateRequestOCR(_ image: CGImage) {
         let anchor = SelectionOverlayController.shared.heldScreenRect ?? .zero
         OCRPanelController.shared.show(near: anchor, image: image) { [weak self] text in
@@ -65,7 +82,11 @@ final class CaptureCoordinator: AnnotateDelegate {
         }
     }
 
+    func cancelRecording() { recording?.cancel() }
+
     private func finish() {
+        if let recording { recording.cancel(); return }   // teardown calls back into finish()
+        pickedTarget = nil
         OCRPanelController.shared.close()
         SelectionOverlayController.shared.release()
         snapshot = nil

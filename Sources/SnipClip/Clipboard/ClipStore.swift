@@ -81,7 +81,7 @@ final class ClipStore {
                             sourceBundleID: source.bundleID, sourceAppName: source.name,
                             snippet: ClipItem.snippet(ofText: text), ocrText: nil, pinned: false,
                             ext: "txt", hasRTF: rtf != nil, pixelWidth: nil, pixelHeight: nil,
-                            byteCount: data.count, contentHash: hash)
+                            byteCount: data.count, duration: nil, contentHash: hash)
         do {
             try data.write(to: payloadURL(item), options: .atomic)
             if let rtf { try rtf.write(to: rtfURL(item), options: .atomic) }
@@ -99,7 +99,7 @@ final class ClipStore {
                             sourceBundleID: source.bundleID, sourceAppName: source.name,
                             snippet: "\(cg.width)×\(cg.height)", ocrText: ocrText, pinned: false,
                             ext: "png", hasRTF: false, pixelWidth: cg.width, pixelHeight: cg.height,
-                            byteCount: png.count, contentHash: hash)
+                            byteCount: png.count, duration: nil, contentHash: hash)
         do { try png.write(to: payloadURL(item), options: .atomic) } catch { return nil }
         if let t = Screenshotter.thumbnail(cg, maxPixels: 640), let td = Screenshotter.pngData(t) {
             try? td.write(to: thumbURL(item), options: .atomic)
@@ -128,8 +128,29 @@ final class ClipStore {
                             sourceBundleID: source.bundleID, sourceAppName: source.name,
                             snippet: snippet, ocrText: nil, pinned: false,
                             ext: "json", hasRTF: false, pixelWidth: nil, pixelHeight: nil,
-                            byteCount: data.count, contentHash: hash)
+                            byteCount: data.count, duration: nil, contentHash: hash)
         do { try data.write(to: payloadURL(item), options: .atomic) } catch { return nil }
+        prepend(item)
+        return item
+    }
+
+    /// Move a finished recording (mp4 / gif) into the store.
+    @discardableResult
+    func insertVideo(tempFile: URL, poster: CGImage?, duration: Double, source: Source) -> ClipItem? {
+        let ext = tempFile.pathExtension.lowercased()
+        let size = (try? FileManager.default.attributesOfItem(atPath: tempFile.path)[.size] as? Int) ?? 0
+        let secs = Int(duration.rounded())
+        var dims = ""
+        if let poster { dims = " · \(poster.width)×\(poster.height)" }
+        let item = ClipItem(id: UUID().uuidString, kind: .video, createdAt: Date(),
+                            sourceBundleID: source.bundleID, sourceAppName: source.name,
+                            snippet: "\(ext.uppercased()) · \(secs) 秒\(dims)", ocrText: nil, pinned: false,
+                            ext: ext, hasRTF: false, pixelWidth: poster?.width, pixelHeight: poster?.height,
+                            byteCount: size, duration: duration, contentHash: Int(truncatingIfNeeded: UInt64.random(in: 0...UInt64.max)))
+        do { try FileManager.default.moveItem(at: tempFile, to: payloadURL(item)) } catch { return nil }
+        if let poster, let t = Screenshotter.thumbnail(poster, maxPixels: 640), let td = Screenshotter.pngData(t) {
+            try? td.write(to: thumbURL(item), options: .atomic)
+        }
         prepend(item)
         return item
     }
@@ -211,7 +232,7 @@ final class ClipStore {
     }
     func thumbnail(of item: ClipItem) -> NSImage? {
         if let t = thumbCache[item.id] { return t }
-        guard item.kind == .image, let img = NSImage(contentsOf: thumbURL(item)) else { return nil }
+        guard item.kind == .image || item.kind == .video, let img = NSImage(contentsOf: thumbURL(item)) else { return nil }
         thumbCache[item.id] = img
         return img
     }
@@ -229,6 +250,8 @@ final class ClipStore {
             PasteboardWriter.writeImage(png: png, itemID: item.id)
         case .files:
             PasteboardWriter.writeFiles(fileURLs(of: item), itemID: item.id)
+        case .video:
+            PasteboardWriter.writeFiles([payloadURL(item)], itemID: item.id)
         }
         bump(item.id)
     }

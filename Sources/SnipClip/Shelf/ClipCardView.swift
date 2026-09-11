@@ -15,6 +15,7 @@ struct ClipCardView: View {
         case .text: return Color(nsColor: NSColor(srgbRed: 0.55, green: 0.58, blue: 0.66, alpha: 1))
         case .url: return Color(nsColor: NSColor(srgbRed: 0.16, green: 0.52, blue: 0.94, alpha: 1))
         case .image: return Self.accent
+        case .video: return Color(nsColor: NSColor(srgbRed: 0.86, green: 0.26, blue: 0.40, alpha: 1))
         case .files: return Color(nsColor: NSColor(srgbRed: 0.95, green: 0.60, blue: 0.15, alpha: 1))
         }
     }
@@ -56,7 +57,7 @@ struct ClipCardView: View {
     @ViewBuilder
     private var content: some View {
         switch item.kind {
-        case .image:
+        case .image, .video:
             if let img = ClipStore.shared.thumbnail(of: item) {
                 // Whole picture, width-fitted, top-aligned: a wide screenshot stays recognisable.
                 VStack(spacing: 0) {
@@ -66,12 +67,24 @@ struct ClipCardView: View {
                         .frame(maxWidth: .infinity)
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                         .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.primary.opacity(0.08), lineWidth: 1))
+                        .overlay(alignment: .bottomLeading) {
+                            if item.kind == .video {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "play.fill").font(.system(size: 9))
+                                    Text(item.ext.uppercased()).font(.system(size: 10, weight: .semibold))
+                                }
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 6).padding(.vertical, 3)
+                                .background(.black.opacity(0.55), in: Capsule())
+                                .padding(6)
+                            }
+                        }
                     Spacer(minLength: 0)
                 }
                 .padding(.horizontal, 10)
                 .padding(.bottom, 6)
             } else {
-                Image(systemName: "photo").font(.largeTitle).foregroundStyle(.quaternary)
+                Image(systemName: item.kind == .video ? "film" : "photo").font(.largeTitle).foregroundStyle(.quaternary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         case .files:
@@ -125,6 +138,7 @@ struct ClipCardView: View {
     private var footerText: String {
         switch item.kind {
         case .image: return "图片 \(item.snippet)"
+        case .video: return item.snippet
         case .text: return "文本 · \(item.byteCount) 字节"
         case .url: return "链接"
         case .files: return "文件 · \(item.snippet.split(separator: "\n").count) 项"
