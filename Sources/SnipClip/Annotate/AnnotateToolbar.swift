@@ -146,8 +146,19 @@ final class AnnotateToolbar: NSView {
     @objc private func cancel() { canvas.cancel() }
     @objc private func done() { canvas.finish() }
 
-    // Clicks on the island itself must not fall through to the mask.
-    override func mouseDown(with event: NSEvent) {}
+    // Drag the bar anywhere on its ground; the sub bar follows.
+    private var dragOrigin: CGPoint?
+    override func mouseDown(with event: NSEvent) { dragOrigin = convert(event.locationInWindow, from: nil) }
+    override func mouseDragged(with event: NSEvent) {
+        guard let o = dragOrigin, let host = superview else { return }
+        let p = convert(event.locationInWindow, from: nil)
+        var f = frame.offsetBy(dx: p.x - o.x, dy: p.y - o.y)
+        f.origin.x = min(max(host.bounds.minX, f.minX), host.bounds.maxX - f.width)
+        f.origin.y = min(max(host.bounds.minY, f.minY), host.bounds.maxY - f.height)
+        frame = f
+        refresh()
+    }
+    override func mouseUp(with event: NSEvent) { dragOrigin = nil }
 }
 
 /// sizes (dots, or 小/中/大 for text) │ colors as rounded squares with a check (not for mosaic)

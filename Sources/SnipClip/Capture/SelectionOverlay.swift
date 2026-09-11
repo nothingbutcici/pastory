@@ -274,16 +274,6 @@ final class OverlayView: NSView {
         guard let ctx = NSGraphicsContext.current else { return }
         NSColor(calibratedWhite: 0, alpha: 0.5).setFill()
         bounds.fill()
-        // Faint graph-paper grid on the mask, same as the shelf.
-        let grid = NSBezierPath()
-        let step: CGFloat = 28
-        var gx = bounds.minX.truncatingRemainder(dividingBy: step)
-        while gx <= bounds.maxX { grid.move(to: CGPoint(x: gx, y: bounds.minY)); grid.line(to: CGPoint(x: gx, y: bounds.maxY)); gx += step }
-        var gy = bounds.minY.truncatingRemainder(dividingBy: step)
-        while gy <= bounds.maxY { grid.move(to: CGPoint(x: bounds.minX, y: gy)); grid.line(to: CGPoint(x: bounds.maxX, y: gy)); gy += step }
-        grid.lineWidth = 1
-        NSColor(calibratedWhite: 1, alpha: 0.05).setStroke()
-        grid.stroke()
         let hole: CGRect? = held ? heldRect : (controller?.mode == .window ? hoveredRectInView : selectionRect)
         guard let hole else { return }
         ctx.compositingOperation = .copy

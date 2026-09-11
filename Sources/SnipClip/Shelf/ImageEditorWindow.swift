@@ -33,10 +33,12 @@ final class ImageEditorWindow: NSObject, NSWindowDelegate, AnnotateDelegate {
         let vf = NSScreen.main?.visibleFrame ?? CGRect(x: 0, y: 0, width: 1440, height: 900)
         let scale = NSScreen.main?.backingScaleFactor ?? 2
         let natural = CGSize(width: CGFloat(image.width) / scale, height: CGFloat(image.height) / scale)
-        let k = min(1, min((vf.width * 0.8 - 80) / natural.width, (vf.height * 0.8 - 160) / natural.height))
-        let canvasSize = CGSize(width: max(320, (natural.width * k).rounded()), height: max(180, (natural.height * k).rounded()))
+        // Fit into 80% of the screen; small pictures are scaled up uniformly so the long edge is at least 360 pt.
+        let fit = min((vf.width * 0.8 - 80) / natural.width, (vf.height * 0.8 - 200) / natural.height)
+        let k = min(fit, max(1, 360 / max(natural.width, natural.height)))
+        let canvasSize = CGSize(width: (natural.width * k).rounded(), height: (natural.height * k).rounded())
         let pad: CGFloat = 40
-        let barH: CGFloat = 56 + 60   // toolbar + room for the sub bar
+        let barH: CGFloat = 56 + 84   // toolbar + room for the sub bar under it
         let rect = CGRect(x: 0, y: 0, width: max(canvasSize.width + pad * 2, 900), height: canvasSize.height + pad + 44 + barH)
         window = NSWindow(contentRect: rect, styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
         super.init()
@@ -54,7 +56,7 @@ final class ImageEditorWindow: NSObject, NSWindowDelegate, AnnotateDelegate {
         content.addSubview(canvas)
         toolbar = AnnotateToolbar(canvas: canvas, doneTitle: "保存")
         let ts = toolbar.fittingSize
-        toolbar.frame = CGRect(x: ((rect.width - ts.width) / 2).rounded(), y: barH - ts.height + 4, width: ts.width, height: ts.height)
+        toolbar.frame = CGRect(x: ((rect.width - ts.width) / 2).rounded(), y: barH - ts.height - 4, width: ts.width, height: ts.height)
         content.addSubview(toolbar)
         window.contentView = content
         toolbar.didLayout()

@@ -24,10 +24,10 @@ final class TopBar: NSView {
         let logo = NSImageView(image: Theme.logo ?? NSImage())
         logo.imageScaling = .scaleProportionallyUpOrDown
         logo.translatesAutoresizingMaskIntoConstraints = false
-        logo.widthAnchor.constraint(equalToConstant: 30).isActive = true
-        logo.heightAnchor.constraint(equalToConstant: 30).isActive = true
+        logo.widthAnchor.constraint(equalToConstant: 32).isActive = true
+        logo.heightAnchor.constraint(equalToConstant: 32).isActive = true
         let name = NSTextField(labelWithString: "Snip Clip")
-        name.font = NSFont.systemFont(ofSize: 18, weight: .bold)
+        name.font = NSFont.systemFont(ofSize: 17, weight: .bold)
         name.textColor = Theme.text
         let brand = NSStackView(views: [logo, name])
         brand.spacing = 9
@@ -37,11 +37,11 @@ final class TopBar: NSView {
         let seg = NSView()
         seg.wantsLayer = true
         seg.layer?.backgroundColor = Theme.bgElevated.cgColor
-        seg.layer?.cornerRadius = 11
+        seg.layer?.cornerRadius = 9
         seg.translatesAutoresizingMaskIntoConstraints = false
         let segStack = NSStackView(views: [shot, rec])
-        segStack.spacing = 4
-        segStack.edgeInsets = NSEdgeInsets(top: 4, left: 4, bottom: 4, right: 4)
+        segStack.spacing = 3
+        segStack.edgeInsets = NSEdgeInsets(top: 3, left: 3, bottom: 3, right: 3)
         segStack.translatesAutoresizingMaskIntoConstraints = false
         seg.addSubview(segStack)
         NSLayoutConstraint.activate([
@@ -52,13 +52,13 @@ final class TopBar: NSView {
             b.isBordered = false
             b.wantsLayer = true
             b.layer?.cornerRadius = 8
-            b.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?.withSymbolConfiguration(.init(pointSize: 15, weight: .medium))
+            b.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?.withSymbolConfiguration(.init(pointSize: 12, weight: .medium))
             b.imagePosition = .imageLeading
             b.imageHugsTitle = true
             b.target = self
             b.translatesAutoresizingMaskIntoConstraints = false
-            b.heightAnchor.constraint(equalToConstant: 36).isActive = true
-            b.widthAnchor.constraint(equalToConstant: 104).isActive = true
+            b.heightAnchor.constraint(equalToConstant: 28).isActive = true
+            b.widthAnchor.constraint(equalToConstant: 80).isActive = true
         }
         shot.action = #selector(pickShot)
         rec.action = #selector(pickRec)
@@ -77,7 +77,7 @@ final class TopBar: NSView {
     }
     required init?(coder: NSCoder) { fatalError() }
 
-    override var fittingSize: CGSize { CGSize(width: stack.fittingSize.width, height: 60) }
+    override var fittingSize: CGSize { CGSize(width: stack.fittingSize.width, height: 52) }
     override func draw(_ dirtyRect: NSRect) { Theme.drawIsland(NSBezierPath(roundedRect: bounds, xRadius: Theme.cornerRadius, yRadius: Theme.cornerRadius)) }
 
     private func style(active: NSButton) {
@@ -87,7 +87,7 @@ final class TopBar: NSView {
             b.contentTintColor = on ? Theme.onPurple : Theme.text
             b.attributedTitle = NSAttributedString(string: " " + b.title.trimmingCharacters(in: .whitespaces), attributes: [
                 .foregroundColor: on ? Theme.onPurple : Theme.text,
-                .font: NSFont.systemFont(ofSize: 14.5, weight: .semibold),
+                .font: NSFont.systemFont(ofSize: 13, weight: .semibold),
             ])
         }
     }
@@ -95,5 +95,17 @@ final class TopBar: NSView {
     @objc private func pickShot() { style(active: shot) }
     @objc private func pickRec() { style(active: rec); onRecord?() }
     @objc private func closeTapped() { onClose?() }
-    override func mouseDown(with event: NSEvent) {}
+
+    // Drag the bar anywhere on its ground.
+    private var dragOrigin: CGPoint?
+    override func mouseDown(with event: NSEvent) { dragOrigin = convert(event.locationInWindow, from: nil) }
+    override func mouseDragged(with event: NSEvent) {
+        guard let o = dragOrigin, let host = superview else { return }
+        let p = convert(event.locationInWindow, from: nil)
+        var f = frame.offsetBy(dx: p.x - o.x, dy: p.y - o.y)
+        f.origin.x = min(max(host.bounds.minX, f.minX), host.bounds.maxX - f.width)
+        f.origin.y = min(max(host.bounds.minY, f.minY), host.bounds.maxY - f.height)
+        frame = f
+    }
+    override func mouseUp(with event: NSEvent) { dragOrigin = nil }
 }

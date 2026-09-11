@@ -63,8 +63,8 @@ struct ShelfView: View {
             VStack(alignment: .leading, spacing: 10) {
                 if let m = Theme.mascot { Image(nsImage: m).resizable().scaledToFit().frame(width: 44, height: 44) }
                 Text("今日暂存").font(.system(size: 15, weight: .bold)).foregroundStyle(Color.shelfInk).padding(.top, 2)
-                rule(icon: "pin.fill", tint: Color(nsColor: Theme.yellow), "Pin 后一直保留")
-                rule(icon: "clock", tint: Color(nsColor: Theme.yellow), retentionShort)
+                rule(icon: "pin.fill", tint: Color.purple, "Pin 后一直保留")
+                rule(icon: "clock", tint: Color.purple, retentionShort)
             }
             .padding(.horizontal, 22)
             .padding(.bottom, 22)

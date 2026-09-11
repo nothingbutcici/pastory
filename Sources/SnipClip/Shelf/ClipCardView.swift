@@ -129,7 +129,7 @@ struct ClipCardView: View {
                 }
                 .foregroundStyle(Color(nsColor: Theme.onLime))
                 .padding(.horizontal, 10).padding(.vertical, 4)
-                .background(Color(nsColor: Theme.yellow), in: Capsule())
+                .background(Color(nsColor: Theme.paleYellow), in: Capsule())
             }
             Text(note.map { "\(kindLabel) · \($0)" } ?? kindLabel)
                 .font(.system(size: 13)).foregroundStyle(Color.shelfMuted).lineLimit(1)
@@ -211,7 +211,7 @@ struct ClipCardView: View {
         Button(action: act) {
             Image(systemName: active ? "pin.fill" : symbol)
                 .font(.system(size: 19, weight: .regular))
-                .foregroundStyle(active ? Color.onPurple : Color.shelfInk)
+                .foregroundStyle(Color.white)
                 .frame(width: 44, height: 38)
                 .background(active ? Color.purple : Color.clear, in: RoundedRectangle(cornerRadius: 9))
                 .contentShape(Rectangle())
