@@ -8,7 +8,8 @@ import Foundation
 ///   - if today's X has not come yet, only "the day before yesterday and earlier" is expired.
 /// N = 3 shifts the line back two more days. Pinned items are never expired by this code.
 /// Running it once or a hundred times gives the same result, so it needs no "already cleaned" flag.
-/// It runs at launch, at the next X (a self re-arming timer), and every time the shelf opens.
+/// It runs at launch, when the shelf opens, and from one timer set to the moment the oldest unpinned item
+/// expires (its day + N days, at X) — so with N = 7 the timer sleeps for days, not once per day.
 enum Retention {
     private static var timer: Timer?
 
@@ -34,32 +35,51 @@ enum Retention {
         ClipStore.shared.removeAll { isExpired($0, now: now, cleanupHour: hour, retentionDays: days) }
     }
 
-    /// Launch: sweep now and arm the timer for the next cleanup time.
+    /// The instant an item created on `day` stops being kept: (day + N days) at hour X.
+    static func expiryMoment(of item: ClipItem, cleanupHour: Int, retentionDays: Int, calendar: Calendar = .current) -> Date? {
+        let day = calendar.startOfDay(for: item.createdAt)
+        guard let d = calendar.date(byAdding: .day, value: max(1, retentionDays), to: day) else { return nil }
+        return calendar.date(bySettingHour: cleanupHour, minute: 0, second: 5, of: d)
+    }
+
+    /// Launch: sweep now and arm the timer.
     @MainActor
     static func schedule() {
         sweep()
         armTimer()
     }
 
-    /// Call after the cleanup hour changes in settings.
+    /// After the cleanup hour or retention days change, or after a sweep.
     @MainActor
     static func reschedule() { armTimer() }
+
+    /// A new item arrived; if nothing was scheduled (store was empty), schedule for it.
+    @MainActor
+    static func itemAdded() { if timer == nil { armTimer() } }
 
     @MainActor
     private static func armTimer() {
         timer?.invalidate()
-        let hour = Preferences.shared.cleanupHour
-        guard let next = Calendar.current.nextDate(after: Date(), matching: DateComponents(hour: hour, minute: 0, second: 5),
-                                                   matchingPolicy: .nextTime) else { return }
+        timer = nil
+        let p = Preferences.shared
+        let hour = p.cleanupHour, days = p.retentionDays
+        // Earliest expiry among unpinned items; nothing unpinned → nothing to schedule.
+        let moments = ClipStore.shared.items.filter { !$0.pinned }.compactMap { expiryMoment(of: $0, cleanupHour: hour, retentionDays: days) }
+        guard let earliest = moments.min() else { return }
+        let fire = max(earliest, Date().addingTimeInterval(5))
         // A timer that was due during sleep fires as soon as the Mac wakes, so sleep needs no special case.
-        let t = Timer(fire: next, interval: 0, repeats: false) { _ in
+        let t = Timer(fire: fire, interval: 0, repeats: false) { _ in
             MainActor.assumeIsolated {
                 sweep()
-                armTimer()          // and again tomorrow
+                armTimer()          // next-oldest item, whenever that is
             }
         }
         t.tolerance = 60
         RunLoop.main.add(t, forMode: .common)
         timer = t
     }
+
+    /// Self-test / diagnostics: when the current timer will fire.
+    @MainActor
+    static var nextFire: Date? { timer?.fireDate }
 }

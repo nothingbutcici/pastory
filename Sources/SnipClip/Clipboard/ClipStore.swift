@@ -277,6 +277,7 @@ final class ClipStore {
     private func prepend(_ item: ClipItem) {
         items.insert(item, at: 0)
         save()
+        Retention.itemAdded()
     }
 
     // MARK: - Mutations

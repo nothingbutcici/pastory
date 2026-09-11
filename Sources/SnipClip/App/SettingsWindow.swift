@@ -19,7 +19,7 @@ final class SettingsWindowController {
 
 @Observable
 final class PrefsMirror {
-    var retentionDays: Int { didSet { Preferences.shared.retentionDays = retentionDays; Task { @MainActor in Retention.sweep() } } }
+    var retentionDays: Int { didSet { Preferences.shared.retentionDays = retentionDays; Task { @MainActor in Retention.sweep(); Retention.reschedule() } } }
     var cleanupHour: Int { didSet { Preferences.shared.cleanupHour = cleanupHour; Task { @MainActor in Retention.reschedule(); Retention.sweep() } } }
     var exportDir: String { didSet { Preferences.shared.customExportDir = exportDir.isEmpty ? nil : exportDir } }
     var ocrImages: Bool { didSet { Preferences.shared.ocrImages = ocrImages } }
@@ -60,6 +60,9 @@ struct ShortcutRecorder: View {
     @State private var monitor: Any?
     @State private var taken = false
     @State private var notice: String?
+    @State private var flagsMonitor: Any?
+    @State private var sawModifiers = false
+    @State private var sawKey = false
 
     private static let names = ["capture": "截图", "shelf": "剪贴板", "search": "搜索剪贴板"]
 
@@ -87,17 +90,34 @@ struct ShortcutRecorder: View {
 
     private func startCapture() {
         capturing = true
+        notice = nil
+        sawModifiers = false
+        sawKey = false
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            sawKey = true
             if event.keyCode == 53 { stop(nil) }
             else if event.keyCode == 51 { stop(Shortcut.none) }
             else if let s = Shortcut(event: event) { stop(s) }
             return nil
         }
+        // A combo another app already owns as a global hotkey is swallowed before it reaches us: we only ever
+        // see the modifiers go down and come back up. That silence is the signal.
+        flagsMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { event in
+            let mods = event.modifierFlags.intersection([.command, .shift, .option, .control])
+            if !mods.isEmpty { sawModifiers = true; sawKey = false }
+            else if sawModifiers, !sawKey, capturing {
+                notice = "刚才的组合没有传到这里，多半已被其他应用（如飞书、微信）占用，换一个"
+                sawModifiers = false
+            }
+            return event
+        }
     }
 
     private func stop(_ newValue: Shortcut?) {
         if let monitor { NSEvent.removeMonitor(monitor) }
+        if let flagsMonitor { NSEvent.removeMonitor(flagsMonitor) }
         monitor = nil
+        flagsMonitor = nil
         capturing = false
         guard let newValue else { return }
         notice = nil

@@ -246,6 +246,17 @@ enum SelfTest {
             print(back ? "FAIL manual delete came back" : "ok   manual delete stays deleted after reload")
             ok = ok && !back
         }
+        // Timer cadence: with 7-day retention the next check is the oldest unpinned item's day + 7 at X, not tomorrow.
+        seed()
+        Preferences.shared.cleanupHour = 4
+        Preferences.shared.retentionDays = 7
+        Retention.reschedule()
+        if let fire = Retention.nextFire {
+            let expect = cal.date(bySettingHour: 4, minute: 0, second: 5, of: cal.date(byAdding: .day, value: 7, to: cal.startOfDay(for: at(-2, 15)))!)!
+            let good = abs(fire.timeIntervalSince(expect)) < 1
+            print("\(good ? "ok  " : "FAIL") 7-day timer fires at \(fire) (expected \(expect))")
+            ok = ok && good
+        } else { print("FAIL no timer armed"); ok = false }
         store.removeAll { _ in true }
         Preferences.shared.retentionDays = 1
         print(ok ? "retention OK" : "retention FAILED")

@@ -69,13 +69,25 @@ struct SettingsPane: View {
                         }
                     }
                     VStack(spacing: 16) {
-                        section("「保存到本地」默认打开的文件夹") {
-                            row(prefs.exportDir.isEmpty ? "~/Downloads" : (prefs.exportDir as NSString).abbreviatingWithTildeInPath) {
+                        section("位置") {
+                            row("「保存到本地」默认打开的文件夹") {
                                 HStack(spacing: 8) {
+                                    Text(prefs.exportDir.isEmpty ? "~/Downloads" : (prefs.exportDir as NSString).abbreviatingWithTildeInPath)
+                                        .font(.system(size: 12)).foregroundStyle(Color.shelfMuted).lineLimit(1).truncationMode(.middle).frame(maxWidth: 220, alignment: .trailing)
                                     if !prefs.exportDir.isEmpty { pill("默认") { prefs.exportDir = "" } }
                                     pill("选择…") { chooseFolder() }
                                 }
                             }
+                            row("剪贴板内容临时存放位置") {
+                                HStack(spacing: 8) {
+                                    Text((ClipStore.shared.root.path as NSString).abbreviatingWithTildeInPath)
+                                        .font(.system(size: 12)).foregroundStyle(Color.shelfMuted).lineLimit(1).truncationMode(.middle).frame(maxWidth: 220, alignment: .trailing)
+                                    if Preferences.shared.customStoreDir != nil { pill("默认") { relocateStore(to: nil) } }
+                                    pill("选择…") { chooseStoreFolder() }
+                                    pill("打开") { NSWorkspace.shared.open(ClipStore.shared.root) }
+                                }
+                            }
+                            if let e = storeError { Text(e).font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.tagMP4)).padding(.horizontal, 16) }
                         }
                         section("系统") {
                             row("登录时启动") { Toggle("", isOn: $prefs.launchAtLogin).labelsHidden().toggleStyle(.switch).tint(Color.purple) }
@@ -87,16 +99,6 @@ struct SettingsPane: View {
                                     pill("系统设置") { Permissions.openSettings("Privacy_ScreenCapture") }
                                 }
                             }
-                        }
-                        section("剪贴板内容存放位置") {
-                            row((ClipStore.shared.root.path as NSString).abbreviatingWithTildeInPath) {
-                                HStack(spacing: 8) {
-                                    if Preferences.shared.customStoreDir != nil { pill("默认") { relocateStore(to: nil) } }
-                                    pill("选择…") { chooseStoreFolder() }
-                                    pill("在 Finder 中打开") { NSWorkspace.shared.open(ClipStore.shared.root) }
-                                }
-                            }
-                            if let e = storeError { Text(e).font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.tagMP4)).padding(.horizontal, 16) }
                         }
                     }
                 }
