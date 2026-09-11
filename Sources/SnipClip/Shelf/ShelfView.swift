@@ -72,11 +72,11 @@ struct ShelfView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.bottom, 14)
-                .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.09), lineWidth: 1))
+                .background(Color.shelfCard, in: RoundedRectangle(cornerRadius: 12))     // opaque: the grid stays behind it
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.shelfBorder, lineWidth: 1))
                 // Tape
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(Color.white.opacity(0.14))
+                    .fill(Color.white.opacity(0.22))
                     .frame(width: 46, height: 13)
                     .rotationEffect(.degrees(-6))
                     .offset(y: -6)
