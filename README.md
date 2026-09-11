@@ -85,6 +85,8 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
   原图棋盘格是画进去的，用局部纹理 + 边缘泛洪抠的），菜单栏图标 `Resources/MenuIcon(@2x).png` 来自设计稿
   `Project/codex相关/cc tools visual identity/.../pastory-menubar*.png`，作为 template 使用。
   录屏控制条、录屏预览窗（自绘播放条）、文本 / 图片编辑窗都是同一套。
+  品牌字体 Ysabeau Office（OFL，`Resources/Fonts/`，启动时按进程注册）只用在「Pastory」字样。
+  截图 / 录屏只排除取景遮罩自己的窗口，货架开着时也能被截进去。
 - 框选完成后屏幕顶部出品牌条：logo · Snip Clip · [截屏 │ 录屏] · ✕，默认截屏；点录屏进录制流程。
   选区是荧光绿框 + 8 个手柄，拖手柄可以改选区（截图是整屏取一次再按选区裁，拖手柄只是重新裁，标注位置不动），
   右上角深色角标显示像素尺寸。

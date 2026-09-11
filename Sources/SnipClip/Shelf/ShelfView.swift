@@ -51,7 +51,7 @@ struct ShelfView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 12) {
                 if let logo = Theme.logo { Image(nsImage: logo).resizable().scaledToFit().frame(width: 56, height: 56) }
-                Text("Pastory").font(.system(size: 22, weight: .bold)).foregroundStyle(Color.shelfInk)
+                Text("Pastory").font(Font(Theme.brandFont(size: 24))).foregroundStyle(Color.shelfInk)
             }
             .padding(.horizontal, 22)
             .padding(.top, 22)
@@ -62,7 +62,7 @@ struct ShelfView: View {
             // 今日暂存: a slightly crooked paper note; the mascot sits on the top-left corner like a piece of tape.
             ZStack(alignment: .topLeading) {
                 VStack(spacing: 5) {
-                    Text("今日暂存").font(.system(size: 15, weight: .bold)).foregroundStyle(Color.purple)
+                    Text("今日暂存").font(.system(size: 15, weight: .bold)).foregroundStyle(Color(nsColor: Theme.purpleLight))
                         .padding(.top, 22)
                     Text("Pin 一下长期保存").font(.system(size: 12.5)).foregroundStyle(Color.shelfMuted)
                     Text("未 Pin 内容定时清空").font(.system(size: 12.5)).foregroundStyle(Color.shelfMuted)

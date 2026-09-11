@@ -24,7 +24,8 @@ enum Theme {
     static let creamInk = NSColor(srgbRed: 0.13, green: 0.12, blue: 0.11, alpha: 1)
     static let purple = NSColor(srgbRed: 0.71, green: 0.64, blue: 0.95, alpha: 1)       // #B5A3F2
     static let yellow = NSColor(srgbRed: 0.97, green: 0.84, blue: 0.45, alpha: 1)       // #F7D673 mascot yellow
-    static let paleYellow = NSColor(srgbRed: 0.99, green: 0.95, blue: 0.80, alpha: 1)   // #FCF2CC 「已复制」
+    static let paleYellow = NSColor(srgbRed: 0.85, green: 0.77, blue: 0.50, alpha: 1)   // #D9C480 「已复制」, muted
+    static let purpleLight = NSColor(srgbRed: 0.83, green: 0.79, blue: 0.98, alpha: 1)  // #D4C9FA note title
     static let paleGreen = NSColor(srgbRed: 0.72, green: 0.89, blue: 0.70, alpha: 1)    // #B8E3B3 「已复制」
     static let onPurple = NSColor(srgbRed: 0.12, green: 0.09, blue: 0.20, alpha: 1)
     // Kind tags: low-saturation outline colours; the label itself stays gray
@@ -47,6 +48,21 @@ enum Theme {
     static let logo: NSImage? = resource("Logo.png")
     /// The mascot on the shelf sidebar.
     static let mascot: NSImage? = resource("Mascot.png")
+    /// Brand typeface (Ysabeau Office, OFL) bundled in Resources/Fonts; registered for this process on first use.
+    private static let brandRegistered: Bool = {
+        let candidates = [Bundle.main.resourceURL?.appendingPathComponent("Fonts/YsabeauOffice.ttf"),
+                          URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+                              .deletingLastPathComponent().appendingPathComponent("Resources/Fonts/YsabeauOffice.ttf")].compactMap { $0 }
+        for url in candidates where FileManager.default.fileExists(atPath: url.path) {
+            if CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil) { return true }
+        }
+        return false
+    }()
+    static func brandFont(size: CGFloat) -> NSFont {
+        _ = brandRegistered
+        return NSFont(name: "YsabeauOffice-Bold", size: size) ?? .systemFont(ofSize: size, weight: .bold)
+    }
+
     /// Menu bar glyph (designer's folded-P asset, 1x + 2x). Template: macOS tints it for light / dark menu bars.
     static let menuIcon: NSImage? = {
         guard let base = resource("MenuIcon.png") else { return nil }

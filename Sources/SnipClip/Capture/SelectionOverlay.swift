@@ -25,6 +25,8 @@ final class SelectionOverlayController {
     private init() {}
 
     private var heldWindow: OverlayWindow? { overlays.first { $0.overlayView.heldRect != nil } }
+    /// The mask windows, so captures can leave out exactly these and nothing else.
+    var ownWindowIDs: [CGWindowID] { overlays.map { CGWindowID($0.windowNumber) } }
     var heldDisplay: SCDisplay? { heldWindow?.display }
     var heldScreenSize: CGSize? { heldWindow?.screenRef.frame.size }
     var heldDisplayLocalRect: CGRect? {

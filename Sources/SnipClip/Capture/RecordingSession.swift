@@ -30,10 +30,10 @@ final class RecordingSession {
         showBar(recording: true)
         Task { @MainActor in
             do {
-                // Re-fetch so the frame and bar (created just now) are excluded from the capture.
+                // Re-fetch so the frame and bar (created just now) are excluded; the shelf, if open, stays visible.
                 let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-                let pid = ProcessInfo.processInfo.processIdentifier
-                let own = content.windows.filter { $0.owningApplication?.processID == pid }
+                let mine = Set([frame, bar].compactMap { $0 }.map { CGWindowID($0.windowNumber) })
+                let own = content.windows.filter { mine.contains($0.windowID) }
                 recorder.onFailure = { [weak self] err in
                     Task { @MainActor in self?.fail(err) }
                 }

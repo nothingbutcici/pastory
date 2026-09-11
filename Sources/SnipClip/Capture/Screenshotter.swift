@@ -37,12 +37,11 @@ enum Screenshotter {
         return try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: cfg)
     }
 
-    /// Whole display, excluding every window of this process (fetched fresh, so the picker's
-    /// own mask windows are left out). Region / window shots are crops of this.
-    static func captureDisplay(_ display: SCDisplay, colorSpaceName: CFString?) async throws -> CGImage {
+    /// Whole display, excluding just the given windows (the picker's masks), fetched fresh.
+    /// Other Pastory windows, the shelf included, stay in the picture. Region / window shots are crops of this.
+    static func captureDisplay(_ display: SCDisplay, excluding ids: Set<CGWindowID>, colorSpaceName: CFString?) async throws -> CGImage {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-        let pid = ProcessInfo.processInfo.processIdentifier
-        let own = content.windows.filter { $0.owningApplication?.processID == pid }
+        let own = content.windows.filter { ids.contains($0.windowID) }
         let filter = SCContentFilter(display: display, excludingWindows: own)
         let cfg = SCStreamConfiguration()
         cfg.pixelFormat = kCVPixelFormatType_32BGRA

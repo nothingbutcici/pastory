@@ -27,7 +27,7 @@ final class TopBar: NSView {
         logo.widthAnchor.constraint(equalToConstant: 32).isActive = true
         logo.heightAnchor.constraint(equalToConstant: 32).isActive = true
         let name = NSTextField(labelWithString: "Pastory")
-        name.font = NSFont.systemFont(ofSize: 17, weight: .bold)
+        name.font = Theme.brandFont(size: 19)
         name.textColor = Theme.text
         let brand = NSStackView(views: [logo, name])
         brand.spacing = 9
