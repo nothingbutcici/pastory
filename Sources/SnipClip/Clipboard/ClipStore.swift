@@ -71,23 +71,29 @@ final class ClipStore {
         let target = newRoot ?? Self.defaultRoot
         guard target.standardizedFileURL != root.standardizedFileURL else { return }
         try fm.createDirectory(at: target, withIntermediateDirectories: true)
+        // Copy our files over; ours win over any same-named leftovers at the target (edits must not be rolled back).
         for name in ["items", "thumbs"] {
             let src = root.appendingPathComponent(name), dst = target.appendingPathComponent(name)
             try? fm.createDirectory(at: dst, withIntermediateDirectories: true)
-            for f in (try? fm.contentsOfDirectory(atPath: src.path)) ?? [] where !fm.fileExists(atPath: dst.appendingPathComponent(f).path) {
-                try fm.copyItem(at: src.appendingPathComponent(f), to: dst.appendingPathComponent(f))
+            for f in (try? fm.contentsOfDirectory(atPath: src.path)) ?? [] {
+                let s = src.appendingPathComponent(f), d = dst.appendingPathComponent(f)
+                if fm.fileExists(atPath: d.path) { try fm.removeItem(at: d) }
+                try fm.copyItem(at: s, to: d)
             }
         }
-        // Merge: what is already at the target (an older store) plus what we carry over, newest first, no duplicate ids.
+        // Merge a genuine other library found at the target (never the one we just retired, see below).
         var merged = items
-        if let data = try? Data(contentsOf: target.appendingPathComponent("index.json")) {
+        let targetIndex = target.appendingPathComponent("index.json")
+        if let data = try? Data(contentsOf: targetIndex) {
             let dec = JSONDecoder(); dec.dateDecodingStrategy = .iso8601
-            let theirs = (try? dec.decode([ClipItem].self, from: data)) ?? []
+            let theirs = (try? dec.decode([Failable<ClipItem>].self, from: data))?.compactMap(\.value) ?? []
             let ids = Set(merged.map(\.id))
-            merged += theirs.filter { !ids.contains($0.id) }
+            merged += theirs.filter { !ids.contains($0.id) && fm.fileExists(atPath: target.appendingPathComponent("items/\($0.fileName)").path) }
             merged.sort { $0.createdAt > $1.createdAt }
         }
-        Preferences.shared.customStoreDir = newRoot?.path
+        // Retire the source index so coming back here later does not resurrect deleted items.
+        let oldRoot = root
+        let oldIndex = oldRoot.appendingPathComponent("index.json")
         root = target
         itemsDir = target.appendingPathComponent("items", isDirectory: true)
         thumbsDir = target.appendingPathComponent("thumbs", isDirectory: true)
@@ -95,38 +101,93 @@ final class ClipStore {
         ensureDirs()
         thumbCache.removeAll()
         items = merged
-        save()
+        guard save() else {
+            // Could not write at the new place: stay where we were.
+            root = oldRoot
+            itemsDir = oldRoot.appendingPathComponent("items", isDirectory: true)
+            thumbsDir = oldRoot.appendingPathComponent("thumbs", isDirectory: true)
+            shareDir = oldRoot.appendingPathComponent("share", isDirectory: true)
+            load()
+            throw NSError(domain: "Pastory", code: 1, userInfo: [NSLocalizedDescriptionKey: "新位置写入失败，已留在原位置"])
+        }
+        Preferences.shared.customStoreDir = newRoot?.path
+        try? fm.moveItem(at: oldIndex, to: oldRoot.appendingPathComponent("index.moved.json"))
     }
 
     // MARK: - Persistence
+
+    /// One bad row must not take the whole index with it.
+    private struct Failable<T: Decodable>: Decodable {
+        let value: T?
+        init(from decoder: Decoder) throws { value = try? T(from: decoder) }
+    }
 
     private func load() {
         guard let data = try? Data(contentsOf: indexURL) else { return }
         let dec = JSONDecoder()
         dec.dateDecodingStrategy = .iso8601
-        items = (try? dec.decode([ClipItem].self, from: data)) ?? []
+        if let rows = try? dec.decode([Failable<ClipItem>].self, from: data) {
+            items = rows.compactMap(\.value)
+            if items.count < rows.count { quarantineIndex(reason: "partial") }   // keep the original around
+            return
+        }
+        // Unreadable: keep the file, never overwrite it with an empty list.
+        quarantineIndex(reason: "unreadable")
+        items = []
     }
 
-    private func save() {
+    private func quarantineIndex(reason: String) {
+        let f = DateFormatter(); f.dateFormat = "yyyyMMdd-HHmmss"
+        let dst = root.appendingPathComponent("index.\(reason).\(f.string(from: Date())).json")
+        try? FileManager.default.copyItem(at: indexURL, to: dst)
+    }
+
+    /// True after a write failed (full disk, unplugged volume). Retention holds off until a save succeeds again.
+    private(set) var lastSaveFailed = false
+    private var warnedSaveFailure = false
+
+    @discardableResult
+    private func save() -> Bool {
         let enc = JSONEncoder()
         enc.dateEncodingStrategy = .iso8601
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
-        if let data = try? enc.encode(items) { try? data.write(to: indexURL, options: .atomic) }
+        do {
+            let data = try enc.encode(items)
+            try data.write(to: indexURL, options: .atomic)
+            lastSaveFailed = false
+            return true
+        } catch {
+            lastSaveFailed = true
+            if !warnedSaveFailure {
+                warnedSaveFailure = true
+                let a = NSAlert()
+                a.messageText = "Pastory 写不进存储目录"
+                a.informativeText = "\(root.path)\n\n\(error.localizedDescription)\n\n在这之前的改动都在，但之后的记录、Pin、删除都没有保存。检查磁盘空间或外接盘是否还在。"
+                NSApp.activate(ignoringOtherApps: true)
+                a.runModal()
+            }
+            return false
+        }
     }
 
     func payloadURL(_ item: ClipItem) -> URL { itemsDir.appendingPathComponent(item.fileName) }
     func rtfURL(_ item: ClipItem) -> URL { itemsDir.appendingPathComponent("\(item.id).rtf") }
     func thumbURL(_ item: ClipItem) -> URL { thumbsDir.appendingPathComponent("\(item.id).png") }
 
-    /// A hard link with a human name ("Rec 2026-09-11 16.10.23.mp4") for putting on the pasteboard:
-    /// receivers show the file name, and a UUID there looks broken.
+    /// A human-named file for the pasteboard ("Rec 2026-09-11 16.10.23.mp4"), kept under share/<id>/ so it
+    /// can always be found and removed with the item. Hard link when the volume allows, copy otherwise.
     func shareURL(_ item: ClipItem) -> URL {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd HH.mm.ss"
         let prefix = item.kind == .video ? "Rec" : (item.kind == .image ? "Snip" : "Clip")
-        let url = shareDir.appendingPathComponent("\(prefix) \(f.string(from: item.createdAt)).\(item.ext)")
-        if !FileManager.default.fileExists(atPath: url.path) {
-            try? FileManager.default.linkItem(at: payloadURL(item), to: url)
+        let dir = shareDir.appendingPathComponent(item.id, isDirectory: true)
+        let url = dir.appendingPathComponent("\(prefix) \(f.string(from: item.createdAt)).\(item.ext)")
+        let fm = FileManager.default
+        if !fm.fileExists(atPath: url.path) {
+            try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
+            if (try? fm.linkItem(at: payloadURL(item), to: url)) == nil {
+                try? fm.copyItem(at: payloadURL(item), to: url)
+            }
         }
         return url
     }
@@ -230,9 +291,9 @@ final class ClipStore {
         return item
     }
 
-    /// Edited text: rewrite the payload, keep id / pin / position.
+    /// Edited text: rewrite the payload, keep id / pin / position. If the item is gone meanwhile, keep the work as a new one.
     func updateText(_ id: String, text: String) {
-        guard let i = items.firstIndex(where: { $0.id == id }) else { return }
+        guard let i = items.firstIndex(where: { $0.id == id }) else { insertText(text, rtf: nil, source: CaptureCoordinator.source); return }
         let data = Data(text.utf8)
         do { try data.write(to: payloadURL(items[i]), options: .atomic) } catch { return }
         try? FileManager.default.removeItem(at: rtfURL(items[i]))
@@ -245,9 +306,10 @@ final class ClipStore {
         save()
     }
 
-    /// Edited image: new PNG + thumbnail, OCR again in the background.
+    /// Edited image: new PNG + thumbnail, OCR again in the background. If the item is gone meanwhile, keep the work as a new one.
     func updateImage(_ id: String, png: Data) {
-        guard let i = items.firstIndex(where: { $0.id == id }), let cg = Screenshotter.image(fromPNG: png) else { return }
+        guard let cg = Screenshotter.image(fromPNG: png) else { return }
+        guard let i = items.firstIndex(where: { $0.id == id }) else { insertImage(png: png, source: CaptureCoordinator.source); return }
         do { try png.write(to: payloadURL(items[i]), options: .atomic) } catch { return }
         if let t = Screenshotter.thumbnail(cg, maxPixels: 640), let td = Screenshotter.pngData(t) {
             try? td.write(to: thumbURL(items[i]), options: .atomic)
@@ -333,12 +395,7 @@ final class ClipStore {
 
     private func deleteFiles(_ item: ClipItem) {
         let fm = FileManager.default
-        for u in [payloadURL(item), rtfURL(item), thumbURL(item)] { try? fm.removeItem(at: u) }
-        if let names = try? fm.contentsOfDirectory(atPath: shareDir.path) {
-            let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd HH.mm.ss"
-            let stamp = f.string(from: item.createdAt)
-            for n in names where n.contains(stamp) { try? fm.removeItem(at: shareDir.appendingPathComponent(n)) }
-        }
+        for u in [payloadURL(item), rtfURL(item), thumbURL(item), shareDir.appendingPathComponent(item.id)] { try? fm.removeItem(at: u) }
         thumbCache[item.id] = nil
     }
 

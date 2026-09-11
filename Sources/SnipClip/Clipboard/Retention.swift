@@ -30,6 +30,7 @@ enum Retention {
 
     @MainActor
     static func sweep(now: Date = Date()) {
+        guard !ClipStore.shared.lastSaveFailed else { return }      // never delete files when the index cannot be written
         let p = Preferences.shared
         let hour = p.cleanupHour, days = p.retentionDays
         ClipStore.shared.removeAll { isExpired($0, now: now, cleanupHour: hour, retentionDays: days) }

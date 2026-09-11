@@ -33,9 +33,11 @@ enum Exporter {
             panel.prompt = "保存"
             guard panel.runModal() == .OK, let url = panel.url else { return }
             let fm = FileManager.default
-            try? fm.removeItem(at: url)
             do {
-                try fm.copyItem(at: store.payloadURL(item), to: url)
+                let tmp = url.deletingLastPathComponent().appendingPathComponent(".\(url.lastPathComponent).pastory-tmp")
+                try? fm.removeItem(at: tmp)
+                try fm.copyItem(at: store.payloadURL(item), to: tmp)
+                _ = try fm.replaceItemAt(url, withItemAt: tmp)      // swap only once the copy fully succeeded
                 remember(url.deletingLastPathComponent())
                 NSWorkspace.shared.activateFileViewerSelecting([url])
             } catch {

@@ -44,7 +44,7 @@ struct SettingsPane: View {
                                 HStack(spacing: 4) {
                                     ForEach([(1, "1 天"), (3, "3 天"), (7, "7 天"), (30, "30 天"), (365, "一年")], id: \.0) { days, label in
                                         let on = prefs.retentionDays == days
-                                        Button { prefs.retentionDays = days } label: {
+                                        Button { changeRetention(to: days) } label: {
                                             Text(label).font(.system(size: 12.5, weight: on ? .semibold : .medium))
                                                 .foregroundStyle(on ? Color.onPurple : Color.shelfInk)
                                                 .padding(.horizontal, 11).padding(.vertical, 6)
@@ -149,6 +149,27 @@ struct SettingsPane: View {
         .buttonStyle(.plain)
         .disabled(disabled)
         .opacity(disabled ? 0.5 : 1)
+    }
+
+    /// Shortening the retention can wipe a lot at once; say how much and ask.
+    private func changeRetention(to days: Int) {
+        let p = Preferences.shared
+        if days < prefs.retentionDays {
+            let doomed = ClipStore.shared.items.filter { Retention.isExpired($0, now: Date(), cleanupHour: p.cleanupHour, retentionDays: days) }.count
+            if doomed > 0 {
+                let shelf = ShelfPanelController.shared
+                shelf.holdOpen = true
+                defer { shelf.holdOpen = false; shelf.refocus() }
+                let a = NSAlert()
+                a.messageText = "把保留期改成 \(days) 天？"
+                a.informativeText = "会立刻清掉 \(doomed) 条未 Pin 的记录。Pin 住的不受影响。"
+                a.addButton(withTitle: "改并清理")
+                a.addButton(withTitle: "取消")
+                NSApp.activate(ignoringOtherApps: true)
+                if a.runModal() != .alertFirstButtonReturn { return }
+            }
+        }
+        prefs.retentionDays = days
     }
 
     private func chooseStoreFolder() {

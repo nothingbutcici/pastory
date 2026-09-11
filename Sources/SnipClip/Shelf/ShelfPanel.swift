@@ -259,7 +259,8 @@ final class ShelfModel {
     func pinSelected() { if let s = selected { ClipStore.shared.togglePin(s.id) } }
     func exportSelected() { if let s = selected { Exporter.export(s) } }
     func deleteSelected() {
-        guard let s = selected else { return }
+        // Only a card that is actually highlighted in the current list; never a silent fallback.
+        guard let id = selectedID, let s = items.first(where: { $0.id == id }) else { return }
         let list = items
         let i = list.firstIndex { $0.id == s.id } ?? 0
         ClipStore.shared.remove(s.id)
