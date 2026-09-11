@@ -82,11 +82,11 @@ struct ShelfView: View {
                 Text(title).font(.system(size: 16, weight: active ? .semibold : .medium))
                 Spacer(minLength: 0)
             }
-            .foregroundStyle(active ? Color.purple : Color.shelfInk)
+            .foregroundStyle(active ? Color.lime : Color.shelfInk)
             .padding(.horizontal, 22)
             .frame(height: 54)
             .frame(maxWidth: .infinity)
-            .background(active ? Color.purple.opacity(0.22) : Color.clear)
+            .background(active ? Color.lime.opacity(0.16) : Color.clear)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -136,9 +136,9 @@ struct ShelfView: View {
                     Button { model.filter = f } label: {
                         Text(f.rawValue)
                             .font(.system(size: 14.5, weight: on ? .semibold : .medium))
-                            .foregroundStyle(on ? Color.onPurple : Color.shelfInk)
+                            .foregroundStyle(on ? Color(nsColor: Theme.onLime) : Color.shelfInk)
                             .padding(.horizontal, 22).padding(.vertical, 9)
-                            .background(on ? Color.purple : Color.shelfCard, in: Capsule())
+                            .background(on ? Color.lime : Color.shelfCard, in: Capsule())
                             .overlay(Capsule().stroke(on ? Color.clear : Color.shelfBorder, lineWidth: 1))
                     }
                     .buttonStyle(.plain)

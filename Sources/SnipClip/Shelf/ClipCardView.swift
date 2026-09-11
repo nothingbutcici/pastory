@@ -127,12 +127,12 @@ struct ClipCardView: View {
                     Image(systemName: "checkmark").font(.system(size: 10, weight: .bold))
                     Text("已复制").font(.system(size: 12.5, weight: .semibold))
                 }
-                .foregroundStyle(Color(nsColor: Theme.onLime))
+                .foregroundStyle(Color.onPurple)
                 .padding(.horizontal, 10).padding(.vertical, 4)
-                .background(Color.lime, in: Capsule())
+                .background(Color.purple, in: Capsule())
             }
-            tag(kindLabel, color: Color(nsColor: tagColor))
-            if let note { Text(note).font(.system(size: 13)).foregroundStyle(Color.shelfMuted).lineLimit(1) }
+            Text(note.map { "\(kindLabel) · \($0)" } ?? kindLabel)
+                .font(.system(size: 13)).foregroundStyle(Color.shelfMuted).lineLimit(1)
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
