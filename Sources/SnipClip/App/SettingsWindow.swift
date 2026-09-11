@@ -101,6 +101,7 @@ struct ShortcutRecorder: View {
         notice = nil
         sawModifiers = false
         sawKey = false
+        HotKeyCenter.shared.suspend()          // otherwise our own combos fire instead of reaching this box
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             sawKey = true
             if event.keyCode == 53 { stop(nil) }
@@ -127,7 +128,13 @@ struct ShortcutRecorder: View {
 
     private func swallowed() {
         stop(nil)
-        notice = "刚才的组合被其他应用（如飞书、微信）的全局快捷键抢走了，这里收不到，换一个"
+        notice = "已被其他应用占用，换一个"
+        // If the owner brought itself to the front, we can name it.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            if let app = NSWorkspace.shared.frontmostApplication, app != NSRunningApplication.current, let name = app.localizedName {
+                notice = "已被 \(name) 占用，换一个"
+            }
+        }
     }
 
     private func stop(_ newValue: Shortcut?) {
@@ -138,6 +145,7 @@ struct ShortcutRecorder: View {
         flagsMonitor = nil
         resignObserver = nil
         capturing = false
+        HotKeyCenter.shared.resume()
         guard let newValue else { return }
         notice = nil
         if newValue.isSet {
@@ -145,15 +153,16 @@ struct ShortcutRecorder: View {
             let onlyCmd = m == UInt32(cmdKey), onlyShift = m == UInt32(shiftKey), cmdShift = m == UInt32(cmdKey | shiftKey)
             let isFKey = KeyCodeNames.name(for: newValue.keyCode).hasPrefix("F")
             if (onlyCmd || onlyShift || cmdShift) && !isFKey {
-                notice = "\(newValue.display) 会抢走所有应用里的这个快捷键，请加上 ⌥ 或 ⌃"
+                notice = "会抢走所有应用的 \(newValue.display)，加上 ⌥ 或 ⌃"
                 return
             }
-            if let owner = HotKeyCenter.shared.ownerName(of: newValue), owner != bindingName {
-                notice = "和「\(Self.names[owner] ?? owner)」重复，换一个"
+            let mine: [(String, String)] = [("capture", Preferences.Key.hotkeyCapture), ("shelf", Preferences.Key.hotkeyShelf), ("search", Preferences.Key.hotkeySearch)]
+            if let (owner, _) = mine.first(where: { $0.0 != bindingName && Preferences.shared.shortcut($0.1) == newValue }) {
+                notice = "已被 Pastory 的「\(Self.names[owner] ?? owner)」占用，换一个"
                 return
             }
             if !HotKeyCenter.shared.isAvailable(newValue) {
-                notice = "\(newValue.display) 被其他应用占用，换一个"
+                notice = "已被其他应用占用，换一个"
                 return
             }
         }

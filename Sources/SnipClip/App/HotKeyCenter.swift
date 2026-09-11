@@ -85,6 +85,22 @@ final class HotKeyCenter {
     }
     private var shortcuts: [String: Shortcut] = [:]
 
+    private var suspended: [(name: String, shortcut: Shortcut, action: () -> Void)] = []
+
+    /// Release every binding (recorder is listening); `resume()` puts them back.
+    func suspend() {
+        suspended = refs.keys.compactMap { name in
+            guard let s = shortcuts[name], let id = refs[name]?.id, let action = actions[id] else { return nil }
+            return (name, s, action)
+        }
+        for name in refs.keys.map({ $0 }) { unbind(name) }
+    }
+    func resume() {
+        let list = suspended
+        suspended = []
+        for b in list { _ = bind(b.shortcut, name: b.name, action: b.action) }
+    }
+
     func unbind(_ name: String) {
         shortcuts[name] = nil
         guard let entry = refs.removeValue(forKey: name) else { return }
