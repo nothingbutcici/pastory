@@ -52,13 +52,35 @@ enum Theme {
         return NSImage(contentsOf: dev)
     }
 
+    static let gridStep: CGFloat = 28
+    static let gridLine = NSColor(calibratedWhite: 1, alpha: 0.05)
+
+    /// Dark rounded island: shadow + border on the layer, background + grid painted by `drawIsland`.
     static func island(_ v: NSView, radius: CGFloat = cornerRadius) {
         v.wantsLayer = true
-        v.layer?.backgroundColor = bg.cgColor
         v.layer?.cornerRadius = radius
         v.layer?.borderWidth = 0.5
         v.layer?.borderColor = NSColor(calibratedWhite: 1, alpha: 0.08).cgColor
         v.shadow = shadow()
+    }
+
+    /// Paint the island ground: fill + faint graph-paper grid, clipped to `path`.
+    static func drawIsland(_ path: NSBezierPath, fill: NSColor = bg) {
+        NSGraphicsContext.saveGraphicsState()
+        path.addClip()
+        fill.setFill()
+        path.bounds.fill()
+        drawGrid(in: path.bounds)
+        NSGraphicsContext.restoreGraphicsState()
+    }
+
+    static func drawGrid(in r: CGRect) {
+        let g = NSBezierPath()
+        var x = r.minX; while x <= r.maxX { g.move(to: CGPoint(x: x, y: r.minY)); g.line(to: CGPoint(x: x, y: r.maxY)); x += gridStep }
+        var y = r.minY; while y <= r.maxY { g.move(to: CGPoint(x: r.minX, y: y)); g.line(to: CGPoint(x: r.maxX, y: y)); y += gridStep }
+        g.lineWidth = 1
+        gridLine.setStroke()
+        g.stroke()
     }
 
     static func divider(height: CGFloat = 24) -> NSView {

@@ -48,9 +48,7 @@ final class ImageEditorWindow: NSObject, NSWindowDelegate, AnnotateDelegate {
         window.delegate = self
         window.center()
 
-        let content = NSView(frame: rect)
-        content.wantsLayer = true
-        content.layer?.backgroundColor = Theme.shelfBG.cgColor
+        let content = GridBackdropView(frame: rect)
         canvas = AnnotateView(frame: CGRect(x: ((rect.width - canvasSize.width) / 2).rounded(), y: barH + 20, width: canvasSize.width, height: canvasSize.height), image: image)
         canvas.delegate = self
         content.addSubview(canvas)

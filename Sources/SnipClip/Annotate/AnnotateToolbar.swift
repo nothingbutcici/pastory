@@ -33,6 +33,7 @@ final class AnnotateToolbar: NSView {
     static func shadow() -> NSShadow { Theme.shadow() }
 
     override var fittingSize: CGSize { CGSize(width: stack.fittingSize.width + 16, height: 56) }
+    override func draw(_ dirtyRect: NSRect) { Theme.drawIsland(NSBezierPath(roundedRect: bounds, xRadius: Theme.cornerRadius, yRadius: Theme.cornerRadius)) }
 
     private func build() {
         stack.orientation = .horizontal
@@ -269,8 +270,7 @@ final class SubBar: NSView {
             path.move(to: CGPoint(x: px - 7, y: body.minY)); path.line(to: CGPoint(x: px, y: body.minY - ph)); path.line(to: CGPoint(x: px + 7, y: body.minY))
         }
         path.close()
-        Theme.bg.setFill()
-        path.fill()
+        Theme.drawIsland(path)
         NSColor(calibratedWhite: 1, alpha: 0.08).setStroke()
         path.lineWidth = 0.5
         path.stroke()

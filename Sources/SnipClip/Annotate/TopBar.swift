@@ -78,6 +78,7 @@ final class TopBar: NSView {
     required init?(coder: NSCoder) { fatalError() }
 
     override var fittingSize: CGSize { CGSize(width: stack.fittingSize.width, height: 60) }
+    override func draw(_ dirtyRect: NSRect) { Theme.drawIsland(NSBezierPath(roundedRect: bounds, xRadius: Theme.cornerRadius, yRadius: Theme.cornerRadius)) }
 
     private func style(active: NSButton) {
         for b in [shot, rec] {

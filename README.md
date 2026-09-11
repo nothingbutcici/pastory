@@ -68,6 +68,7 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest retention      # 造今天 / 昨天 / �
 SNIPCLIP_STORE=/tmp/x "$BIN" --selftest shelf <out.png>     # 离屏渲染货架面板（含 5 条样例）
 "$BIN" --selftest annotate <out.png>   # 离屏渲染标注画布 + 工具条，另存 <out>.flat.png 为合成结果
 "$BIN" --selftest gif                  # 合成 2 秒 mp4 → GIF，核对帧数与首帧
+"$BIN" --selftest preview <out.png>    # 离屏渲染录屏预览窗（视频区离屏是黑的，看布局用）
 SNIPCLIP_STORE=/tmp/x "$BIN" --selftest settings <out.png>   # 离屏渲染货架的设置页
 SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本编辑窗 <out>.text.png 与图片编辑窗 <out>.image.png
 ```
@@ -79,8 +80,9 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
 - **⌥⌘S 截图**（⌃⌘A 被微信占用，系统只认先注册的）：拖拽选区；␣ 切窗口模式；F 整屏；单击空白 / 右键 / ⎋ 取消。
   框选时只显示尺寸角标，没有十字线和提示文字。选完立刻整屏取图（重新枚举窗口把遮罩排除掉），之后出现的工具条不会进图。
   ⏎ 或双击 = 复制到剪贴板并进货架；⌘Z 撤销一笔。
-- 视觉：深色浮岛 + 淡紫强调（`App/Theme.swift` 统一取色；荧光绿只剩货架的「已复制」），遮罩带淡格纹，
-  logo 在 `Resources/Logo.png`（原图带棋盘格，用局部纹理 + 边缘泛洪抠的），面包人在 `Resources/Mascot.png`。
+- 视觉：深色浮岛（都带淡格纹，`Theme.drawIsland`）+ 淡紫强调（`App/Theme.swift` 统一取色；荧光绿只剩 logo 和货架「已复制」），
+  logo 在 `Resources/Logo.png`（绿夹子版），面包人在 `Resources/Mascot.png`（原图棋盘格是画进去的，用局部纹理 + 边缘泛洪抠的）。
+  录屏控制条、录屏预览窗（自绘播放条）、文本 / 图片编辑窗都是同一套。
 - 框选完成后屏幕顶部出品牌条：logo · Snip Clip · [截屏 │ 录屏] · ✕，默认截屏；点录屏进录制流程。
   选区是荧光绿框 + 8 个手柄，拖手柄可以改选区（截图是整屏取一次再按选区裁，拖手柄只是重新裁，标注位置不动），
   右上角深色角标显示像素尺寸。

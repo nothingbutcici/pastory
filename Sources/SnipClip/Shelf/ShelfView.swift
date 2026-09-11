@@ -49,9 +49,9 @@ struct ShelfView: View {
 
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 10) {
-                if let logo = Theme.logo { Image(nsImage: logo).resizable().scaledToFit().frame(width: 42, height: 42) }
-                Text("Snip Clip").font(.system(size: 18, weight: .bold)).foregroundStyle(Color.shelfInk)
+            HStack(spacing: 12) {
+                if let logo = Theme.logo { Image(nsImage: logo).resizable().scaledToFit().frame(width: 56, height: 56) }
+                Text("Snip Clip").font(.system(size: 22, weight: .bold)).foregroundStyle(Color.shelfInk)
             }
             .padding(.horizontal, 22)
             .padding(.top, 22)
@@ -61,7 +61,7 @@ struct ShelfView: View {
             Spacer()
             // 今日暂存: the two rules that matter, under the mascot.
             VStack(alignment: .leading, spacing: 10) {
-                if let m = Theme.mascot { Image(nsImage: m).resizable().scaledToFit().frame(width: 60, height: 60) }
+                if let m = Theme.mascot { Image(nsImage: m).resizable().scaledToFit().frame(width: 44, height: 44) }
                 Text("今日暂存").font(.system(size: 15, weight: .bold)).foregroundStyle(Color.shelfInk).padding(.top, 2)
                 rule(icon: "pin.fill", tint: Color.purple, "Pin 后一直保留")
                 rule(icon: "clock", tint: Color.purple, retentionShort)

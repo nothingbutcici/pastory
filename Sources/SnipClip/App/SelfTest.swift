@@ -29,6 +29,13 @@ enum SelfTest {
                 w.contentView = host
                 w.isReleasedWhenClosed = false
                 ok = snapshot(host, to: rest.first ?? "snipclip-settings.png")
+            case "preview":
+                let mov = FileManager.default.temporaryDirectory.appendingPathComponent("snipclip-preview.mp4")
+                try? FileManager.default.removeItem(at: mov)
+                try? await SyntheticMovie.write(to: mov, size: CGSize(width: 1280, height: 720), seconds: 6, fps: 30)
+                let w = RecordingPreviewWindow(movie: mov, duration: 6, pixelSize: CGSize(width: 1280, height: 720), near: CGRect(x: 200, y: 200, width: 640, height: 360))
+                w.debugSeek(2.5)
+                ok = w.debugContentView.map { snapshot($0, to: rest.first ?? "snipclip-preview.png") } ?? false
             case "editors":
                 await seedStore()
                 let out = rest.first ?? "snipclip-editor.png"

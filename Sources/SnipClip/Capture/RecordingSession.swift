@@ -132,16 +132,11 @@ final class RecordingSession {
         p.hasShadow = true
         p.level = .statusBar
         p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
-        let v = NSView()
-        v.wantsLayer = true
-        v.layer?.backgroundColor = NSColor.white.cgColor
-        v.layer?.cornerRadius = 10
-        v.layer?.borderWidth = 0.5
-        v.layer?.borderColor = NSColor(calibratedWhite: 0, alpha: 0.08).cgColor
+        let v = IslandView()
         let stack = NSStackView()
         stack.orientation = .horizontal
-        stack.spacing = 8
-        stack.edgeInsets = NSEdgeInsets(top: 0, left: 12, bottom: 0, right: 8)
+        stack.spacing = 10
+        stack.edgeInsets = NSEdgeInsets(top: 0, left: 16, bottom: 0, right: 10)
         stack.translatesAutoresizingMaskIntoConstraints = false
         v.addSubview(stack)
         NSLayoutConstraint.activate([
@@ -157,29 +152,31 @@ final class RecordingSession {
         d.heightAnchor.constraint(equalToConstant: 10).isActive = true
         dot = d
         let label = NSTextField(labelWithString: "00:00")
-        label.font = NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .semibold)
-        label.textColor = NSColor(srgbRed: 0.11, green: 0.11, blue: 0.12, alpha: 1)
+        label.font = NSFont.monospacedDigitSystemFont(ofSize: 15, weight: .semibold)
+        label.textColor = Theme.text
         timeLabel = label
-        let stopBtn = pill("停止", tint: NSColor(srgbRed: 0.88, green: 0.20, blue: 0.20, alpha: 1), action: #selector(stopTapped))
-        let cancelBtn = pill("丢弃", tint: NSColor(calibratedWhite: 0.35, alpha: 1), action: #selector(cancelTapped))
+        let stopBtn = pill("■ 停止", fill: Theme.purple, ink: Theme.onPurple, action: #selector(stopTapped))
+        let cancelBtn = pill("丢弃", fill: Theme.shelfCard, ink: Theme.text, action: #selector(cancelTapped))
         for x in [d, label, NSView(), stopBtn, cancelBtn] { stack.addArrangedSubview(x) }
         p.contentView = v
-        place(p, size: CGSize(width: 230, height: 40))
+        place(p, size: CGSize(width: 290, height: 52))
         p.orderFrontRegardless()
         bar = p
     }
 
-    private func pill(_ title: String, tint: NSColor, action: Selector) -> NSButton {
+    private func pill(_ title: String, fill: NSColor, ink: NSColor, action: Selector) -> NSButton {
         let b = NSButton(title: title, target: self, action: action)
         b.isBordered = false
         b.attributedTitle = NSAttributedString(string: title, attributes: [
-            .foregroundColor: tint, .font: NSFont.systemFont(ofSize: 12, weight: .semibold)])
+            .foregroundColor: ink, .font: NSFont.systemFont(ofSize: 13, weight: .semibold)])
         b.wantsLayer = true
-        b.layer?.cornerRadius = 7
-        b.layer?.backgroundColor = tint.withAlphaComponent(0.12).cgColor
+        b.layer?.cornerRadius = 9
+        b.layer?.backgroundColor = fill.cgColor
+        b.layer?.borderWidth = fill == Theme.shelfCard ? 1 : 0
+        b.layer?.borderColor = Theme.shelfBorder.cgColor
         b.translatesAutoresizingMaskIntoConstraints = false
-        b.widthAnchor.constraint(equalToConstant: 52).isActive = true
-        b.heightAnchor.constraint(equalToConstant: 28).isActive = true
+        b.widthAnchor.constraint(greaterThanOrEqualToConstant: 64).isActive = true
+        b.heightAnchor.constraint(equalToConstant: 34).isActive = true
         return b
     }
 
@@ -234,6 +231,16 @@ final class RecordingSession {
             teardown()      // closes the preview too
         }
     }
+}
+
+/// Dark rounded island with the grid, used as a bare container.
+final class IslandView: NSView {
+    init() {
+        super.init(frame: .zero)
+        Theme.island(self)
+    }
+    required init?(coder: NSCoder) { fatalError() }
+    override func draw(_ dirtyRect: NSRect) { Theme.drawIsland(NSBezierPath(roundedRect: bounds, xRadius: Theme.cornerRadius, yRadius: Theme.cornerRadius)) }
 }
 
 /// Purple frame just outside the recorded region.
