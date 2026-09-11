@@ -3,10 +3,11 @@ import CoreImage
 import ImageIO
 import UniformTypeIdentifiers
 
-/// MP4 → GIF: sample at a fixed rate, shrink the long edge, let ImageIO build per-frame palettes.
+/// MP4 → GIF: sample at a fixed rate, keep the recording's own pixels (long edge capped at 1920),
+/// let ImageIO build per-frame palettes.
 enum GIFEncoder {
     static let fps: Double = 12
-    static let maxEdge: CGFloat = 800
+    static let maxEdge: CGFloat = 1920
 
     static func encode(movie: URL, to out: URL, progress: ((Double) -> Void)? = nil) async throws {
         let asset = AVURLAsset(url: movie)

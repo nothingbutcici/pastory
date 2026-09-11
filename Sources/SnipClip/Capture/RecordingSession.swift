@@ -98,6 +98,9 @@ final class RecordingSession {
     private func teardown() {
         frame?.orderOut(nil); frame?.close(); frame = nil
         bar?.orderOut(nil); bar?.close(); bar = nil
+        preview?.onDiscard = nil
+        preview?.close()
+        preview = nil
         onFinish?()
     }
 
@@ -195,59 +198,28 @@ final class RecordingSession {
 
     // MARK: After stop
 
+    private var preview: RecordingPreviewWindow?
+
     private func showFormatChoice(duration: Double) {
-        frame?.orderOut(nil)
-        bar?.orderOut(nil); bar?.close()
-        let p = NSPanel(contentRect: CGRect(x: 0, y: 0, width: 300, height: 40),
-                        styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        p.isReleasedWhenClosed = false
-        p.isOpaque = false
-        p.backgroundColor = .clear
-        p.hasShadow = true
-        p.level = .statusBar
-        p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
-        let v = NSView()
-        v.wantsLayer = true
-        v.layer?.backgroundColor = NSColor.white.cgColor
-        v.layer?.cornerRadius = 10
-        let stack = NSStackView()
-        stack.orientation = .horizontal
-        stack.spacing = 8
-        stack.edgeInsets = NSEdgeInsets(top: 0, left: 12, bottom: 0, right: 8)
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        v.addSubview(stack)
-        NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: v.leadingAnchor), stack.trailingAnchor.constraint(equalTo: v.trailingAnchor),
-            stack.topAnchor.constraint(equalTo: v.topAnchor), stack.bottomAnchor.constraint(equalTo: v.bottomAnchor),
-        ])
-        let label = NSTextField(labelWithString: String(format: "已录 %d 秒 · 保存为", Int(duration.rounded())))
-        label.font = NSFont.systemFont(ofSize: 12, weight: .medium)
-        label.textColor = NSColor(srgbRed: 0.11, green: 0.11, blue: 0.12, alpha: 1)
-        timeLabel = label
-        let mp4 = pill("MP4", tint: AnnotatePalette.accent, action: #selector(chooseMP4))
-        let gif = pill(duration > 30 ? "GIF·大" : "GIF", tint: NSColor(srgbRed: 0.16, green: 0.65, blue: 0.27, alpha: 1), action: #selector(chooseGIF))
-        gif.toolTip = duration > 30 ? "超过 30 秒的 GIF 会很大，建议 MP4" : "12 帧/秒，长边 800 像素"
-        let drop = pill("丢弃", tint: NSColor(calibratedWhite: 0.35, alpha: 1), action: #selector(cancelTapped))
-        for x in [label, NSView(), mp4, gif, drop] { stack.addArrangedSubview(x) }
-        p.contentView = v
-        place(p, size: CGSize(width: 330, height: 40))
-        p.orderFrontRegardless()
-        bar = p
+        frame?.orderOut(nil); frame?.close(); frame = nil
+        bar?.orderOut(nil); bar?.close(); bar = nil
+        let w = RecordingPreviewWindow(movie: tmpURL, duration: duration, pixelSize: recorder.pixelSize, near: regionScreenRect)
+        w.onChoose = { [weak self] gif in self?.deliver(gif: gif) }
+        w.onDiscard = { [weak self] in self?.cancel() }
+        preview = w
+        w.present()
     }
 
-    @objc private func chooseMP4() { deliver(gif: false) }
-    @objc private func chooseGIF() { deliver(gif: true) }
-
     private func deliver(gif: Bool) {
-        timeLabel?.stringValue = gif ? "正在转 GIF…" : "保存中…"
         let src = tmpURL
+        preview?.setBusy(gif ? "正在转 GIF…" : "保存中…")
         Task { @MainActor in
             var fileURL = src
             if gif {
                 let g = src.deletingPathExtension().appendingPathExtension("gif")
                 do {
                     try await GIFEncoder.encode(movie: src, to: g) { [weak self] p in
-                        Task { @MainActor in self?.timeLabel?.stringValue = "正在转 GIF… \(Int(p * 100))%" }
+                        Task { @MainActor in self?.preview?.setBusy("正在转 GIF… \(Int(p * 100))%") }
                     }
                     fileURL = g
                 } catch {
@@ -260,7 +232,10 @@ final class RecordingSession {
             if gif { try? FileManager.default.removeItem(at: src) }
             if let item {
                 PasteboardWriter.writeFiles([ClipStore.shared.payloadURL(item)], itemID: item.id)
+                preview?.setDone(item.kind == .video ? "\(item.snippet) · \(ByteCountFormatter.string(fromByteCount: Int64(item.byteCount), countStyle: .file)) · 已复制到剪贴板，⌘V 即可发送" : "已复制")
             }
+            preview?.onDiscard = nil
+            preview = nil
             teardown()
         }
     }
