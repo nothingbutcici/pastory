@@ -141,7 +141,9 @@ final class SelectionOverlayController {
         var f = r.offsetBy(dx: dx, dy: dy)
         f.origin.x = min(max(b.minX, f.minX), b.maxX - f.width)
         f.origin.y = min(max(b.minY, f.minY), b.maxY - f.height)
-        regionChanged(f.integral)
+        // Round the origin only. `.integral` would round outward and the frame would grow a pixel per drag event.
+        f.origin.x.round(); f.origin.y.round()
+        regionChanged(f)
     }
 
     func regionCommit() {

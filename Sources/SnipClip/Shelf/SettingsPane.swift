@@ -40,9 +40,9 @@ struct SettingsPane: View {
                             row("搜索剪贴板") { ShortcutRecorder(key: Preferences.Key.hotkeySearch) }
                         }
                         section("剪贴板") {
-                            row("未 Pin 的内容保留") {
+                            row("未 Pin 内容保留时间") {
                                 HStack(spacing: 4) {
-                                    ForEach([(1, "1 天"), (3, "3 天"), (7, "7 天"), (30, "30 天"), (365, "一年"), (0, "永不")], id: \.0) { days, label in
+                                    ForEach([(1, "1 天"), (3, "3 天"), (7, "7 天"), (30, "30 天"), (365, "一年"), (0, "永不删除")], id: \.0) { days, label in
                                         let on = prefs.retentionDays == days
                                         Button { changeRetention(to: days) } label: {
                                             Text(label).font(.system(size: 12.5, weight: on ? .semibold : .medium))
