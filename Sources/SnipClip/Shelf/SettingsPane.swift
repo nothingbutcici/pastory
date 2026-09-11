@@ -38,24 +38,10 @@ struct SettingsPane: View {
                             row("显示 / 隐藏剪贴板") { ShortcutRecorder(key: Preferences.Key.hotkeyShelf) }
                         }
                         section("剪贴板") {
-                            row("每天清理时刻") {
-                                HStack(spacing: 2) {
-                                    stepButton("chevron.left") { prefs.cleanupHour = (prefs.cleanupHour + 23) % 24 }
-                                    Text(String(format: "%02d:00", prefs.cleanupHour))
-                                        .font(.system(size: 13.5, weight: .semibold).monospacedDigit()).foregroundStyle(Color.shelfInk)
-                                        .frame(width: 58)
-                                    stepButton("chevron.right") { prefs.cleanupHour = (prefs.cleanupHour + 1) % 24 }
-                                }
-                                .padding(3)
-                                .background(Color.black.opacity(0.25), in: Capsule())
-                                .overlay(Capsule().stroke(Color.shelfBorder, lineWidth: 1))
-                            }
-                            Text("到点清掉「\(prefs.retentionDays == 1 ? "昨天" : "\(prefs.retentionDays) 天前")及更早」的未 Pin 内容，按自然日算，当天的不动；Pin 住的永远不清。")
-                                .font(.system(size: 12)).foregroundStyle(Color.shelfMuted)
-                                .padding(.horizontal, 16).padding(.bottom, 4)
+                            row("每天清理时刻") { HourWheel(hour: $prefs.cleanupHour) }
                             row("未 Pin 的内容保留") {
                                 HStack(spacing: 4) {
-                                    ForEach([(1, "1 天"), (3, "3 天"), (7, "7 天"), (30, "30 天")], id: \.0) { days, label in
+                                    ForEach([(1, "1 天"), (3, "3 天"), (7, "7 天"), (30, "30 天"), (365, "一年")], id: \.0) { days, label in
                                         let on = prefs.retentionDays == days
                                         Button { prefs.retentionDays = days } label: {
                                             Text(label).font(.system(size: 12.5, weight: on ? .semibold : .medium))
@@ -72,7 +58,7 @@ struct SettingsPane: View {
                             }
                             row("图片自动识别文字（可按文字搜图）") { Toggle("", isOn: $prefs.ocrImages).labelsHidden().toggleStyle(.switch).tint(Color.purple) }
                             row("暂停记录") { Toggle("", isOn: $prefs.paused).labelsHidden().toggleStyle(.switch).tint(Color.purple) }
-                            row("\(ClipStore.shared.items.count) 项，其中 Pin \(ClipStore.shared.items.filter(\.pinned).count) 项") {
+                            row("手动清空一次") {
                                 pill(cleared ? "已清空" : "清空未 Pin 的", disabled: cleared) {
                                     ClipStore.shared.removeAll { !$0.pinned }
                                     cleared = true
@@ -160,5 +146,52 @@ struct SettingsPane: View {
         panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.prompt = "选择"
         NSApp.activate(ignoringOtherApps: true)
         if panel.runModal() == .OK, let url = panel.url { prefs.exportDir = url.path }
+    }
+}
+
+/// Vertical hour wheel: scroll (trackpad / mouse wheel) or click ▲▼; the previous and next hours show dimmed.
+struct HourWheel: View {
+    @Binding var hour: Int
+    private func label(_ h: Int) -> String { String(format: "%02d:00", (h + 24) % 24) }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            VStack(spacing: 0) {
+                Text(label(hour - 1)).font(.system(size: 11).monospacedDigit()).foregroundStyle(Color.shelfMuted.opacity(0.55))
+                Text(label(hour)).font(.system(size: 14, weight: .semibold).monospacedDigit()).foregroundStyle(Color.shelfInk)
+                    .frame(width: 66, height: 26)
+                    .background(Color.purple.opacity(0.22), in: RoundedRectangle(cornerRadius: 6))
+                Text(label(hour + 1)).font(.system(size: 11).monospacedDigit()).foregroundStyle(Color.shelfMuted.opacity(0.55))
+            }
+            .frame(width: 72)
+            .overlay(ScrollSteps { step in hour = (hour + step + 24) % 24 })
+            VStack(spacing: 2) {
+                Button { hour = (hour + 23) % 24 } label: { Image(systemName: "chevron.up").font(.system(size: 10, weight: .bold)).frame(width: 22, height: 18) }
+                Button { hour = (hour + 1) % 24 } label: { Image(systemName: "chevron.down").font(.system(size: 10, weight: .bold)).frame(width: 22, height: 18) }
+            }
+            .buttonStyle(.plain).foregroundStyle(Color.shelfInk)
+        }
+        .padding(.horizontal, 6).padding(.vertical, 4)
+        .background(Color.black.opacity(0.25), in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.shelfBorder, lineWidth: 1))
+    }
+}
+
+/// Transparent view that turns scroll-wheel motion into +1 / -1 steps.
+struct ScrollSteps: NSViewRepresentable {
+    let onStep: (Int) -> Void
+    func makeNSView(context: Context) -> StepView { let v = StepView(); v.onStep = onStep; return v }
+    func updateNSView(_ v: StepView, context: Context) { v.onStep = onStep }
+    final class StepView: NSView {
+        var onStep: ((Int) -> Void)?
+        private var acc: CGFloat = 0
+        override func scrollWheel(with event: NSEvent) {
+            acc += event.scrollingDeltaY
+            let threshold: CGFloat = event.hasPreciseScrollingDeltas ? 18 : 1
+            while acc >= threshold { acc -= threshold; onStep?(-1) }     // scroll up → earlier hour
+            while acc <= -threshold { acc += threshold; onStep?(1) }
+        }
+        override func hitTest(_ point: NSPoint) -> NSView? { bounds.contains(point) ? self : nil }
+        override func mouseDown(with event: NSEvent) {}
     }
 }
