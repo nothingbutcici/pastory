@@ -123,16 +123,21 @@ struct ClipCardView: View {
     private var captionRow: some View {
         HStack(spacing: 8) {
             Text(caption)
-                .font(.system(size: 12.5, weight: .medium)).foregroundStyle(Color(nsColor: tagColor))
+                .font(.system(size: 12.5, weight: .regular)).foregroundStyle(Color.shelfMuted)
                 .padding(.horizontal, 10).padding(.vertical, 4)
-                .overlay(Capsule().stroke(Color(nsColor: tagColor).opacity(0.85), lineWidth: 1))
+                .overlay(Capsule().stroke(Color(nsColor: tagColor), lineWidth: 1))
                 .lineLimit(1)
             Spacer(minLength: 0)
             if onClipboard {
-                Text("已复制")
-                    .font(.system(size: 12.5, weight: .semibold)).foregroundStyle(Color(nsColor: Theme.onLime))
-                    .padding(.horizontal, 11).padding(.vertical, 5)
-                    .background(Color.lime, in: Capsule())
+                HStack(spacing: 5) {
+                    ZStack {
+                        Circle().fill(.white).frame(width: 14, height: 14)
+                        Image(systemName: "checkmark").font(.system(size: 8, weight: .heavy)).foregroundStyle(.black)
+                    }
+                    Text("已复制").font(.system(size: 12.5, weight: .semibold)).foregroundStyle(Color(nsColor: Theme.onLime))
+                }
+                .padding(.leading, 6).padding(.trailing, 11).padding(.vertical, 4)
+                .background(Color.lime, in: Capsule())
             }
         }
         .padding(.horizontal, 16)

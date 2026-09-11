@@ -31,7 +31,7 @@ struct ShelfView: View {
             }
             .padding(.horizontal, 24)
         }
-        .background(Color.shelfBG)
+        .background(ZStack { Color.shelfBG; GridPattern() })
         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 22, topTrailingRadius: 22))
         .overlay(alignment: .top) {
             UnevenRoundedRectangle(topLeadingRadius: 22, topTrailingRadius: 22).stroke(Color.white.opacity(0.08), lineWidth: 1)
@@ -53,7 +53,11 @@ struct ShelfView: View {
             Text("今日暂存").font(.system(size: 27, weight: .bold)).foregroundStyle(Color.shelfInk)
             Text("未 Pin 内容\n\(retentionText)").font(.system(size: 13.5)).foregroundStyle(Color.shelfMuted).lineSpacing(4).padding(.top, 14)
             Spacer()
-            // Mascot goes here once the asset arrives.
+            if let m = Theme.mascot {
+                Image(nsImage: m).resizable().scaledToFit().frame(width: 132, height: 132)
+                    .frame(maxWidth: .infinity)
+                    .padding(.bottom, 14)
+            }
             HStack(spacing: 7) {
                 Image(systemName: "pin.fill").font(.system(size: 12)).foregroundStyle(Color.lime)
                 Text("Pin 后一直保留").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.shelfInk)
@@ -65,7 +69,7 @@ struct ShelfView: View {
         }
         .padding(.horizontal, 26)
         .frame(width: 210, alignment: .leading)
-        .background(Color.shelfSide)
+        .background(ZStack { Color.shelfSide; GridPattern() })
         .overlay(alignment: .trailing) { Rectangle().fill(Color.white.opacity(0.06)).frame(width: 1) }
     }
 
@@ -211,5 +215,21 @@ struct ShelfView: View {
         }
         Divider()
         Button("删除", role: .destructive) { ClipStore.shared.remove(item.id) }
+    }
+}
+
+/// Faint square grid over the dark ground, like graph paper.
+struct GridPattern: View {
+    var step: CGFloat = 28
+    var body: some View {
+        Canvas { ctx, size in
+            var path = Path()
+            var x: CGFloat = 0
+            while x <= size.width { path.move(to: CGPoint(x: x, y: 0)); path.addLine(to: CGPoint(x: x, y: size.height)); x += step }
+            var y: CGFloat = 0
+            while y <= size.height { path.move(to: CGPoint(x: 0, y: y)); path.addLine(to: CGPoint(x: size.width, y: y)); y += step }
+            ctx.stroke(path, with: .color(Color(nsColor: Theme.shelfGrid)), lineWidth: 1)
+        }
+        .allowsHitTesting(false)
     }
 }

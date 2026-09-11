@@ -12,24 +12,25 @@ enum Theme {
     static let red = NSColor(srgbRed: 0.90, green: 0.28, blue: 0.30, alpha: 1)         // #E5484D
     static let cornerRadius: CGFloat = 14
 
-    // Shelf (dark, lavender accent)
-    static let shelfBG = NSColor(srgbRed: 0.094, green: 0.094, blue: 0.106, alpha: 1)   // #18181B
-    static let shelfSide = NSColor(srgbRed: 0.118, green: 0.118, blue: 0.133, alpha: 1) // #1E1E22
-    static let shelfCard = NSColor(srgbRed: 0.137, green: 0.137, blue: 0.157, alpha: 1) // #232328
-    static let shelfBorder = NSColor(srgbRed: 0.20, green: 0.20, blue: 0.23, alpha: 1)  // #33333A
+    // Shelf (warm dark, lavender accent) — the reference's blacks lean slightly brown
+    static let shelfBG = NSColor(srgbRed: 0.106, green: 0.102, blue: 0.094, alpha: 1)   // #1B1A18
+    static let shelfSide = NSColor(srgbRed: 0.125, green: 0.121, blue: 0.110, alpha: 1) // #201F1C
+    static let shelfCard = NSColor(srgbRed: 0.149, green: 0.145, blue: 0.133, alpha: 1) // #262522
+    static let shelfBorder = NSColor(srgbRed: 0.22, green: 0.21, blue: 0.19, alpha: 1)  // #383630
     static let shelfInk = NSColor(calibratedWhite: 0.96, alpha: 1)
-    static let shelfMuted = NSColor(srgbRed: 0.62, green: 0.62, blue: 0.66, alpha: 1)   // #9E9EA8
+    static let shelfMuted = NSColor(srgbRed: 0.63, green: 0.62, blue: 0.59, alpha: 1)   // #A19E97
+    static let shelfGrid = NSColor(calibratedWhite: 1, alpha: 0.045)
     static let cream = NSColor(srgbRed: 0.95, green: 0.93, blue: 0.89, alpha: 1)        // #F2EDE3 content paper
     static let creamInk = NSColor(srgbRed: 0.13, green: 0.12, blue: 0.11, alpha: 1)
     static let purple = NSColor(srgbRed: 0.71, green: 0.64, blue: 0.95, alpha: 1)       // #B5A3F2
     static let onPurple = NSColor(srgbRed: 0.12, green: 0.09, blue: 0.20, alpha: 1)
-    // Kind tags (outline + text in the colour, no fill)
-    static let tagMP4 = NSColor(srgbRed: 0.98, green: 0.75, blue: 0.52, alpha: 1)       // apricot
-    static let tagGIF = NSColor(srgbRed: 0.97, green: 0.64, blue: 0.78, alpha: 1)       // pink
-    static let tagImage = NSColor(srgbRed: 0.96, green: 0.87, blue: 0.50, alpha: 1)     // pale yellow
-    static let tagText = NSColor(srgbRed: 0.60, green: 0.78, blue: 0.96, alpha: 1)      // sky
-    static let tagLink = NSColor(srgbRed: 0.77, green: 0.70, blue: 0.97, alpha: 1)      // lavender
-    static let tagFiles = NSColor(srgbRed: 0.70, green: 0.70, blue: 0.75, alpha: 1)     // gray
+    // Kind tags: low-saturation outline colours; the label itself stays gray
+    static let tagMP4 = NSColor(srgbRed: 0.78, green: 0.64, blue: 0.54, alpha: 1)       // dusty peach
+    static let tagGIF = NSColor(srgbRed: 0.78, green: 0.60, blue: 0.68, alpha: 1)       // dusty rose
+    static let tagImage = NSColor(srgbRed: 0.76, green: 0.72, blue: 0.56, alpha: 1)     // dusty sand
+    static let tagText = NSColor(srgbRed: 0.58, green: 0.66, blue: 0.76, alpha: 1)      // dusty blue
+    static let tagLink = NSColor(srgbRed: 0.68, green: 0.63, blue: 0.80, alpha: 1)      // dusty lavender
+    static let tagFiles = NSColor(srgbRed: 0.56, green: 0.56, blue: 0.58, alpha: 1)     // gray
 
     static func shadow() -> NSShadow {
         let s = NSShadow()
@@ -40,12 +41,16 @@ enum Theme {
     }
 
     /// Product logo (Resources/Logo.png). Falls back to the source tree so self-tests find it too.
-    static let logo: NSImage? = {
-        if let url = Bundle.main.resourceURL?.appendingPathComponent("Logo.png"), let img = NSImage(contentsOf: url) { return img }
+    static let logo: NSImage? = resource("Logo.png")
+    /// The mascot on the shelf sidebar.
+    static let mascot: NSImage? = resource("Mascot.png")
+
+    private static func resource(_ name: String) -> NSImage? {
+        if let url = Bundle.main.resourceURL?.appendingPathComponent(name), let img = NSImage(contentsOf: url) { return img }
         let dev = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .deletingLastPathComponent().appendingPathComponent("Resources/Logo.png")
+            .deletingLastPathComponent().appendingPathComponent("Resources/\(name)")
         return NSImage(contentsOf: dev)
-    }()
+    }
 
     static func island(_ v: NSView, radius: CGFloat = cornerRadius) {
         v.wantsLayer = true
