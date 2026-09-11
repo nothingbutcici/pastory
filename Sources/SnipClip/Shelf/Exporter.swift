@@ -9,11 +9,10 @@ enum Exporter {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd HH.mm.ss"
         let stamp = f.string(from: item.createdAt)
-        let shelf = ShelfPanelController.shared
-        shelf.holdOpen = true
-        defer { shelf.holdOpen = false; shelf.refocus() }
-        NSApp.activate(ignoringOtherApps: true)
+        ShelfPanelController.shared.withDialog { run(item, stamp: stamp, store: store) }
+    }
 
+    private static func run(_ item: ClipItem, stamp: String, store: ClipStore) {
         switch item.kind {
         case .image, .text, .url, .video:
             let panel = NSSavePanel()

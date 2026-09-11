@@ -27,7 +27,7 @@ build/               构建产物，不进 git
 
 ## 存储
 
-一切在 `~/Library/Application Support/Snip Clip/`：
+一切在 `~/Library/Application Support/Pastory/`：
 
 | 路径 | 内容 |
 | --- | --- |

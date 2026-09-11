@@ -157,31 +157,29 @@ struct SettingsPane: View {
         if days < prefs.retentionDays {
             let doomed = ClipStore.shared.items.filter { Retention.isExpired($0, now: Date(), cleanupHour: p.cleanupHour, retentionDays: days) }.count
             if doomed > 0 {
-                let shelf = ShelfPanelController.shared
-                shelf.holdOpen = true
-                defer { shelf.holdOpen = false; shelf.refocus() }
-                let a = NSAlert()
-                a.messageText = "把保留期改成 \(days) 天？"
-                a.informativeText = "会立刻清掉 \(doomed) 条未 Pin 的记录。Pin 住的不受影响。"
-                a.addButton(withTitle: "改并清理")
-                a.addButton(withTitle: "取消")
-                NSApp.activate(ignoringOtherApps: true)
-                if a.runModal() != .alertFirstButtonReturn { return }
+                let go = ShelfPanelController.shared.withDialog { () -> Bool in
+                    let a = NSAlert()
+                    a.messageText = "把保留期改成 \(days) 天？"
+                    a.informativeText = "会立刻清掉 \(doomed) 条未 Pin 的记录。Pin 住的不受影响。"
+                    a.addButton(withTitle: "改并清理")
+                    a.addButton(withTitle: "取消")
+                    return a.runModal() == .alertFirstButtonReturn
+                }
+                if !go { return }
             }
         }
         prefs.retentionDays = days
     }
 
     private func chooseStoreFolder() {
-        let shelf = ShelfPanelController.shared
-        shelf.holdOpen = true
-        defer { shelf.holdOpen = false; shelf.refocus() }
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.canCreateDirectories = true
-        panel.prompt = "用这个文件夹"
-        panel.message = "现有内容会复制过去；原文件夹保留，可以自己删。"
-        NSApp.activate(ignoringOtherApps: true)
-        if panel.runModal() == .OK, let url = panel.url { relocateStore(to: url) }
+        let picked: URL? = ShelfPanelController.shared.withDialog {
+            let panel = NSOpenPanel()
+            panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.canCreateDirectories = true
+            panel.prompt = "用这个文件夹"
+            panel.message = "现有内容会复制过去；原文件夹保留，可以自己删。"
+            return panel.runModal() == .OK ? panel.url : nil
+        }
+        if let picked { relocateStore(to: picked) }
     }
 
     private func relocateStore(to url: URL?) {
@@ -190,13 +188,12 @@ struct SettingsPane: View {
     }
 
     private func chooseFolder() {
-        let shelf = ShelfPanelController.shared
-        shelf.holdOpen = true
-        defer { shelf.holdOpen = false; shelf.refocus() }
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.prompt = "选择"
-        NSApp.activate(ignoringOtherApps: true)
-        if panel.runModal() == .OK, let url = panel.url { prefs.exportDir = url.path }
+        let picked: URL? = ShelfPanelController.shared.withDialog {
+            let panel = NSOpenPanel()
+            panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.prompt = "选择"
+            return panel.runModal() == .OK ? panel.url : nil
+        }
+        if let picked { prefs.exportDir = picked.path }
     }
 }
 

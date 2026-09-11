@@ -8,7 +8,7 @@ func stableHash(_ data: Data) -> Int {
     return digest.withUnsafeBytes { Int(truncatingIfNeeded: $0.load(as: UInt64.self)) }
 }
 
-/// ~/Library/Application Support/Snip Clip/
+/// ~/Library/Application Support/Pastory/
 ///   index.json       metadata, newest first
 ///   items/<id>.<ext> payload (txt / png / json list of paths); <id>.rtf alongside when rich text
 ///   thumbs/<id>.png  shelf thumbnail for images
@@ -30,8 +30,14 @@ final class ClipStore {
         if let env = ProcessInfo.processInfo.environment["SNIPCLIP_STORE"], !env.isEmpty {
             return URL(fileURLWithPath: env, isDirectory: true)
         }
-        return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Snip Clip", isDirectory: true)
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let new = support.appendingPathComponent("Pastory", isDirectory: true)
+        let old = support.appendingPathComponent("Snip Clip", isDirectory: true)
+        // One-time rename from the code-name folder; never leave two stores around.
+        if !FileManager.default.fileExists(atPath: new.path), FileManager.default.fileExists(atPath: old.path) {
+            try? FileManager.default.moveItem(at: old, to: new)
+        }
+        return new
     }
     private var thumbCache: [String: NSImage] = [:]
     static let maxTextBytes = 20 * 1024 * 1024

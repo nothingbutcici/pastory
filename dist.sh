@@ -22,6 +22,6 @@ Pastory 首次打开说明
    系统设置 › 隐私与安全性 › 屏幕录制，勾选 Pastory，然后退出 Pastory 重新打开。
 4. 默认快捷键：⌥⌘S 截图 / 录屏，⇧⌘V 打开剪贴板。可以在剪贴板面板左侧「设置」里改。
 
-所有内容只存在本机 ~/Library/Application Support/Snip Clip/，不联网、不上传。
+所有内容只存在本机 ~/Library/Application Support/Pastory/，不联网、不上传。
 TXT
 echo "→ dist/Pastory-$VERSION.zip ($(du -h "dist/Pastory-$VERSION.zip" | cut -f1))"

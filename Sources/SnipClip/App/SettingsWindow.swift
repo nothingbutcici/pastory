@@ -62,6 +62,7 @@ struct ShortcutRecorder: View {
     @State private var notice: String?
     @State private var flagsMonitor: Any?
     @State private var resignObserver: Any?
+    @State private var clickMonitor: Any?
     @State private var sawModifiers = false
     @State private var sawKey = false
 
@@ -71,23 +72,26 @@ struct ShortcutRecorder: View {
         HStack(spacing: 8) {
             if let notice, !capturing { Text(notice).font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.tagMP4)) }
             else if taken, !capturing { Text("被其他应用占用").font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.tagMP4)) }
-            Button { capturing ? stop(nil) : startCapture() } label: {
-                Text(capturing ? "按下组合键，⌫ 清除" : shortcut.display)
-                    .font(.system(size: 13, weight: .medium).monospaced())
-                    .foregroundStyle(capturing ? Color.onPurple : (shortcut.isSet ? Color.shelfInk : Color.shelfMuted))
-                    .frame(minWidth: 110)
-                    .padding(.horizontal, 12).padding(.vertical, 7)
-                    .background(capturing ? Color.purple : Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(taken ? Color(nsColor: Theme.tagMP4) : Color.shelfBorder, lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-            // Not everyone wants every shortcut: clear it and the action stays reachable from the menu.
-            if shortcut.isSet, !capturing {
-                Button { stop(Shortcut.none) } label: {
-                    Image(systemName: "xmark.circle.fill").font(.system(size: 14)).foregroundStyle(Color.shelfMuted)
+            HStack(spacing: 6) {
+                Button { capturing ? stop(nil) : startCapture() } label: {
+                    Text(capturing ? "按下组合键" : shortcut.display)
+                        .font(.system(size: 13, weight: .medium).monospaced())
+                        .foregroundStyle(capturing ? Color.onPurple : (shortcut.isSet ? Color.purple : Color.shelfMuted))
+                        .frame(minWidth: 96)
+                        .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain).help("不设快捷键")
+                .buttonStyle(.plain)
+                // Clear lives inside the box, gray; the action then stays reachable from the menu.
+                if shortcut.isSet, !capturing {
+                    Button { stop(Shortcut.none) } label: {
+                        Image(systemName: "xmark.circle.fill").font(.system(size: 13)).foregroundStyle(Color.shelfMuted)
+                    }
+                    .buttonStyle(.plain).help("不设快捷键")
+                }
             }
+            .padding(.leading, 12).padding(.trailing, shortcut.isSet && !capturing ? 8 : 12).padding(.vertical, 7)
+            .background(capturing ? Color.purple : Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(taken ? Color(nsColor: Theme.tagMP4) : Color.shelfBorder, lineWidth: 1))
         }
         .onAppear { shortcut = Preferences.shared.shortcut(key); refreshTaken() }
         .onDisappear { stop(nil) }
@@ -102,6 +106,11 @@ struct ShortcutRecorder: View {
         sawModifiers = false
         sawKey = false
         HotKeyCenter.shared.suspend()          // otherwise our own combos fire instead of reaching this box
+        // Any click while waiting = never mind.
+        clickMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { event in
+            DispatchQueue.main.async { if capturing { stop(nil) } }
+            return event
+        }
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             sawKey = true
             if event.keyCode == 53 { stop(nil) }
@@ -141,6 +150,8 @@ struct ShortcutRecorder: View {
         if let monitor { NSEvent.removeMonitor(monitor) }
         if let flagsMonitor { NSEvent.removeMonitor(flagsMonitor) }
         if let resignObserver { NotificationCenter.default.removeObserver(resignObserver) }
+        if let clickMonitor { NSEvent.removeMonitor(clickMonitor) }
+        clickMonitor = nil
         monitor = nil
         flagsMonitor = nil
         resignObserver = nil

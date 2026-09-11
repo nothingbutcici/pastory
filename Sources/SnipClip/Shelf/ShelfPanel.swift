@@ -17,6 +17,22 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
 
     func refocus() { if let p = panel, p.isVisible { p.makeKey() } }
 
+    /// Run a system dialog (open / save / alert) from the shelf: the shelf normally floats above everything,
+    /// which would bury the dialog and leave the user stuck. Lower it for the duration, keep it open, then restore.
+    func withDialog<T>(_ body: () -> T) -> T {
+        holdOpen = true
+        let level = panel?.level ?? .statusBar
+        panel?.level = .normal
+        panel?.orderBack(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        defer {
+            panel?.level = level
+            holdOpen = false
+            refocus()
+        }
+        return body()
+    }
+
     func toggle() { isVisible ? hide() : show() }
 
     /// Open (if needed) with the search box focused.
