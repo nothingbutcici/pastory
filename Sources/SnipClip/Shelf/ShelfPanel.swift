@@ -75,7 +75,9 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
             if Int(event.keyCode) == kVK_Escape { model.renamingID = nil; return true }
             return false
         }
-        let typing = panel?.firstResponder is NSTextView
+        // "Typing" = any text input owns the keyboard (field editor, SwiftUI text view, NSTextField).
+        let fr = panel?.firstResponder
+        let typing = fr is NSText || fr is NSTextField || String(describing: type(of: fr as Any)).contains("Text")
         let cmd = event.modifierFlags.contains(.command)
         switch Int(event.keyCode) {
         case kVK_Escape:
@@ -83,6 +85,7 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
             if model.showSettings { model.showSettings = false; return true }
             hide(); return true
         case kVK_Return, kVK_ANSI_KeypadEnter:
+            if typing { return false }                 // ⏎ inside a text box stays in the text box
             model.copySelected(); return true
         case kVK_LeftArrow where !typing: model.move(-1); return true
         case kVK_RightArrow where !typing: model.move(1); return true
