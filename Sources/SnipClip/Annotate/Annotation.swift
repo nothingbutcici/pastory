@@ -162,7 +162,7 @@ enum AnnotatePalette {
         NSColor(srgbRed: 0.56, green: 0.42, blue: 1.00, alpha: 1),   // purple
         .white,
     ]
-    static let accent = NSColor(srgbRed: 0.56, green: 0.42, blue: 1.0, alpha: 1)
+    static let accent = Theme.lime
 }
 
 extension NSColor {

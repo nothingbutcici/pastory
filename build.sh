@@ -25,7 +25,7 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/Snip Clip"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
-for f in AppIcon.icns; do
+for f in AppIcon.icns Logo.png; do
     [ -f "Resources/$f" ] && cp "Resources/$f" "$APP/Contents/Resources/$f"
 done
 

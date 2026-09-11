@@ -13,8 +13,8 @@ protocol AnnotateDelegate: AnyObject {
 /// The current tool stays active. Clicking a drawn element selects it instead of drawing:
 /// drag to move, pull a handle to reshape, hit the ✕ bubble or ⌫ to delete, click selected text to edit it.
 final class AnnotateView: NSView, NSTextFieldDelegate {
-    let image: CGImage
-    private let nsImage: NSImage
+    private(set) var image: CGImage
+    private var nsImage: NSImage
     weak var delegate: AnnotateDelegate?
     var onStateChange: (() -> Void)?
 
@@ -94,6 +94,16 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
     func cancel() { delegate?.annotateDidCancel() }
     func requestOCR() { commitTextEditor(); delegate?.annotateRequestOCR(image) }
     func requestRecord() { commitTextEditor(); delegate?.annotateRequestRecord() }
+
+    /// Region resized: new crop, new frame; annotations stay put on screen.
+    func replaceImage(_ img: CGImage, frame newFrame: CGRect) {
+        let d = CGPoint(x: frame.minX - newFrame.minX, y: newFrame.maxY - frame.maxY)   // view is flipped: y from the top edge
+        for i in annotations.indices { annotations[i].translate(d) }
+        image = img
+        nsImage = NSImage(cgImage: img, size: newFrame.size)
+        frame = newFrame
+        needsDisplay = true
+    }
 
     /// Self-test only.
     func debugSet(_ list: [Annotation], select: Int? = nil) {

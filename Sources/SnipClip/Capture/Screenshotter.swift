@@ -37,6 +37,25 @@ enum Screenshotter {
         return try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: cfg)
     }
 
+    /// Whole display, excluding every window of this process (fetched fresh, so the picker's
+    /// own mask windows are left out). Region / window shots are crops of this.
+    static func captureDisplay(_ display: SCDisplay, colorSpaceName: CFString?) async throws -> CGImage {
+        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        let pid = ProcessInfo.processInfo.processIdentifier
+        let own = content.windows.filter { $0.owningApplication?.processID == pid }
+        let filter = SCContentFilter(display: display, excludingWindows: own)
+        let cfg = SCStreamConfiguration()
+        cfg.pixelFormat = kCVPixelFormatType_32BGRA
+        cfg.captureResolution = .best
+        cfg.showsCursor = false
+        cfg.scalesToFit = false
+        let scale = CGFloat(filter.pointPixelScale)
+        cfg.width = Int((filter.contentRect.width * scale).rounded())
+        cfg.height = Int((filter.contentRect.height * scale).rounded())
+        if let colorSpaceName { cfg.colorSpaceName = colorSpaceName }
+        return try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: cfg)
+    }
+
     static func screen(for target: CaptureTarget, snapshot: ShareableSnapshot) -> NSScreen? {
         switch target {
         case .display(let d), .region(let d, _):

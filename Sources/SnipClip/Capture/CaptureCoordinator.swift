@@ -6,6 +6,8 @@ final class CaptureCoordinator: AnnotateDelegate {
     static let shared = CaptureCoordinator()
     private var snapshot: ShareableSnapshot?
     private var pickedTarget: CaptureTarget?
+    private var fullImage: CGImage?
+    private var fullScale: CGFloat = 2
     private var recording: RecordingSession?
     private(set) var isBusy = false
     static let source = ClipStore.Source(bundleID: "com.cici.snipclip", name: "Snip Clip")
@@ -35,15 +37,31 @@ final class CaptureCoordinator: AnnotateDelegate {
     private func picked(_ target: CaptureTarget?) {
         guard let target, let snapshot else { finish(); return }
         pickedTarget = target
+        let overlay = SelectionOverlayController.shared
+        guard let display = overlay.heldDisplay else { finish(); return }
+        let screen = snapshot.screen(for: display)
         Task { @MainActor in
             do {
-                let image = try await Screenshotter.capture(target, snapshot: snapshot)
-                SelectionOverlayController.shared.showAnnotator(image: image, delegate: self)
+                let colorSpaceName = screen?.colorSpace?.cgColorSpace?.name
+                let image = try await Screenshotter.captureDisplay(display, colorSpaceName: colorSpaceName)
+                fullImage = image
+                fullScale = CGFloat(image.width) / (screen?.frame.width ?? CGFloat(image.width))
+                overlay.cropProvider = { [weak self] local in self?.crop(local) }
+                guard let local = overlay.heldDisplayLocalRect, let cropped = crop(local) else { finish(); return }
+                overlay.showAnnotator(image: cropped, delegate: self)
             } catch {
                 NSSound.beep()
                 finish()
             }
         }
+    }
+
+    /// Display-local points (origin top-left) → pixels of the full capture.
+    private func crop(_ local: CGRect) -> CGImage? {
+        guard let fullImage else { return nil }
+        let px = CGRect(x: local.minX * fullScale, y: local.minY * fullScale,
+                        width: local.width * fullScale, height: local.height * fullScale).integral
+        return fullImage.cropping(to: px.intersection(CGRect(x: 0, y: 0, width: fullImage.width, height: fullImage.height)))
     }
 
     func cancel() { if let recording { recording.cancel() } else { finish() } }
@@ -61,7 +79,11 @@ final class CaptureCoordinator: AnnotateDelegate {
     func annotateDidCancel() { finish() }
 
     func annotateRequestRecord() {
-        guard let target = pickedTarget, let rect = SelectionOverlayController.shared.heldScreenRect else { finish(); return }
+        // Record whatever the (possibly resized) frame covers now.
+        let overlay = SelectionOverlayController.shared
+        guard let rect = overlay.heldScreenRect, let display = overlay.heldDisplay, let local = overlay.heldDisplayLocalRect else { finish(); return }
+        let target: CaptureTarget = local.size == overlay.heldScreenSize ? .display(display) : .region(display, local)
+        _ = pickedTarget
         OCRPanelController.shared.close()
         SelectionOverlayController.shared.release()
         let session = RecordingSession(target: target, regionScreenRect: rect)
@@ -87,6 +109,7 @@ final class CaptureCoordinator: AnnotateDelegate {
     private func finish() {
         if let recording { recording.cancel(); return }   // teardown calls back into finish()
         pickedTarget = nil
+        fullImage = nil
         OCRPanelController.shared.close()
         SelectionOverlayController.shared.release()
         snapshot = nil

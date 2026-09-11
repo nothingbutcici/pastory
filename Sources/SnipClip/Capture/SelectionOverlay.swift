@@ -5,7 +5,8 @@ import ScreenCaptureKit
 enum PickMode { case region, window }
 
 /// Full-screen picker: drag a region, tap a window, F for the whole display.
-/// After a pick the mask stays up and the annotator is placed over the frozen capture.
+/// After a pick the mask stays up, the frame grows lime handles (drag to resize; the canvas re-crops),
+/// and the brand bar + annotator appear.
 @MainActor
 final class SelectionOverlayController {
     static let shared = SelectionOverlayController()
@@ -17,11 +18,24 @@ final class SelectionOverlayController {
     private(set) var hoveredWindow: SCWindow?
     private(set) var annotator: AnnotateView?
     private var toolbar: AnnotateToolbar?
-    private var modeSwitch: ModeSwitch?
+    private var topBar: TopBar?
+    /// Display-local rect (points, origin top-left) → cropped capture. Set by the coordinator.
+    var cropProvider: ((CGRect) -> CGImage?)?
 
     private init() {}
 
-    var ownWindowIDs: [CGWindowID] { overlays.map { CGWindowID($0.windowNumber) } }
+    private var heldWindow: OverlayWindow? { overlays.first { $0.overlayView.heldRect != nil } }
+    var heldDisplay: SCDisplay? { heldWindow?.display }
+    var heldScreenSize: CGSize? { heldWindow?.screenRef.frame.size }
+    var heldDisplayLocalRect: CGRect? {
+        guard let w = heldWindow, let r = w.overlayView.heldRect else { return nil }
+        return CoordinateSpace.displayLocalRect(viewRect: r, screen: w.screenRef)
+    }
+    /// Screen-space rect of the held selection, for placing side panels.
+    var heldScreenRect: CGRect? {
+        guard let w = heldWindow, let r = w.overlayView.heldRect else { return nil }
+        return w.convertToScreen(r)
+    }
 
     func present(snapshot: ShareableSnapshot, mode: PickMode, completion: @escaping (CaptureTarget?) -> Void) {
         if isPresenting || !overlays.isEmpty { release() }
@@ -82,76 +96,88 @@ final class SelectionOverlayController {
             o.overlayView.held = true
             o.overlayView.heldRect = o === window ? (viewRect ?? o.overlayView.bounds) : nil
             o.overlayView.needsDisplay = true
+            o.invalidateCursorRects(for: o.overlayView)
         }
         done?(target)
     }
 
-    /// Place the annotation canvas over the frozen selection.
+    /// Place the brand bar and the annotation canvas over the frozen selection.
     func showAnnotator(image: CGImage, delegate: AnnotateDelegate) {
-        guard let win = overlays.first(where: { $0.overlayView.heldRect != nil }),
-              let rect = win.overlayView.heldRect else { return }
-        // Now that the picture is taken, keep the mouse from seeing the other screens' masks as pickable.
+        guard let win = heldWindow, let rect = win.overlayView.heldRect else { return }
         for o in overlays where o !== win { o.ignoresMouseEvents = true }
         let canvas = AnnotateView(frame: rect, image: image)
         canvas.delegate = delegate
         win.overlayView.addSubview(canvas)
         let bar = AnnotateToolbar(canvas: canvas)
-        bar.frame = Self.toolbarFrame(for: rect, size: bar.fittingSize, in: win.overlayView.bounds)
         win.overlayView.addSubview(bar)
-        bar.didLayout()
-        let sw = ModeSwitch(frame: .zero)
-        sw.onRecord = { [weak canvas] in canvas?.requestRecord() }
-        sw.frame.origin = Self.modeSwitchOrigin(for: rect, size: ModeSwitch.size, in: win.overlayView.bounds, avoiding: bar.frame)
-        win.overlayView.addSubview(sw)
-        modeSwitch = sw
+        let top = TopBar()
+        top.onRecord = { [weak canvas] in canvas?.requestRecord() }
+        top.onClose = { [weak canvas] in canvas?.cancel() }
+        win.overlayView.addSubview(top)
         annotator = canvas
         toolbar = bar
+        topBar = top
+        layoutChrome()
         win.makeKeyAndOrderFront(nil)
         win.makeFirstResponder(canvas)
     }
 
+    /// Frame handle dragged: re-crop and re-flow the chrome.
+    func regionChanged(_ viewRect: CGRect) {
+        guard let win = heldWindow, let canvas = annotator else { return }
+        win.overlayView.heldRect = viewRect
+        win.overlayView.needsDisplay = true
+        let local = CoordinateSpace.displayLocalRect(viewRect: viewRect, screen: win.screenRef)
+        if let img = cropProvider?(local) { canvas.replaceImage(img, frame: viewRect) }
+        layoutChrome()
+    }
+
+    func regionCommit() {
+        guard let win = heldWindow else { return }
+        win.invalidateCursorRects(for: win.overlayView)
+    }
+
+    private func layoutChrome() {
+        guard let win = heldWindow, let rect = win.overlayView.heldRect else { return }
+        let bounds = win.overlayView.bounds
+        if let bar = toolbar {
+            bar.frame = Self.toolbarFrame(for: rect, size: bar.fittingSize, in: bounds)
+            bar.didLayout()
+        }
+        if let top = topBar {
+            let size = top.fittingSize
+            var f = CGRect(x: (bounds.midX - size.width / 2).rounded(), y: bounds.maxY - 28 - size.height, width: size.width, height: size.height)
+            if f.intersects(rect.insetBy(dx: -8, dy: -8)) { f.origin.y = bounds.minY + 28 }
+            if let bar = toolbar, f.intersects(bar.frame) { f.origin.y = bounds.maxY - 28 - size.height }
+            top.frame = f
+        }
+    }
+
     private static func toolbarFrame(for rect: CGRect, size: CGSize, in bounds: CGRect) -> CGRect {
-        let gap: CGFloat = 8
+        let gap: CGFloat = 12
         var y = rect.minY - size.height - gap
         if y < bounds.minY + 4 {
             y = rect.maxY + gap
             if y + size.height > bounds.maxY - 4 { y = rect.minY + gap }
         }
-        var x = rect.maxX - size.width
+        var x = rect.midX - size.width / 2
         x = min(max(bounds.minX + 4, x), bounds.maxX - size.width - 4)
-        return CGRect(x: x, y: y, width: size.width, height: size.height)
-    }
-
-    /// Top-left above the selection; inside the top-left corner when there is no room.
-    private static func modeSwitchOrigin(for rect: CGRect, size: CGSize, in bounds: CGRect, avoiding bar: CGRect) -> CGPoint {
-        let gap: CGFloat = 8
-        var p = CGPoint(x: rect.minX, y: rect.maxY + gap)
-        if p.y + size.height > bounds.maxY - 4 || CGRect(origin: p, size: size).intersects(bar) {
-            p = CGPoint(x: rect.minX + gap, y: rect.maxY - gap - size.height)
-        }
-        p.x = min(max(bounds.minX + 4, p.x), bounds.maxX - size.width - 4)
-        return p
-    }
-
-    /// Screen-space rect of the held selection, for placing side panels.
-    var heldScreenRect: CGRect? {
-        guard let win = overlays.first(where: { $0.overlayView.heldRect != nil }),
-              let r = win.overlayView.heldRect else { return nil }
-        return win.convertToScreen(r)
+        return CGRect(x: x.rounded(), y: y.rounded(), width: size.width, height: size.height)
     }
 
     /// Tear everything down.
     func release() {
         isPresenting = false
         completion = nil
+        cropProvider = nil
         HotKeyCenter.shared.unbind("picker.esc")
         annotator?.removeFromSuperview()
         toolbar?.subBar.removeFromSuperview()
         toolbar?.removeFromSuperview()
-        modeSwitch?.removeFromSuperview()
-        modeSwitch = nil
+        topBar?.removeFromSuperview()
         annotator = nil
         toolbar = nil
+        topBar = nil
         overlays.forEach { $0.orderOut(nil); $0.close() }
         overlays.removeAll()
         previousApp?.activate()
@@ -171,7 +197,6 @@ final class OverlayWindow: NSWindow {
         super.init(contentRect: screen.frame, styleMask: [.borderless], backing: .buffered, defer: false)
         overlayView.screenRef = screen
         overlayView.display = display
-        // NSWindow defaults to releasing itself on close(); ARC releases it again → double free.
         isReleasedWhenClosed = false
         isOpaque = false
         backgroundColor = .clear
@@ -194,13 +219,28 @@ final class OverlayView: NSView {
     var candidates: [(SCWindow, CGRect)] = []
     private var dragStart: CGPoint?
     private var dragCurrent: CGPoint?
-    /// After a pick: freeze the drawing, no hints, no crosshair.
+    /// After a pick: freeze the drawing; the frame gets handles.
     var held = false
     var heldRect: CGRect?
-    private let accent = NSColor(calibratedRed: 0.56, green: 0.42, blue: 1.0, alpha: 1.0)
+    private var resizing: (handle: Int, anchor: CGRect)?
+    static let handleSize: CGFloat = 9
 
     override var acceptsFirstResponder: Bool { true }
-    override func resetCursorRects() { if !held { addCursorRect(bounds, cursor: .crosshair) } }
+
+    /// 8 handles: corners then edge midpoints (index → which sides move).
+    private func handles(_ r: CGRect) -> [CGPoint] {
+        [CGPoint(x: r.minX, y: r.minY), CGPoint(x: r.maxX, y: r.minY), CGPoint(x: r.minX, y: r.maxY), CGPoint(x: r.maxX, y: r.maxY),
+         CGPoint(x: r.midX, y: r.minY), CGPoint(x: r.midX, y: r.maxY), CGPoint(x: r.minX, y: r.midY), CGPoint(x: r.maxX, y: r.midY)]
+    }
+
+    override func resetCursorRects() {
+        if !held { addCursorRect(bounds, cursor: .crosshair); return }
+        guard let r = heldRect else { return }
+        for (i, h) in handles(r).enumerated() {
+            let cursor: NSCursor = i == 4 || i == 5 ? .resizeUpDown : (i == 6 || i == 7 ? .resizeLeftRight : .crosshair)
+            addCursorRect(CGRect(x: h.x - 8, y: h.y - 8, width: 16, height: 16), cursor: cursor)
+        }
+    }
 
     private var tracking: NSTrackingArea?
     override func updateTrackingAreas() {
@@ -232,71 +272,109 @@ final class OverlayView: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         guard let ctx = NSGraphicsContext.current else { return }
-        NSColor(calibratedWhite: 0, alpha: 0.45).setFill()
+        NSColor(calibratedWhite: 0, alpha: 0.5).setFill()
         bounds.fill()
         let hole: CGRect? = held ? heldRect : (controller?.mode == .window ? hoveredRectInView : selectionRect)
-        if let hole {
-            ctx.compositingOperation = .copy
-            NSColor.clear.setFill()
-            hole.fill()
-            ctx.compositingOperation = .sourceOver
-            accent.setStroke()
-            let path = NSBezierPath(rect: hole.insetBy(dx: -0.5, dy: -0.5))
-            path.lineWidth = 1.5
-            path.stroke()
-            if !held { drawBadge(for: hole) }
+        guard let hole else { return }
+        ctx.compositingOperation = .copy
+        NSColor.clear.setFill()
+        hole.fill()
+        ctx.compositingOperation = .sourceOver
+        Theme.lime.setStroke()
+        let path = NSBezierPath(rect: hole.insetBy(dx: -1, dy: -1))
+        path.lineWidth = 2
+        path.stroke()
+        if held {
+            for h in handles(hole) {
+                let s = Self.handleSize
+                let sq = CGRect(x: h.x - s / 2, y: h.y - s / 2, width: s, height: s)
+                Theme.lime.setFill()
+                NSBezierPath(roundedRect: sq, xRadius: 1.5, yRadius: 1.5).fill()
+                NSColor(calibratedWhite: 0, alpha: 0.35).setStroke()
+                let o = NSBezierPath(roundedRect: sq.insetBy(dx: -0.5, dy: -0.5), xRadius: 2, yRadius: 2)
+                o.lineWidth = 1
+                o.stroke()
+            }
         }
+        drawBadge(for: hole)
     }
 
+    /// "918 × 502" pill at the top-right, outside the frame when there is room.
     private func drawBadge(for rect: CGRect) {
         let text: String
-        if controller?.mode == .window, let w = controller?.hoveredWindow {
+        if !held, controller?.mode == .window, let w = controller?.hoveredWindow {
             let app = w.owningApplication?.applicationName ?? ""
             let title = w.title ?? ""
             text = title.isEmpty ? app : "\(app) — \(title)"
         } else {
             let s = screenRef.backingScaleFactor
-            text = "\(Int(rect.width * s)) × \(Int(rect.height * s)) px"
+            text = "\(Int((rect.width * s).rounded())) × \(Int((rect.height * s).rounded()))"
         }
         let attrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium), .foregroundColor: NSColor.white
+            .font: NSFont.monospacedDigitSystemFont(ofSize: 12.5, weight: .medium), .foregroundColor: Theme.text
         ]
         let size = (text as NSString).size(withAttributes: attrs)
-        let pad: CGFloat = 8
-        var box = CGRect(x: rect.minX, y: rect.maxY + 8, width: size.width + pad * 2, height: size.height + pad)
-        if box.maxY > bounds.maxY - 4 { box.origin.y = rect.minY - box.height - 8 }
-        if box.maxX > bounds.maxX - 4 { box.origin.x = bounds.maxX - box.width - 4 }
-        box.origin.x = max(4, box.origin.x); box.origin.y = max(4, box.origin.y)
-        NSColor(calibratedWhite: 0.08, alpha: 0.92).setFill()
-        NSBezierPath(roundedRect: box, xRadius: 6, yRadius: 6).fill()
-        (text as NSString).draw(at: CGPoint(x: box.minX + pad, y: box.minY + pad / 2), withAttributes: attrs)
+        let pad: CGFloat = 9
+        var box = CGRect(x: rect.maxX - size.width - pad * 2, y: rect.maxY + 10, width: size.width + pad * 2, height: size.height + 8)
+        if box.maxY > bounds.maxY - 4 { box.origin.y = rect.maxY - box.height - 10 }
+        box.origin.x = max(4, min(box.origin.x, bounds.maxX - box.width - 4))
+        Theme.bg.withAlphaComponent(0.92).setFill()
+        NSBezierPath(roundedRect: box, xRadius: 7, yRadius: 7).fill()
+        (text as NSString).draw(at: CGPoint(x: box.minX + pad, y: box.minY + 4), withAttributes: attrs)
     }
 
     private var overlayWindow: OverlayWindow? { window as? OverlayWindow }
 
     override func mouseDown(with event: NSEvent) {
-        guard !held else { return }
+        let p = convert(event.locationInWindow, from: nil)
+        if held {
+            guard let r = heldRect,
+                  let i = handles(r).firstIndex(where: { abs($0.x - p.x) <= 10 && abs($0.y - p.y) <= 10 }) else { return }
+            resizing = (i, r)
+            return
+        }
         window?.makeKeyAndOrderFront(nil)
         window?.makeFirstResponder(self)
         guard controller?.mode == .region else {
             controller?.updateHover(at: NSEvent.mouseLocation)
             return
         }
-        dragStart = convert(event.locationInWindow, from: nil)
-        dragCurrent = dragStart
+        dragStart = p
+        dragCurrent = p
         needsDisplay = true
     }
 
     override func mouseDragged(with event: NSEvent) {
-        guard !held, controller?.mode == .region, dragStart != nil else { return }
         var p = convert(event.locationInWindow, from: nil)
         p.x = min(max(0, p.x), bounds.width); p.y = min(max(0, p.y), bounds.height)
+        if held {
+            guard let (i, a) = resizing else { return }
+            var minX = a.minX, maxX = a.maxX, minY = a.minY, maxY = a.maxY
+            switch i {
+            case 0: minX = p.x; minY = p.y
+            case 1: maxX = p.x; minY = p.y
+            case 2: minX = p.x; maxY = p.y
+            case 3: maxX = p.x; maxY = p.y
+            case 4: minY = p.y
+            case 5: maxY = p.y
+            case 6: minX = p.x
+            default: maxX = p.x
+            }
+            let r = CGRect(x: min(minX, maxX), y: min(minY, maxY), width: abs(maxX - minX), height: abs(maxY - minY)).integral
+            guard r.width >= 8, r.height >= 8 else { return }
+            controller?.regionChanged(r)
+            return
+        }
+        guard controller?.mode == .region, dragStart != nil else { return }
         dragCurrent = p
         needsDisplay = true
     }
 
     override func mouseUp(with event: NSEvent) {
-        guard !held else { return }
+        if held {
+            if resizing != nil { resizing = nil; controller?.regionCommit() }
+            return
+        }
         if controller?.mode == .window {
             controller?.updateHover(at: NSEvent.mouseLocation)
             if let w = controller?.hoveredWindow {

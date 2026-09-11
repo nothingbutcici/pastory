@@ -1,7 +1,7 @@
 import AppKit
 
-/// Two-layer toolbar, Feishu-style.
-/// Main bar:  ▢ ○ ╱ ↗ ✎ A ▦ │ 识别文字 │ ↶ · ✕ · ✓
+/// Two-layer toolbar, Feishu-style, dark with a lime active state.
+/// Main bar:  ▢ ○ ╱ ↗ ✎ A ▦ │ 识别文字 │ ↶ │ ✕ · [✓ 复制]
 /// Sub bar:   appears under the active tool (or the selected element's tool) with sizes · colors.
 final class AnnotateToolbar: NSView {
     private unowned let canvas: AnnotateView
@@ -10,42 +10,31 @@ final class AnnotateToolbar: NSView {
     private let stack = NSStackView()
     let subBar: SubBar
 
-    static let ink = NSColor(srgbRed: 0.11, green: 0.11, blue: 0.12, alpha: 1)
-    static let selectedBG = NSColor(srgbRed: 0.88, green: 0.86, blue: 1.0, alpha: 1)
-    static let selectedInk = NSColor(srgbRed: 0.28, green: 0.27, blue: 0.70, alpha: 1)
-    static let red = NSColor(srgbRed: 0.88, green: 0.20, blue: 0.20, alpha: 1)
-    static let green = NSColor(srgbRed: 0.16, green: 0.65, blue: 0.27, alpha: 1)
+    static let ink = Theme.text
+    static let selectedBG = Theme.lime
+    static let selectedInk = Theme.onLime
+    static let red = Theme.red
+    static let green = Theme.lime
 
     init(canvas: AnnotateView) {
         self.canvas = canvas
         subBar = SubBar(canvas: canvas)
         super.init(frame: .zero)
-        wantsLayer = true
-        layer?.backgroundColor = NSColor.white.cgColor
-        layer?.cornerRadius = 10
-        layer?.borderWidth = 0.5
-        layer?.borderColor = NSColor(calibratedWhite: 0, alpha: 0.08).cgColor
-        shadow = Self.shadow()
+        Theme.island(self)
         build()
         canvas.onStateChange = { [weak self] in self?.refresh() }
         refresh()
     }
     required init?(coder: NSCoder) { fatalError() }
 
-    static func shadow() -> NSShadow {
-        let s = NSShadow()
-        s.shadowColor = NSColor(calibratedWhite: 0, alpha: 0.26)
-        s.shadowBlurRadius = 10
-        s.shadowOffset = CGSize(width: 0, height: -2)
-        return s
-    }
+    static func shadow() -> NSShadow { Theme.shadow() }
 
-    override var fittingSize: CGSize { CGSize(width: stack.fittingSize.width + 12, height: 46) }
+    override var fittingSize: CGSize { CGSize(width: stack.fittingSize.width + 16, height: 56) }
 
     private func build() {
         stack.orientation = .horizontal
-        stack.spacing = 2
-        stack.edgeInsets = NSEdgeInsets(top: 0, left: 6, bottom: 0, right: 6)
+        stack.spacing = 4
+        stack.edgeInsets = NSEdgeInsets(top: 0, left: 8, bottom: 0, right: 8)
         stack.translatesAutoresizingMaskIntoConstraints = false
         addSubview(stack)
         NSLayoutConstraint.activate([
@@ -60,20 +49,48 @@ final class AnnotateToolbar: NSView {
             stack.addArrangedSubview(b)
         }
         stack.addArrangedSubview(Self.divider())
-        stack.addArrangedSubview(Self.iconButton(NSImage(systemSymbolName: "text.viewfinder", accessibilityDescription: nil)!
-            .withSymbolConfiguration(.init(pointSize: 15, weight: .regular))!, tip: "识别文字", target: self, action: #selector(ocr)))
+        // 识别文字: icon + label
+        let ocrBtn = NSButton(title: " 识别文字", image: NSImage(systemSymbolName: "text.viewfinder", accessibilityDescription: nil)!
+            .withSymbolConfiguration(.init(pointSize: 15, weight: .regular))!, target: self, action: #selector(ocr))
+        ocrBtn.isBordered = false
+        ocrBtn.imagePosition = .imageLeading
+        ocrBtn.imageHugsTitle = true
+        ocrBtn.contentTintColor = Self.ink
+        ocrBtn.attributedTitle = NSAttributedString(string: " 识别文字", attributes: [
+            .foregroundColor: Self.ink, .font: NSFont.systemFont(ofSize: 14, weight: .medium)])
+        ocrBtn.wantsLayer = true
+        ocrBtn.layer?.cornerRadius = 9
+        ocrBtn.translatesAutoresizingMaskIntoConstraints = false
+        ocrBtn.heightAnchor.constraint(equalToConstant: 38).isActive = true
+        ocrBtn.widthAnchor.constraint(equalToConstant: 112).isActive = true
+        stack.addArrangedSubview(ocrBtn)
         stack.addArrangedSubview(Self.divider())
         undoButton = Self.iconButton(NSImage(systemSymbolName: "arrow.uturn.backward", accessibilityDescription: nil)!
-            .withSymbolConfiguration(.init(pointSize: 14, weight: .medium))!, tip: "撤销 ⌘Z", target: self, action: #selector(undo))
+            .withSymbolConfiguration(.init(pointSize: 15, weight: .medium))!, tip: "撤销 ⌘Z", target: self, action: #selector(undo))
         stack.addArrangedSubview(undoButton)
+        stack.addArrangedSubview(Self.divider())
         let cancel = Self.iconButton(NSImage(systemSymbolName: "xmark", accessibilityDescription: nil)!
-            .withSymbolConfiguration(.init(pointSize: 15, weight: .semibold))!, tip: "取消 ⎋", target: self, action: #selector(cancel))
+            .withSymbolConfiguration(.init(pointSize: 16, weight: .semibold))!, tip: "取消 ⎋", target: self, action: #selector(cancel))
         cancel.contentTintColor = Self.red
         stack.addArrangedSubview(cancel)
-        let done = Self.iconButton(NSImage(systemSymbolName: "checkmark", accessibilityDescription: nil)!
-            .withSymbolConfiguration(.init(pointSize: 15, weight: .bold))!, tip: "完成 ⏎ · 复制到剪贴板", target: self, action: #selector(done))
-        done.contentTintColor = Self.green
+        // ✓ 复制 — lime pill
+        let done = NSButton(title: " 复制", image: NSImage(systemSymbolName: "checkmark", accessibilityDescription: nil)!
+            .withSymbolConfiguration(.init(pointSize: 14, weight: .bold))!, target: self, action: #selector(done))
+        done.isBordered = false
+        done.imagePosition = .imageLeading
+        done.imageHugsTitle = true
+        done.contentTintColor = Theme.onLime
+        done.attributedTitle = NSAttributedString(string: " 复制", attributes: [
+            .foregroundColor: Theme.onLime, .font: NSFont.systemFont(ofSize: 15, weight: .bold)])
+        done.toolTip = "完成 ⏎ · 复制到剪贴板"
+        done.wantsLayer = true
+        done.layer?.backgroundColor = Theme.lime.cgColor
+        done.layer?.cornerRadius = 10
+        done.translatesAutoresizingMaskIntoConstraints = false
+        done.heightAnchor.constraint(equalToConstant: 40).isActive = true
+        done.widthAnchor.constraint(equalToConstant: 104).isActive = true
         stack.addArrangedSubview(done)
+        stack.setCustomSpacing(8, after: cancel)
     }
 
     static func iconButton(_ image: NSImage, tip: String, target: AnyObject, action: Selector) -> NSButton {
@@ -84,22 +101,14 @@ final class AnnotateToolbar: NSView {
         b.toolTip = tip
         b.contentTintColor = ink
         b.wantsLayer = true
-        b.layer?.cornerRadius = 7
+        b.layer?.cornerRadius = 9
         b.translatesAutoresizingMaskIntoConstraints = false
-        b.widthAnchor.constraint(equalToConstant: 34).isActive = true
-        b.heightAnchor.constraint(equalToConstant: 34).isActive = true
+        b.widthAnchor.constraint(equalToConstant: 38).isActive = true
+        b.heightAnchor.constraint(equalToConstant: 38).isActive = true
         return b
     }
 
-    static func divider() -> NSView {
-        let v = NSView()
-        v.wantsLayer = true
-        v.layer?.backgroundColor = NSColor(calibratedWhite: 0, alpha: 0.1).cgColor
-        v.translatesAutoresizingMaskIntoConstraints = false
-        v.widthAnchor.constraint(equalToConstant: 1).isActive = true
-        v.heightAnchor.constraint(equalToConstant: 22).isActive = true
-        return v
-    }
+    static func divider() -> NSView { Theme.divider(height: 26) }
 
     /// Called once the overlay has placed the main bar; the sub bar hangs off it.
     func didLayout() { refresh() }
@@ -165,9 +174,9 @@ final class SubBar: NSView {
         self.canvas = canvas
         super.init(frame: .zero)
         wantsLayer = true
-        shadow = AnnotateToolbar.shadow()
+        shadow = Theme.shadow()
         stack.orientation = .horizontal
-        stack.spacing = 5
+        stack.spacing = 6
         stack.translatesAutoresizingMaskIntoConstraints = false
         addSubview(stack)
         NSLayoutConstraint.activate([
@@ -197,17 +206,17 @@ final class SubBar: NSView {
             b.layer?.backgroundColor = c.cgColor
             b.layer?.cornerRadius = 6
             b.layer?.borderWidth = 1
-            b.layer?.borderColor = (c == .white ? NSColor(calibratedWhite: 0, alpha: 0.2) : c.withAlphaComponent(0.0)).cgColor
+            b.layer?.borderColor = NSColor.clear.cgColor
             b.translatesAutoresizingMaskIntoConstraints = false
-            b.widthAnchor.constraint(equalToConstant: 24).isActive = true
-            b.heightAnchor.constraint(equalToConstant: 24).isActive = true
+            b.widthAnchor.constraint(equalToConstant: 26).isActive = true
+            b.heightAnchor.constraint(equalToConstant: 26).isActive = true
             colorButtons.append(b)
             stack.addArrangedSubview(b)
         }
     }
     required init?(coder: NSCoder) { fatalError() }
 
-    override var fittingSize: CGSize { CGSize(width: stack.fittingSize.width + 24, height: 40 + Self.pointerH) }
+    override var fittingSize: CGSize { CGSize(width: stack.fittingSize.width + 28, height: 46 + Self.pointerH) }
 
     func configure(kind: AnnotateTool) {
         self.kind = kind
@@ -217,8 +226,8 @@ final class SubBar: NSView {
         let sel = canvas.effectiveSize
         for (s, b) in sizeButtons {
             let on = s == sel
-            b.layer?.backgroundColor = on ? AnnotateToolbar.selectedBG.cgColor : nil
-            let tint = on ? AnnotateToolbar.selectedInk : NSColor(calibratedWhite: 0.25, alpha: 1)
+            b.layer?.backgroundColor = on ? NSColor(calibratedWhite: 1, alpha: 0.14).cgColor : nil
+            let tint = Theme.text
             if kind == .text {
                 b.image = nil
                 b.attributedTitle = NSAttributedString(string: ["小", "中", "大"][s.rawValue - 1], attributes: [
@@ -240,7 +249,7 @@ final class SubBar: NSView {
             let on = c == color
             b.image = on ? Self.check(on: c) : nil
             b.imagePosition = .imageOnly
-            b.layer?.borderColor = (on ? AnnotateToolbar.selectedInk : (c == .white ? NSColor(calibratedWhite: 0, alpha: 0.2) : NSColor.clear)).cgColor
+            b.layer?.borderColor = (on ? NSColor.white : (c == AnnotatePalette.colors[0] ? NSColor(calibratedWhite: 1, alpha: 0.25) : NSColor.clear)).cgColor
             b.layer?.borderWidth = on ? 2 : 1
         }
     }
@@ -261,7 +270,7 @@ final class SubBar: NSView {
         let ph = Self.pointerH
         let body = pointsUp ? CGRect(x: 0, y: 0, width: bounds.width, height: bounds.height - ph)
                             : CGRect(x: 0, y: ph, width: bounds.width, height: bounds.height - ph)
-        let path = NSBezierPath(roundedRect: body, xRadius: 10, yRadius: 10)
+        let path = NSBezierPath(roundedRect: body, xRadius: 12, yRadius: 12)
         let px = min(max(14, pointerX), bounds.width - 14)
         if pointsUp {
             path.move(to: CGPoint(x: px - 7, y: body.maxY)); path.line(to: CGPoint(x: px, y: body.maxY + ph)); path.line(to: CGPoint(x: px + 7, y: body.maxY))
@@ -269,9 +278,9 @@ final class SubBar: NSView {
             path.move(to: CGPoint(x: px - 7, y: body.minY)); path.line(to: CGPoint(x: px, y: body.minY - ph)); path.line(to: CGPoint(x: px + 7, y: body.minY))
         }
         path.close()
-        NSColor.white.setFill()
+        Theme.bg.setFill()
         path.fill()
-        NSColor(calibratedWhite: 0, alpha: 0.08).setStroke()
+        NSColor(calibratedWhite: 1, alpha: 0.08).setStroke()
         path.lineWidth = 0.5
         path.stroke()
     }

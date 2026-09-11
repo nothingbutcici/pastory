@@ -254,17 +254,23 @@ enum SelfTest {
     private static func renderAnnotate(out: String) -> Bool {
         guard let img = renderSample() else { return false }
         let scale: CGFloat = 2
-        let rect = CGRect(x: 40, y: 140, width: CGFloat(img.width) / scale, height: CGFloat(img.height) / scale)
-        let stage = NSView(frame: CGRect(x: 0, y: 0, width: max(rect.width + 80, 780), height: rect.height + 220))
+        let rect = CGRect(x: 220, y: 150, width: CGFloat(img.width) / scale, height: CGFloat(img.height) / scale)
+        let stage = NSView(frame: CGRect(x: 0, y: 0, width: max(rect.width + 80, 900), height: rect.height + 320))
         stage.wantsLayer = true
-        stage.layer?.backgroundColor = NSColor(calibratedWhite: 0.25, alpha: 1).cgColor
+        stage.layer?.backgroundColor = NSColor(srgbRed: 0.35, green: 0.45, blue: 0.55, alpha: 1).cgColor   // stands in for the desktop
+        let mask = OverlayView(frame: stage.bounds)
+        mask.screenRef = NSScreen.main
+        mask.held = true
+        mask.heldRect = rect
+        stage.addSubview(mask)
         let canvas = AnnotateView(frame: rect, image: img)
         stage.addSubview(canvas)
-        let sw = ModeSwitch(frame: .zero)
-        sw.frame.origin = CGPoint(x: rect.minX, y: rect.maxY + 8)
-        stage.addSubview(sw)
+        let top = TopBar()
+        let ts = top.fittingSize
+        top.frame = CGRect(x: (stage.bounds.midX - ts.width / 2).rounded(), y: stage.bounds.maxY - 16 - ts.height, width: ts.width, height: ts.height)
+        stage.addSubview(top)
         let bar = AnnotateToolbar(canvas: canvas)
-        bar.frame = CGRect(x: max(8, rect.maxX - bar.fittingSize.width), y: rect.minY - 54, width: bar.fittingSize.width, height: bar.fittingSize.height)
+        bar.frame = CGRect(x: max(8, (rect.midX - bar.fittingSize.width / 2).rounded()), y: rect.minY - 68, width: bar.fittingSize.width, height: bar.fittingSize.height)
         stage.addSubview(bar)
         bar.didLayout()
         let w = NSWindow(contentRect: stage.frame, styleMask: [.borderless], backing: .buffered, defer: false)
