@@ -248,15 +248,16 @@ enum SelfTest {
     private static func renderAnnotate(out: String) -> Bool {
         guard let img = renderSample() else { return false }
         let scale: CGFloat = 2
-        let rect = CGRect(x: 40, y: 80, width: CGFloat(img.width) / scale, height: CGFloat(img.height) / scale)
-        let stage = NSView(frame: CGRect(x: 0, y: 0, width: max(rect.width + 80, 760), height: rect.height + 160))
+        let rect = CGRect(x: 40, y: 140, width: CGFloat(img.width) / scale, height: CGFloat(img.height) / scale)
+        let stage = NSView(frame: CGRect(x: 0, y: 0, width: max(rect.width + 80, 780), height: rect.height + 220))
         stage.wantsLayer = true
         stage.layer?.backgroundColor = NSColor(calibratedWhite: 0.25, alpha: 1).cgColor
         let canvas = AnnotateView(frame: rect, image: img)
         stage.addSubview(canvas)
         let bar = AnnotateToolbar(canvas: canvas)
-        bar.frame = CGRect(x: max(8, rect.maxX - bar.fittingSize.width), y: rect.minY - 48, width: bar.fittingSize.width, height: bar.fittingSize.height)
+        bar.frame = CGRect(x: max(8, rect.maxX - bar.fittingSize.width), y: rect.minY - 54, width: bar.fittingSize.width, height: bar.fittingSize.height)
         stage.addSubview(bar)
+        bar.didLayout()
         let w = NSWindow(contentRect: stage.frame, styleMask: [.borderless], backing: .buffered, defer: false)
         w.contentView = stage
         w.isReleasedWhenClosed = false
@@ -271,7 +272,9 @@ enum SelfTest {
             Annotation(tool: .mosaic, color: red, size: .m, points: [CGPoint(x: 20, y: 72), CGPoint(x: 200, y: 108)]),
             Annotation(tool: .text, color: blue, size: .m, points: [CGPoint(x: 262, y: 6)], text: "你好，今天天气怎么样？"),
             Annotation(tool: .text, color: ink, size: .s, points: [CGPoint(x: 300, y: 32)], text: "Hello Snip Clip"),
-        ], select: 0)
+        ], select: nil)
+        guard snapshot(stage, to: URL(fileURLWithPath: out).deletingPathExtension().appendingPathExtension("idle.png").path) else { return false }
+        canvas.debugSet(canvas.annotations, select: 0)
         guard snapshot(stage, to: out) else { return false }
         // Second frame: the arrow selected, to check endpoint handles.
         canvas.debugSet(canvas.annotations, select: 1)

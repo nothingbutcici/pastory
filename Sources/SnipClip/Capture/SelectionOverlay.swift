@@ -97,6 +97,7 @@ final class SelectionOverlayController {
         let bar = AnnotateToolbar(canvas: canvas)
         bar.frame = Self.toolbarFrame(for: rect, size: bar.fittingSize, in: win.overlayView.bounds)
         win.overlayView.addSubview(bar)
+        bar.didLayout()
         annotator = canvas
         toolbar = bar
         win.makeKeyAndOrderFront(nil)
@@ -128,6 +129,7 @@ final class SelectionOverlayController {
         completion = nil
         HotKeyCenter.shared.unbind("picker.esc")
         annotator?.removeFromSuperview()
+        toolbar?.subBar.removeFromSuperview()
         toolbar?.removeFromSuperview()
         annotator = nil
         toolbar = nil
@@ -224,21 +226,7 @@ final class OverlayView: NSView {
             path.lineWidth = 1.5
             path.stroke()
             if !held { drawBadge(for: hole) }
-        } else if controller?.mode == .region, !held {
-            drawCrosshair()
         }
-        if !held { drawHint() }
-    }
-
-    private func drawCrosshair() {
-        guard let win = window, win.isKeyWindow else { return }
-        let p = convert(win.mouseLocationOutsideOfEventStream, from: nil)
-        guard bounds.contains(p) else { return }
-        NSColor(calibratedWhite: 1, alpha: 0.35).setStroke()
-        let path = NSBezierPath()
-        path.move(to: CGPoint(x: 0, y: p.y)); path.line(to: CGPoint(x: bounds.width, y: p.y))
-        path.move(to: CGPoint(x: p.x, y: 0)); path.line(to: CGPoint(x: p.x, y: bounds.height))
-        path.stroke()
     }
 
     private func drawBadge(for rect: CGRect) {
@@ -263,21 +251,6 @@ final class OverlayView: NSView {
         NSColor(calibratedWhite: 0.08, alpha: 0.92).setFill()
         NSBezierPath(roundedRect: box, xRadius: 6, yRadius: 6).fill()
         (text as NSString).draw(at: CGPoint(x: box.minX + pad, y: box.minY + pad / 2), withAttributes: attrs)
-    }
-
-    private func drawHint() {
-        let text = controller?.mode == .window
-            ? "点击窗口截图   ␣ 区域模式   F 整屏   点空白 / 右键 / ⎋ 取消"
-            : "拖拽选择区域   ␣ 窗口模式   F 整屏   单击 / 右键 / ⎋ 取消"
-        let attrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 13, weight: .medium),
-            .foregroundColor: NSColor(calibratedWhite: 1, alpha: 0.9)
-        ]
-        let size = (text as NSString).size(withAttributes: attrs)
-        let box = CGRect(x: (bounds.width - size.width) / 2 - 14, y: 48, width: size.width + 28, height: size.height + 14)
-        NSColor(calibratedWhite: 0.08, alpha: 0.85).setFill()
-        NSBezierPath(roundedRect: box, xRadius: 9, yRadius: 9).fill()
-        (text as NSString).draw(at: CGPoint(x: box.minX + 14, y: box.minY + 7), withAttributes: attrs)
     }
 
     private var overlayWindow: OverlayWindow? { window as? OverlayWindow }
@@ -329,7 +302,7 @@ final class OverlayView: NSView {
 
     override func mouseMoved(with event: NSEvent) {
         guard !held else { return }
-        if controller?.mode == .window { controller?.updateHover(at: NSEvent.mouseLocation) } else { needsDisplay = true }
+        if controller?.mode == .window { controller?.updateHover(at: NSEvent.mouseLocation) }
     }
 
     override func keyDown(with event: NSEvent) {

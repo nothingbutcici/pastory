@@ -1,5 +1,6 @@
 import AppKit
 import Carbon.HIToolbox
+import UniformTypeIdentifiers
 
 @MainActor
 protocol AnnotateDelegate: AnyObject {
@@ -18,7 +19,8 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
     weak var delegate: AnnotateDelegate?
     var onStateChange: (() -> Void)?
 
-    var tool: AnnotateTool = .rect { didSet { commitTextEditor(); window?.invalidateCursorRects(for: self); onStateChange?() } }
+    /// nil = no tool: clicks only select / move; nothing gets drawn.
+    var tool: AnnotateTool? = nil { didSet { commitTextEditor(); window?.invalidateCursorRects(for: self); onStateChange?() } }
     var color: NSColor = AnnotatePalette.colors[1] { didSet { applyToSelected { $0.color = color } } }
     var size: StrokeSize = .m { didSet { applyToSelected { $0.size = size } } }
     var dashed = false { didSet { applyToSelected { $0.dashed = dashed } } }
@@ -46,11 +48,20 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
 
     override var isFlipped: Bool { true }
     override var acceptsFirstResponder: Bool { true }
-    override func resetCursorRects() { addCursorRect(bounds, cursor: tool == .text ? .iBeam : .crosshair) }
+    override func resetCursorRects() {
+        let c: NSCursor = tool == nil ? .arrow : (tool == .text ? .iBeam : .crosshair)
+        addCursorRect(bounds, cursor: c)
+    }
 
     var canUndo: Bool { !annotations.isEmpty }
     var hasSelection: Bool { selectedID != nil }
     private var selectedIndex: Int? { selectedID.flatMap { id in annotations.firstIndex { $0.id == id } } }
+    var selected: Annotation? { selectedIndex.map { annotations[$0] } }
+    /// What the sub-bar should describe: the selected element, else the active tool.
+    var activeKind: AnnotateTool? { selected?.tool ?? tool }
+    var effectiveColor: NSColor { selected?.color ?? color }
+    var effectiveSize: StrokeSize { selected?.size ?? size }
+    var effectiveDashed: Bool { selected?.dashed ?? dashed }
 
     func undo() {
         commitTextEditor()
@@ -67,6 +78,25 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
     private func applyToSelected(_ change: (inout Annotation) -> Void) {
         if let i = selectedIndex { change(&annotations[i]) }
         onStateChange?()
+    }
+
+    /// Save the flattened image where the user says, then it also lands on the shelf / pasteboard.
+    func saveToFile() {
+        commitTextEditor()
+        let img = renderedImage()
+        guard let png = Screenshotter.pngData(img) else { return }
+        let panel = NSSavePanel()
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd HH.mm.ss"
+        panel.nameFieldStringValue = "Snip \(f.string(from: Date())).png"
+        panel.allowedContentTypes = [.png]
+        panel.directoryURL = Preferences.shared.exportDirectory()
+        panel.canCreateDirectories = true
+        panel.prompt = "保存"
+        panel.level = NSWindow.Level(rawValue: NSWindow.Level.screenSaver.rawValue + 2)
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        try? png.write(to: url, options: .atomic)
+        Preferences.shared.customExportDir = url.deletingLastPathComponent().path
+        delegate?.annotateDidFinish(img)
     }
 
     /// Flattened result.
@@ -124,9 +154,10 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
             drag = .move(last: p)
             return
         }
-        // 3. Empty space: deselect; double-click finishes; otherwise start drawing.
+        // 3. Empty space: deselect; double-click finishes; otherwise start drawing with the active tool.
         if selectedID != nil { selectedID = nil; if event.clickCount == 2 { return } }
         if event.clickCount == 2, draft == nil { finish(); return }
+        guard let tool else { return }
         if tool == .text {
             beginTextEditor(at: p, text: "", replacing: nil)
         } else {

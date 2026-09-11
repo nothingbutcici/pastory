@@ -1,40 +1,45 @@
 import AppKit
 
-/// White island under the selection, Excalidraw-style:
-/// 录屏 │ rect · ellipse · arrow · line · pen · text · mosaic │ colors │ S M L · dashed │ 识别文字 │ ✕ ✓
-/// No select tool and no undo button: clicking a drawn element selects it (drag, handles, ✕), ⌘Z still undoes.
+/// Two-layer toolbar, Feishu-style.
+/// Main bar:  ● rec │ ▢ ○ ╱ ↗ ✎ A ▦ │ 识别文字 │ ↓ save · ✕ · ✓
+/// Sub bar:   appears under the active tool (or the selected element's tool) with sizes · colors · dashed.
 final class AnnotateToolbar: NSView {
     private unowned let canvas: AnnotateView
     private var toolButtons: [AnnotateTool: NSButton] = [:]
-    private var colorButtons: [NSButton] = []
-    private var sizeButtons: [StrokeSize: NSButton] = [:]
-    private var dashButton: NSButton!
     private let stack = NSStackView()
+    let subBar: SubBar
 
-    private static let ink = NSColor(srgbRed: 0.11, green: 0.11, blue: 0.12, alpha: 1)
-    private static let muted = NSColor(srgbRed: 0.42, green: 0.42, blue: 0.46, alpha: 1)
-    private static let selectedBG = NSColor(srgbRed: 0.88, green: 0.86, blue: 1.0, alpha: 1)
-    private static let selectedInk = NSColor(srgbRed: 0.28, green: 0.27, blue: 0.70, alpha: 1)
+    static let ink = NSColor(srgbRed: 0.11, green: 0.11, blue: 0.12, alpha: 1)
+    static let selectedBG = NSColor(srgbRed: 0.88, green: 0.86, blue: 1.0, alpha: 1)
+    static let selectedInk = NSColor(srgbRed: 0.28, green: 0.27, blue: 0.70, alpha: 1)
+    static let red = NSColor(srgbRed: 0.88, green: 0.20, blue: 0.20, alpha: 1)
+    static let green = NSColor(srgbRed: 0.16, green: 0.65, blue: 0.27, alpha: 1)
 
     init(canvas: AnnotateView) {
         self.canvas = canvas
+        subBar = SubBar(canvas: canvas)
         super.init(frame: .zero)
         wantsLayer = true
         layer?.backgroundColor = NSColor.white.cgColor
         layer?.cornerRadius = 10
         layer?.borderWidth = 0.5
         layer?.borderColor = NSColor(calibratedWhite: 0, alpha: 0.08).cgColor
-        shadow = NSShadow()
-        shadow?.shadowColor = NSColor(calibratedWhite: 0, alpha: 0.28)
-        shadow?.shadowBlurRadius = 10
-        shadow?.shadowOffset = CGSize(width: 0, height: -2)
+        shadow = Self.shadow()
         build()
         canvas.onStateChange = { [weak self] in self?.refresh() }
         refresh()
     }
     required init?(coder: NSCoder) { fatalError() }
 
-    override var fittingSize: CGSize { CGSize(width: stack.fittingSize.width + 12, height: 44) }
+    static func shadow() -> NSShadow {
+        let s = NSShadow()
+        s.shadowColor = NSColor(calibratedWhite: 0, alpha: 0.26)
+        s.shadowBlurRadius = 10
+        s.shadowOffset = CGSize(width: 0, height: -2)
+        return s
+    }
+
+    override var fittingSize: CGSize { CGSize(width: stack.fittingSize.width + 12, height: 46) }
 
     private func build() {
         stack.orientation = .horizontal
@@ -47,103 +52,48 @@ final class AnnotateToolbar: NSView {
             stack.trailingAnchor.constraint(equalTo: trailingAnchor),
             stack.centerYAnchor.constraint(equalTo: centerYAnchor),
         ])
-        let rec = iconButton(ToolIcons.record(), tip: "录屏这块区域（MP4 / GIF）", action: #selector(record))
-        rec.contentTintColor = NSColor(srgbRed: 0.88, green: 0.20, blue: 0.20, alpha: 1)
+        let rec = Self.iconButton(ToolIcons.record(), tip: "录屏这块区域（MP4 / GIF）", target: self, action: #selector(record))
+        rec.contentTintColor = Self.red
         stack.addArrangedSubview(rec)
-        stack.addArrangedSubview(divider())
+        stack.addArrangedSubview(Self.divider())
         for t in AnnotateTool.allCases {
-            let b = iconButton(ToolIcons.image(for: t), tip: t.tip, action: #selector(pickTool(_:)))
+            let b = Self.iconButton(ToolIcons.image(for: t), tip: t.tip, target: self, action: #selector(pickTool(_:)))
             b.tag = AnnotateTool.allCases.firstIndex(of: t)!
             toolButtons[t] = b
             stack.addArrangedSubview(b)
         }
-        stack.addArrangedSubview(divider())
-        for (i, c) in AnnotatePalette.colors.enumerated() {
-            let b = NSButton(frame: .zero)
-            b.isBordered = false
-            b.title = ""
-            b.wantsLayer = true
-            b.layer?.backgroundColor = c.cgColor
-            b.layer?.cornerRadius = 8
-            b.layer?.borderWidth = c == .white ? 1 : 0
-            b.layer?.borderColor = NSColor(calibratedWhite: 0, alpha: 0.18).cgColor
-            b.tag = i
-            b.target = self
-            b.action = #selector(pickColor(_:))
-            b.toolTip = "颜色"
-            let wrap = NSView()
-            wrap.wantsLayer = true
-            wrap.layer?.cornerRadius = 11
-            wrap.translatesAutoresizingMaskIntoConstraints = false
-            wrap.addSubview(b)
-            b.translatesAutoresizingMaskIntoConstraints = false
-            NSLayoutConstraint.activate([
-                wrap.widthAnchor.constraint(equalToConstant: 22), wrap.heightAnchor.constraint(equalToConstant: 22),
-                b.widthAnchor.constraint(equalToConstant: 16), b.heightAnchor.constraint(equalToConstant: 16),
-                b.centerXAnchor.constraint(equalTo: wrap.centerXAnchor), b.centerYAnchor.constraint(equalTo: wrap.centerYAnchor),
-            ])
-            colorButtons.append(b)
-            stack.addArrangedSubview(wrap)
-            stack.setCustomSpacing(4, after: wrap)
-        }
-        stack.addArrangedSubview(divider())
-        for s in StrokeSize.allCases {
-            let b = NSButton(title: s.label, target: self, action: #selector(pickSize(_:)))
-            b.isBordered = false
-            b.font = NSFont.systemFont(ofSize: 11.5, weight: .semibold)
-            b.tag = s.rawValue
-            b.toolTip = "大小：线宽和字号"
-            b.wantsLayer = true
-            b.layer?.cornerRadius = 6
-            b.translatesAutoresizingMaskIntoConstraints = false
-            b.widthAnchor.constraint(equalToConstant: 26).isActive = true
-            b.heightAnchor.constraint(equalToConstant: 28).isActive = true
-            sizeButtons[s] = b
-            stack.addArrangedSubview(b)
-        }
-        dashButton = iconButton(ToolIcons.dashed(), tip: "虚线", action: #selector(toggleDash))
-        stack.addArrangedSubview(dashButton)
-        stack.addArrangedSubview(divider())
-        stack.addArrangedSubview(textButton("识别文字", action: #selector(ocr)))
-        stack.addArrangedSubview(divider())
-        let cancel = iconButton(NSImage(systemSymbolName: "xmark", accessibilityDescription: nil)!, tip: "取消 ⎋", action: #selector(cancel))
+        stack.addArrangedSubview(Self.divider())
+        stack.addArrangedSubview(Self.iconButton(NSImage(systemSymbolName: "text.viewfinder", accessibilityDescription: nil)!
+            .withSymbolConfiguration(.init(pointSize: 15, weight: .regular))!, tip: "识别文字", target: self, action: #selector(ocr)))
+        stack.addArrangedSubview(Self.divider())
+        stack.addArrangedSubview(Self.iconButton(NSImage(systemSymbolName: "arrow.down.to.line", accessibilityDescription: nil)!
+            .withSymbolConfiguration(.init(pointSize: 14, weight: .medium))!, tip: "保存到文件…", target: self, action: #selector(save)))
+        let cancel = Self.iconButton(NSImage(systemSymbolName: "xmark", accessibilityDescription: nil)!
+            .withSymbolConfiguration(.init(pointSize: 15, weight: .semibold))!, tip: "取消 ⎋", target: self, action: #selector(cancel))
+        cancel.contentTintColor = Self.red
         stack.addArrangedSubview(cancel)
-        let done = iconButton(NSImage(systemSymbolName: "checkmark", accessibilityDescription: nil)!.withSymbolConfiguration(.init(pointSize: 13, weight: .bold))!,
-                              tip: "完成 ⏎ · 复制到剪贴板", action: #selector(done))
-        done.contentTintColor = NSColor(srgbRed: 0.16, green: 0.65, blue: 0.27, alpha: 1)
+        let done = Self.iconButton(NSImage(systemSymbolName: "checkmark", accessibilityDescription: nil)!
+            .withSymbolConfiguration(.init(pointSize: 15, weight: .bold))!, tip: "完成 ⏎ · 复制到剪贴板", target: self, action: #selector(done))
+        done.contentTintColor = Self.green
         stack.addArrangedSubview(done)
     }
 
-    private func iconButton(_ image: NSImage, tip: String, action: Selector) -> NSButton {
-        let b = NSButton(image: image, target: self, action: action)
+    static func iconButton(_ image: NSImage, tip: String, target: AnyObject, action: Selector) -> NSButton {
+        let b = NSButton(image: image, target: target, action: action)
         b.isBordered = false
         b.imagePosition = .imageOnly
         b.imageScaling = .scaleNone
         b.toolTip = tip
-        b.contentTintColor = Self.ink
+        b.contentTintColor = ink
         b.wantsLayer = true
         b.layer?.cornerRadius = 7
         b.translatesAutoresizingMaskIntoConstraints = false
-        b.widthAnchor.constraint(equalToConstant: 32).isActive = true
-        b.heightAnchor.constraint(equalToConstant: 32).isActive = true
+        b.widthAnchor.constraint(equalToConstant: 34).isActive = true
+        b.heightAnchor.constraint(equalToConstant: 34).isActive = true
         return b
     }
 
-    private func textButton(_ title: String, action: Selector) -> NSButton {
-        let b = NSButton(title: title, target: self, action: action)
-        b.isBordered = false
-        b.attributedTitle = NSAttributedString(string: title, attributes: [
-            .foregroundColor: Self.ink, .font: NSFont.systemFont(ofSize: 12, weight: .medium)])
-        b.wantsLayer = true
-        b.layer?.cornerRadius = 7
-        b.layer?.backgroundColor = NSColor(calibratedWhite: 0, alpha: 0.06).cgColor
-        b.translatesAutoresizingMaskIntoConstraints = false
-        b.heightAnchor.constraint(equalToConstant: 28).isActive = true
-        b.widthAnchor.constraint(equalToConstant: 68).isActive = true
-        return b
-    }
-
-    private func divider() -> NSView {
+    static func divider() -> NSView {
         let v = NSView()
         v.wantsLayer = true
         v.layer?.backgroundColor = NSColor(calibratedWhite: 0, alpha: 0.1).cgColor
@@ -153,33 +103,46 @@ final class AnnotateToolbar: NSView {
         return v
     }
 
+    /// Called once the overlay has placed the main bar; the sub bar hangs off it.
+    func didLayout() { refresh() }
+
     private func refresh() {
+        let active = canvas.activeKind
         for (t, b) in toolButtons {
-            let on = t == canvas.tool
+            let on = t == active
             b.layer?.backgroundColor = on ? Self.selectedBG.cgColor : nil
             b.contentTintColor = on ? Self.selectedInk : Self.ink
         }
-        for (i, b) in colorButtons.enumerated() {
-            let on = AnnotatePalette.colors[i] == canvas.color
-            b.superview?.layer?.borderWidth = on ? 1.5 : 0
-            b.superview?.layer?.borderColor = Self.selectedInk.cgColor
-        }
-        for (s, b) in sizeButtons {
-            let on = s == canvas.size
-            b.layer?.backgroundColor = on ? Self.selectedBG.cgColor : nil
-            b.attributedTitle = NSAttributedString(string: s.label, attributes: [
-                .foregroundColor: on ? Self.selectedInk : Self.muted, .font: NSFont.systemFont(ofSize: 11.5, weight: .semibold)])
-        }
-        dashButton.layer?.backgroundColor = canvas.dashed ? Self.selectedBG.cgColor : nil
-        dashButton.contentTintColor = canvas.dashed ? Self.selectedInk : Self.ink
+        layoutSubBar(for: active)
     }
 
-    @objc private func pickTool(_ sender: NSButton) { canvas.tool = AnnotateTool.allCases[sender.tag] }
-    @objc private func pickColor(_ sender: NSButton) { canvas.color = AnnotatePalette.colors[sender.tag] }
-    @objc private func pickSize(_ sender: NSButton) { canvas.size = StrokeSize(rawValue: sender.tag) ?? .m }
-    @objc private func toggleDash() { canvas.dashed.toggle() }
+    private func layoutSubBar(for kind: AnnotateTool?) {
+        guard let kind, let host = superview, let button = toolButtons[kind] else {
+            subBar.removeFromSuperview()
+            return
+        }
+        subBar.configure(kind: kind)
+        if subBar.superview !== host { host.addSubview(subBar) }
+        let size = subBar.fittingSize
+        let gap: CGFloat = 8
+        let below = frame.minY - gap - size.height >= host.bounds.minY + 4
+        let y = below ? frame.minY - gap - size.height : frame.maxY + gap
+        let anchorX = button.convert(button.bounds, to: host).midX
+        var x = anchorX - size.width / 2
+        x = min(max(host.bounds.minX + 4, x), host.bounds.maxX - size.width - 4)
+        subBar.pointerX = anchorX - x
+        subBar.pointsUp = below
+        subBar.frame = CGRect(x: x.rounded(), y: y.rounded(), width: size.width, height: size.height)
+        subBar.needsDisplay = true
+    }
+
+    @objc private func pickTool(_ sender: NSButton) {
+        let t = AnnotateTool.allCases[sender.tag]
+        canvas.tool = canvas.tool == t ? nil : t     // second click deactivates
+    }
     @objc private func ocr() { canvas.requestOCR() }
     @objc private func record() { canvas.requestRecord() }
+    @objc private func save() { canvas.saveToFile() }
     @objc private func cancel() { canvas.cancel() }
     @objc private func done() { canvas.finish() }
 
@@ -187,27 +150,174 @@ final class AnnotateToolbar: NSView {
     override func mouseDown(with event: NSEvent) {}
 }
 
+/// sizes (dots, or 小/中/大 for text) │ colors as rounded squares with a check │ dashed
+final class SubBar: NSView {
+    private unowned let canvas: AnnotateView
+    private let stack = NSStackView()
+    private var sizeButtons: [StrokeSize: NSButton] = [:]
+    private var colorButtons: [NSButton] = []
+    private var dashButton: NSButton!
+    private var dashDivider: NSView!
+    private var kind: AnnotateTool = .rect
+    var pointerX: CGFloat = 40
+    var pointsUp = true
+    private static let pointerH: CGFloat = 7
+
+    init(canvas: AnnotateView) {
+        self.canvas = canvas
+        super.init(frame: .zero)
+        wantsLayer = true
+        shadow = AnnotateToolbar.shadow()
+        stack.orientation = .horizontal
+        stack.spacing = 6
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
+            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
+            stack.centerYAnchor.constraint(equalTo: centerYAnchor),
+        ])
+        for s in StrokeSize.allCases {
+            let b = NSButton(title: "", target: self, action: #selector(pickSize(_:)))
+            b.isBordered = false
+            b.tag = s.rawValue
+            b.wantsLayer = true
+            b.layer?.cornerRadius = 6
+            b.translatesAutoresizingMaskIntoConstraints = false
+            b.widthAnchor.constraint(equalToConstant: 30).isActive = true
+            b.heightAnchor.constraint(equalToConstant: 30).isActive = true
+            sizeButtons[s] = b
+            stack.addArrangedSubview(b)
+        }
+        stack.addArrangedSubview(AnnotateToolbar.divider())
+        for (i, c) in AnnotatePalette.colors.enumerated() {
+            let b = NSButton(title: "", target: self, action: #selector(pickColor(_:)))
+            b.isBordered = false
+            b.tag = i
+            b.wantsLayer = true
+            b.layer?.backgroundColor = c.cgColor
+            b.layer?.cornerRadius = 6
+            b.layer?.borderWidth = 1
+            b.layer?.borderColor = (c == .white ? NSColor(calibratedWhite: 0, alpha: 0.2) : c.withAlphaComponent(0.0)).cgColor
+            b.translatesAutoresizingMaskIntoConstraints = false
+            b.widthAnchor.constraint(equalToConstant: 26).isActive = true
+            b.heightAnchor.constraint(equalToConstant: 26).isActive = true
+            colorButtons.append(b)
+            stack.addArrangedSubview(b)
+        }
+        dashDivider = AnnotateToolbar.divider()
+        stack.addArrangedSubview(dashDivider)
+        dashButton = AnnotateToolbar.iconButton(ToolIcons.dashed(), tip: "虚线", target: self, action: #selector(toggleDash))
+        stack.addArrangedSubview(dashButton)
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
+    override var fittingSize: CGSize { CGSize(width: stack.fittingSize.width + 24, height: 44 + Self.pointerH) }
+
+    func configure(kind: AnnotateTool) {
+        self.kind = kind
+        let dashable = [.rect, .ellipse, .arrow, .line].contains(kind)
+        dashButton.isHidden = !dashable
+        dashDivider.isHidden = !dashable
+        let sel = canvas.effectiveSize
+        for (s, b) in sizeButtons {
+            let on = s == sel
+            b.layer?.backgroundColor = on ? AnnotateToolbar.selectedBG.cgColor : nil
+            let tint = on ? AnnotateToolbar.selectedInk : NSColor(calibratedWhite: 0.25, alpha: 1)
+            if kind == .text {
+                b.image = nil
+                b.attributedTitle = NSAttributedString(string: ["小", "中", "大"][s.rawValue - 1], attributes: [
+                    .foregroundColor: tint, .font: NSFont.systemFont(ofSize: 12.5, weight: .medium)])
+            } else {
+                b.attributedTitle = NSAttributedString(string: "")
+                let d: CGFloat = [7, 11, 15][s.rawValue - 1]
+                b.image = NSImage(size: CGSize(width: 16, height: 16), flipped: false) { _ in
+                    tint.setFill()
+                    NSBezierPath(ovalIn: CGRect(x: (16 - d) / 2, y: (16 - d) / 2, width: d, height: d)).fill()
+                    return true
+                }
+                b.imagePosition = .imageOnly
+            }
+        }
+        let color = canvas.effectiveColor
+        for (i, b) in colorButtons.enumerated() {
+            let c = AnnotatePalette.colors[i]
+            let on = c == color
+            b.image = on ? Self.check(on: c) : nil
+            b.imagePosition = .imageOnly
+            b.layer?.borderColor = (on ? AnnotateToolbar.selectedInk : (c == .white ? NSColor(calibratedWhite: 0, alpha: 0.2) : NSColor.clear)).cgColor
+            b.layer?.borderWidth = on ? 2 : 1
+        }
+        dashButton.layer?.backgroundColor = canvas.effectiveDashed ? AnnotateToolbar.selectedBG.cgColor : nil
+        dashButton.contentTintColor = canvas.effectiveDashed ? AnnotateToolbar.selectedInk : AnnotateToolbar.ink
+    }
+
+    private static func check(on color: NSColor) -> NSImage {
+        NSImage(size: CGSize(width: 14, height: 14), flipped: false) { _ in
+            let p = NSBezierPath()
+            p.move(to: CGPoint(x: 3, y: 7)); p.line(to: CGPoint(x: 6, y: 4)); p.line(to: CGPoint(x: 11.5, y: 10.5))
+            p.lineWidth = 2; p.lineCapStyle = .round; p.lineJoinStyle = .round
+            (color.isLight ? NSColor.black : NSColor.white).setStroke()
+            p.stroke()
+            return true
+        }
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        // White pill with a little pointer toward the main bar.
+        let ph = Self.pointerH
+        let body = pointsUp ? CGRect(x: 0, y: 0, width: bounds.width, height: bounds.height - ph)
+                            : CGRect(x: 0, y: ph, width: bounds.width, height: bounds.height - ph)
+        let path = NSBezierPath(roundedRect: body, xRadius: 10, yRadius: 10)
+        let px = min(max(14, pointerX), bounds.width - 14)
+        if pointsUp {
+            path.move(to: CGPoint(x: px - 7, y: body.maxY)); path.line(to: CGPoint(x: px, y: body.maxY + ph)); path.line(to: CGPoint(x: px + 7, y: body.maxY))
+        } else {
+            path.move(to: CGPoint(x: px - 7, y: body.minY)); path.line(to: CGPoint(x: px, y: body.minY - ph)); path.line(to: CGPoint(x: px + 7, y: body.minY))
+        }
+        path.close()
+        NSColor.white.setFill()
+        path.fill()
+        NSColor(calibratedWhite: 0, alpha: 0.08).setStroke()
+        path.lineWidth = 0.5
+        path.stroke()
+    }
+
+    override func layout() {
+        super.layout()
+        // Keep the stack centred in the body, not the pointer strip.
+        stack.frame.origin.y = (pointsUp ? 0 : Self.pointerH) + ((bounds.height - Self.pointerH) - stack.frame.height) / 2
+    }
+
+    @objc private func pickSize(_ sender: NSButton) { canvas.size = StrokeSize(rawValue: sender.tag) ?? .m }
+    @objc private func pickColor(_ sender: NSButton) { canvas.color = AnnotatePalette.colors[sender.tag] }
+    @objc private func toggleDash() { canvas.dashed.toggle() }
+    override func mouseDown(with event: NSEvent) {}
+}
+
 /// Thin-line 18 pt template icons drawn in code, so every tool shares one visual weight.
 enum ToolIcons {
     static func image(for tool: AnnotateTool) -> NSImage {
         switch tool {
-        case .rect: return make { p in p.appendRoundedRect(CGRect(x: 2.5, y: 4, width: 13, height: 10), xRadius: 2.5, yRadius: 2.5) }
-        case .ellipse: return make { p in p.appendOval(in: CGRect(x: 2.5, y: 3.5, width: 13, height: 11)) }
+        case .rect: return make { p in p.appendRoundedRect(CGRect(x: 2.5, y: 3, width: 13, height: 12), xRadius: 1.5, yRadius: 1.5) }
+        case .ellipse: return make { p in p.appendOval(in: CGRect(x: 2.5, y: 2.5, width: 13, height: 13)) }
         case .arrow: return make { p in
             p.move(to: CGPoint(x: 3, y: 15)); p.line(to: CGPoint(x: 15, y: 3))
             p.move(to: CGPoint(x: 8.5, y: 3)); p.line(to: CGPoint(x: 15, y: 3)); p.line(to: CGPoint(x: 15, y: 9.5))
         }
         case .line: return make { p in p.move(to: CGPoint(x: 3, y: 15)); p.line(to: CGPoint(x: 15, y: 3)) }
         case .pen: return make { p in
-            p.move(to: CGPoint(x: 2.5, y: 12))
-            p.curve(to: CGPoint(x: 8, y: 9), controlPoint1: CGPoint(x: 4, y: 5), controlPoint2: CGPoint(x: 6, y: 5))
-            p.curve(to: CGPoint(x: 13, y: 8), controlPoint1: CGPoint(x: 10, y: 13), controlPoint2: CGPoint(x: 11, y: 13))
-            p.curve(to: CGPoint(x: 15.5, y: 6), controlPoint1: CGPoint(x: 14.5, y: 4), controlPoint2: CGPoint(x: 15, y: 4))
+            // Pen nib with a squiggle under it.
+            p.move(to: CGPoint(x: 11.5, y: 2.5)); p.line(to: CGPoint(x: 15.5, y: 6.5)); p.line(to: CGPoint(x: 7.5, y: 14.5))
+            p.line(to: CGPoint(x: 3.5, y: 15.5)); p.line(to: CGPoint(x: 4.5, y: 11.5)); p.close()
+            p.move(to: CGPoint(x: 9.5, y: 4.5)); p.line(to: CGPoint(x: 13.5, y: 8.5))
         }
-        case .text: return make(fill: true) { p in
-            let s = NSAttributedString(string: "A", attributes: [.font: NSFont.systemFont(ofSize: 16, weight: .medium), .foregroundColor: NSColor.black])
-            let sz = s.size()
-            s.draw(at: CGPoint(x: 9 - sz.width / 2, y: 9 - sz.height / 2))
+        case .text: return make { p in
+            p.move(to: CGPoint(x: 3.5, y: 4)); p.line(to: CGPoint(x: 14.5, y: 4))
+            p.move(to: CGPoint(x: 3.5, y: 3)); p.line(to: CGPoint(x: 3.5, y: 6))
+            p.move(to: CGPoint(x: 14.5, y: 3)); p.line(to: CGPoint(x: 14.5, y: 6))
+            p.move(to: CGPoint(x: 9, y: 4)); p.line(to: CGPoint(x: 9, y: 15.5))
+            p.move(to: CGPoint(x: 6.5, y: 15.5)); p.line(to: CGPoint(x: 11.5, y: 15.5))
         }
         case .mosaic: return make(fill: true) { p in
             for r in 0..<3 { for c in 0..<3 where (r + c) % 2 == 0 {

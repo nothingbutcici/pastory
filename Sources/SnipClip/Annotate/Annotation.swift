@@ -161,3 +161,10 @@ enum AnnotatePalette {
     ]
     static let accent = NSColor(srgbRed: 0.56, green: 0.42, blue: 1.0, alpha: 1)
 }
+
+extension NSColor {
+    var isLight: Bool {
+        guard let c = usingColorSpace(.sRGB) else { return false }
+        return 0.299 * c.redComponent + 0.587 * c.greenComponent + 0.114 * c.blueComponent > 0.7
+    }
+}
