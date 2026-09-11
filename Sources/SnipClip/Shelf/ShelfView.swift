@@ -54,9 +54,9 @@ struct ShelfView: View {
             Text("未 Pin 内容\n\(retentionText)").font(.system(size: 13.5)).foregroundStyle(Color.shelfMuted).lineSpacing(4).padding(.top, 14)
             Spacer()
             if let m = Theme.mascot {
-                Image(nsImage: m).resizable().scaledToFit().frame(width: 132, height: 132)
-                    .padding(.leading, -6)
-                    .padding(.bottom, 14)
+                Image(nsImage: m).resizable().scaledToFit().frame(width: 100, height: 100)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.bottom, 12)
             }
             HStack(spacing: 7) {
                 Image(systemName: "pin.fill").font(.system(size: 12)).foregroundStyle(Color.lime)
@@ -97,8 +97,16 @@ struct ShelfView: View {
             Spacer()
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass").font(.system(size: 14)).foregroundStyle(Color.shelfMuted)
-                TextField("", text: $model.query, prompt: Text("搜索剪贴板").foregroundStyle(Color.shelfMuted))
-                    .textFieldStyle(.plain).font(.system(size: 14)).foregroundStyle(Color.shelfInk).focused($searchFocused)
+                ZStack(alignment: .leading) {
+                    // macOS ignores prompt colours on a plain TextField; draw the placeholder ourselves.
+                    if model.query.isEmpty {
+                        Text("搜索剪贴板").font(.system(size: 14)).foregroundColor(Color.shelfMuted).allowsHitTesting(false)
+                    }
+                    TextField("", text: $model.query)
+                        .textFieldStyle(.plain).font(.system(size: 14))
+                        .foregroundColor(Color.shelfInk).tint(Color.purple)
+                        .focused($searchFocused)
+                }
                 if !model.query.isEmpty {
                     Button { model.query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Color.shelfMuted) }
                         .buttonStyle(.plain)
