@@ -127,17 +127,12 @@ struct ClipCardView: View {
                     Image(systemName: "checkmark").font(.system(size: 10, weight: .bold))
                     Text("已复制").font(.system(size: 12.5, weight: .semibold))
                 }
-                .foregroundStyle(Color.onPurple)
+                .foregroundStyle(Color(nsColor: Theme.onLime))
                 .padding(.horizontal, 10).padding(.vertical, 4)
-                .background(Color.purple, in: Capsule())
+                .background(Color.lime, in: Capsule())
             }
-            // Kind: solid muted colour, white text. Note: gray outline.
-            Text(kindLabel)
-                .font(.system(size: 12.5, weight: .medium)).foregroundStyle(.white)
-                .padding(.horizontal, 10).padding(.vertical, 4)
-                .background(Color(nsColor: tagColor), in: Capsule())
-                .lineLimit(1)
-            if let note { tag(note, color: Color.shelfMuted.opacity(0.7), ink: Color.shelfMuted) }
+            Text(note == nil ? kindLabel : "\(kindLabel) ·").font(.system(size: 13)).foregroundStyle(Color.shelfMuted)
+            if let note { tag(note, color: Color.shelfMuted.opacity(0.6), ink: Color.shelfMuted) }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)

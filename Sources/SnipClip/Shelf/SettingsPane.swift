@@ -27,7 +27,7 @@ struct SettingsPane: View {
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.top, 20)
+            .padding(.top, 18)
             .padding(.bottom, 14)
 
             ScrollView(.vertical, showsIndicators: false) {

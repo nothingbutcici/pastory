@@ -12,13 +12,13 @@ enum Theme {
     static let red = NSColor(srgbRed: 0.90, green: 0.28, blue: 0.30, alpha: 1)         // #E5484D
     static let cornerRadius: CGFloat = 14
 
-    // Shelf (warm dark, lavender accent) — the reference's blacks lean slightly brown
-    static let shelfBG = NSColor(srgbRed: 0.106, green: 0.102, blue: 0.094, alpha: 1)   // #1B1A18
-    static let shelfSide = NSColor(srgbRed: 0.125, green: 0.121, blue: 0.110, alpha: 1) // #201F1C
-    static let shelfCard = NSColor(srgbRed: 0.149, green: 0.145, blue: 0.133, alpha: 1) // #262522
-    static let shelfBorder = NSColor(srgbRed: 0.22, green: 0.21, blue: 0.19, alpha: 1)  // #383630
+    // Shelf (near-black, lavender accent)
+    static let shelfBG = NSColor(srgbRed: 0.090, green: 0.090, blue: 0.094, alpha: 1)   // #171718
+    static let shelfSide = NSColor(srgbRed: 0.110, green: 0.110, blue: 0.114, alpha: 1) // #1C1C1D
+    static let shelfCard = NSColor(srgbRed: 0.137, green: 0.137, blue: 0.141, alpha: 1) // #232324
+    static let shelfBorder = NSColor(srgbRed: 0.20, green: 0.20, blue: 0.21, alpha: 1)  // #333336
     static let shelfInk = NSColor(calibratedWhite: 0.96, alpha: 1)
-    static let shelfMuted = NSColor(srgbRed: 0.63, green: 0.62, blue: 0.59, alpha: 1)   // #A19E97
+    static let shelfMuted = NSColor(srgbRed: 0.62, green: 0.62, blue: 0.64, alpha: 1)   // #9E9EA3
     static let shelfGrid = NSColor(calibratedWhite: 1, alpha: 0.045)
     static let cream = NSColor(srgbRed: 0.95, green: 0.93, blue: 0.89, alpha: 1)        // #F2EDE3 content paper
     static let creamInk = NSColor(srgbRed: 0.13, green: 0.12, blue: 0.11, alpha: 1)

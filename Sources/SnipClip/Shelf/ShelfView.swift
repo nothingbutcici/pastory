@@ -43,102 +43,111 @@ struct ShelfView: View {
         .onChange(of: model.focusSearch) { _, _ in searchFocused = true }
     }
 
-    // MARK: Sidebar
+    // MARK: Sidebar — brand row, nav (剪贴板 / 设置), mascot + pin note
 
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Everything in the sidebar hangs off the same left edge.
-            VStack(alignment: .leading, spacing: 10) {
-                if let logo = Theme.logo { Image(nsImage: logo).resizable().scaledToFit().frame(width: 64, height: 64) }
-                Text("Snip Clip").font(.system(size: 20, weight: .bold)).foregroundStyle(Color.shelfInk)
+            HStack(spacing: 10) {
+                if let logo = Theme.logo { Image(nsImage: logo).resizable().scaledToFit().frame(width: 42, height: 42) }
+                Text("Snip Clip").font(.system(size: 18, weight: .bold)).foregroundStyle(Color.shelfInk)
             }
-            .padding(.top, 26)
-            .padding(.bottom, 38)
-            Text("今日暂存").font(.system(size: 27, weight: .bold)).foregroundStyle(Color.shelfInk)
-            Text("未 Pin 内容\n\(retentionText)").font(.system(size: 13.5)).foregroundStyle(Color.shelfMuted).lineSpacing(4).padding(.top, 14)
+            .padding(.horizontal, 22)
+            .padding(.top, 22)
+            .padding(.bottom, 26)
+            navRow(icon: "clipboard", "剪贴板", active: !model.showSettings) { model.showSettings = false }
+            navRow(icon: "gearshape", "设置", active: model.showSettings) { model.showSettings = true }
             Spacer()
-            if let m = Theme.mascot {
-                Image(nsImage: m).resizable().scaledToFit().frame(width: 64, height: 64)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .padding(.bottom, 14)
+            HStack(alignment: .center, spacing: 10) {
+                if let m = Theme.mascot { Image(nsImage: m).resizable().scaledToFit().frame(width: 56, height: 56) }
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 5) {
+                        Image(systemName: "pin.fill").font(.system(size: 11)).foregroundStyle(Color.lime)
+                        Text("Pin 后").font(.system(size: 13)).foregroundStyle(Color.shelfInk)
+                    }
+                    Text("一直保留").font(.system(size: 13)).foregroundStyle(Color.shelfMuted)
+                }
             }
-            sideRow(icon: "pin.fill", tint: Color.lime, "Pin 后一直保留", active: false) { model.showSettings = false }
-            sideRow(icon: "gearshape", tint: Color.shelfInk, "设置", active: model.showSettings) { model.showSettings.toggle() }
-                .padding(.top, 8)
-                .padding(.bottom, 24)
+            .padding(.horizontal, 22)
+            .padding(.bottom, 22)
         }
-        .padding(.horizontal, 26)
-        .frame(width: 210, alignment: .leading)
+        .frame(width: 214, alignment: .leading)
         .background(ZStack { Color.shelfSide; GridPattern() })
         .overlay(alignment: .trailing) { Rectangle().fill(Color.white.opacity(0.06)).frame(width: 1) }
     }
 
-    private func sideRow(icon: String, tint: Color, _ title: String, active: Bool, action: @escaping () -> Void) -> some View {
+    private func navRow(icon: String, _ title: String, active: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: icon).font(.system(size: 12, weight: .semibold)).foregroundStyle(active ? Color(nsColor: Theme.onLime) : tint)
-                Text(title).font(.system(size: 13, weight: .medium)).foregroundStyle(active ? Color(nsColor: Theme.onLime) : Color.shelfInk)
+            HStack(spacing: 12) {
+                Image(systemName: icon).font(.system(size: 17, weight: .medium))
+                Text(title).font(.system(size: 16, weight: active ? .semibold : .medium))
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 14).padding(.vertical, 9)
+            .foregroundStyle(active ? Color.purple : Color.shelfInk)
+            .padding(.horizontal, 22)
+            .frame(height: 54)
             .frame(maxWidth: .infinity)
-            .background(active ? Color.lime : Color.shelfCard, in: RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(active ? Color.clear : Color.shelfBorder, lineWidth: 1))
-            .contentShape(RoundedRectangle(cornerRadius: 10))
+            .background(active ? Color.purple.opacity(0.22) : Color.clear)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 
     private var retentionText: String {
         let d = Preferences.shared.retentionDays
-        return d <= 1 ? "次日 04:00 清理" : "\(d) 天后 04:00 清理"
+        return d <= 1 ? "未 Pin 的内容次日 04:00 清理" : "未 Pin 的内容 \(d) 天后 04:00 清理"
     }
 
-    // MARK: Header
+    // MARK: Header — title + note, search, close; then the filter pills
 
     private var header: some View {
-        HStack(spacing: 10) {
-            ForEach(ShelfFilter.allCases) { f in
-                let on = model.filter == f
-                Button { model.filter = f } label: {
-                    Text(f.rawValue)
-                        .font(.system(size: 14.5, weight: on ? .semibold : .medium))
-                        .foregroundStyle(on ? Color(nsColor: Theme.onLime) : Color.shelfInk)
-                        .padding(.horizontal, 22).padding(.vertical, 9)
-                        .background(on ? Color.lime : Color.shelfCard, in: Capsule())
-                        .overlay(Capsule().stroke(on ? Color.clear : Color.shelfBorder, lineWidth: 1))
-                }
-                .buttonStyle(.plain)
-            }
-            Spacer()
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass").font(.system(size: 14)).foregroundStyle(Color.shelfMuted)
-                ZStack(alignment: .leading) {
-                    // macOS ignores prompt colours on a plain TextField; draw the placeholder ourselves.
-                    if model.query.isEmpty {
-                        Text("搜索剪贴板").font(.system(size: 14)).foregroundColor(Color.shelfMuted).allowsHitTesting(false)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 14) {
+                Text("今日暂存").font(.system(size: 22, weight: .bold)).foregroundStyle(Color.shelfInk)
+                Text(retentionText).font(.system(size: 13.5)).foregroundStyle(Color.shelfMuted)
+                Spacer()
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass").font(.system(size: 14)).foregroundStyle(Color.shelfMuted)
+                    ZStack(alignment: .leading) {
+                        if model.query.isEmpty {
+                            Text("搜索剪贴板").font(.system(size: 14)).foregroundColor(Color.shelfMuted).allowsHitTesting(false)
+                        }
+                        TextField("", text: $model.query)
+                            .textFieldStyle(.plain).font(.system(size: 14))
+                            .foregroundColor(Color.shelfInk).tint(Color.purple)
+                            .focused($searchFocused)
                     }
-                    TextField("", text: $model.query)
-                        .textFieldStyle(.plain).font(.system(size: 14))
-                        .foregroundColor(Color.shelfInk).tint(Color.purple)
-                        .focused($searchFocused)
+                    if !model.query.isEmpty {
+                        Button { model.query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Color.shelfMuted) }
+                            .buttonStyle(.plain)
+                    }
                 }
-                if !model.query.isEmpty {
-                    Button { model.query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Color.shelfMuted) }
-                        .buttonStyle(.plain)
+                .padding(.horizontal, 14).padding(.vertical, 8)
+                .background(Color.shelfCard, in: Capsule())
+                .overlay(Capsule().stroke(Color.shelfBorder, lineWidth: 1))
+                .frame(width: 300)
+                Button { ShelfPanelController.shared.hide() } label: {
+                    Image(systemName: "xmark").font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.shelfInk).frame(width: 36, height: 36)
                 }
+                .buttonStyle(.plain).help("关闭 ⎋")
             }
-            .padding(.horizontal, 14).padding(.vertical, 9)
-            .background(Color.shelfCard, in: Capsule())
-            .overlay(Capsule().stroke(Color.shelfBorder, lineWidth: 1))
-            .frame(width: 350)
-            Button { ShelfPanelController.shared.hide() } label: {
-                Image(systemName: "xmark").font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.shelfInk).frame(width: 36, height: 36)
+            HStack(spacing: 10) {
+                ForEach(ShelfFilter.allCases) { f in
+                    let on = model.filter == f
+                    Button { model.filter = f } label: {
+                        Text(f.rawValue)
+                            .font(.system(size: 14.5, weight: on ? .semibold : .medium))
+                            .foregroundStyle(on ? Color.onPurple : Color.shelfInk)
+                            .padding(.horizontal, 22).padding(.vertical, 9)
+                            .background(on ? Color.purple : Color.shelfCard, in: Capsule())
+                            .overlay(Capsule().stroke(on ? Color.clear : Color.shelfBorder, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                }
+                Spacer()
             }
-            .buttonStyle(.plain).help("关闭 ⎋")
         }
-        .padding(.top, 20)
-        .padding(.bottom, 16)
+        .padding(.top, 18)
+        .padding(.bottom, 14)
     }
 
     // MARK: Cards
