@@ -43,6 +43,7 @@ build/               构建产物，不进 git
 
 - 「保存到本地」每次弹系统保存对话框让用户选位置（默认打开上次用过的文件夹），存储里的原条目不动。
 - 保留期默认「次日凌晨 4 点清理未固定条目」，可改为 N 天；固定的永不自动清。
+  清理在启动时、每小时、电脑唤醒时各检查一次，按"记录属于哪一天"判断，4 点时休眠也不会漏。
 - 带 `org.nspasteboard.ConcealedType` / `TransientType` 标记的内容（密码管理器等）不记录。
 - 不上云。要跨设备时由用户把存储目录换到 iCloud Drive，本项目不碰服务器。
 
@@ -56,6 +57,16 @@ open "build/Pastory.app"
 签名顺序：钥匙串里有「Snip Clip Dev」用它；没有就复用 cc record 的「CC Record Dev」（同一台机器、同一用途，
 不必再生成一张）；都没有才 ad-hoc（每次重编译都要重新勾屏幕录制权限）。要单独一张证书就跑
 `./tools/make-signing-cert.sh`。只需要 Command Line Tools，不需要完整 Xcode。
+
+## 分享给别人
+
+```bash
+./dist.sh        # 产出 dist/Pastory-<版本>.zip 和 dist/首次打开.txt，一起发给对方
+```
+
+分发包用 ad-hoc 签名（本机自签证书在别人机器上不被信任）。没有 Apple 开发者账号和公证，
+对方第一次打开要在「隐私与安全性」里点「仍要打开」一次，说明写在 `首次打开.txt` 里。
+版本号改 `Resources/Info.plist` 的 CFBundleShortVersionString。app 图标 `Resources/AppIcon.icns` 由 Logo.png 生成。
 
 ## 自测
 
