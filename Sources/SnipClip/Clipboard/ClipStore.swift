@@ -9,7 +9,7 @@ func stableHash(_ data: Data) -> Int {
 }
 
 /// ~/Library/Application Support/Pastory/
-///   index.json       metadata, newest first
+///   pastory.sqlite   the index (SQLite, WAL); an old index.json is imported once and renamed
 ///   items/<id>.<ext> payload (txt / png / json list of paths); <id>.rtf alongside when rich text
 ///   thumbs/<id>.png  shelf thumbnail for images
 @MainActor
@@ -22,7 +22,9 @@ final class ClipStore {
     private var itemsDir: URL
     private var thumbsDir: URL
     private var shareDir: URL
-    private var indexURL: URL { root.appendingPathComponent("index.json") }
+    private var indexURL: URL { root.appendingPathComponent("index.json") }     // legacy, imported once
+    private var dbURL: URL { root.appendingPathComponent("pastory.sqlite") }
+    private var db: ClipDB?
 
     /// The real location — unless SNIPCLIP_STORE is set, in which case that sandbox is "default" too,
     /// so self-tests (relocate back to default included) can never touch the user's data.
@@ -47,10 +49,6 @@ final class ClipStore {
         let base: URL
         if let root {
             base = root
-        } else if ProcessInfo.processInfo.environment["SNIPCLIP_STORE"].map({ !$0.isEmpty }) == true {
-            base = Self.defaultRoot
-        } else if let custom = Preferences.shared.customStoreDir, !custom.isEmpty {
-            base = URL(fileURLWithPath: custom, isDirectory: true)
         } else {
             base = Self.defaultRoot
         }
@@ -70,56 +68,6 @@ final class ClipStore {
         }
     }
 
-    /// Move the whole store to another folder (nil = back to the default). Existing files are copied over
-    /// first, then the app switches to the new place; the old folder is left as-is for the user to delete.
-    func relocate(to newRoot: URL?) throws {
-        let fm = FileManager.default
-        let target = newRoot ?? Self.defaultRoot
-        guard target.standardizedFileURL != root.standardizedFileURL else { return }
-        try fm.createDirectory(at: target, withIntermediateDirectories: true)
-        // Copy our files over; ours win over any same-named leftovers at the target (edits must not be rolled back).
-        for name in ["items", "thumbs"] {
-            let src = root.appendingPathComponent(name), dst = target.appendingPathComponent(name)
-            try? fm.createDirectory(at: dst, withIntermediateDirectories: true)
-            for f in (try? fm.contentsOfDirectory(atPath: src.path)) ?? [] {
-                let s = src.appendingPathComponent(f), d = dst.appendingPathComponent(f)
-                if fm.fileExists(atPath: d.path) { try fm.removeItem(at: d) }
-                try fm.copyItem(at: s, to: d)
-            }
-        }
-        // Merge a genuine other library found at the target (never the one we just retired, see below).
-        var merged = items
-        let targetIndex = target.appendingPathComponent("index.json")
-        if let data = try? Data(contentsOf: targetIndex) {
-            let dec = JSONDecoder(); dec.dateDecodingStrategy = .iso8601
-            let theirs = (try? dec.decode([Failable<ClipItem>].self, from: data))?.compactMap(\.value) ?? []
-            let ids = Set(merged.map(\.id))
-            merged += theirs.filter { !ids.contains($0.id) && fm.fileExists(atPath: target.appendingPathComponent("items/\($0.fileName)").path) }
-            merged.sort { $0.createdAt > $1.createdAt }
-        }
-        // Retire the source index so coming back here later does not resurrect deleted items.
-        let oldRoot = root
-        let oldIndex = oldRoot.appendingPathComponent("index.json")
-        root = target
-        itemsDir = target.appendingPathComponent("items", isDirectory: true)
-        thumbsDir = target.appendingPathComponent("thumbs", isDirectory: true)
-        shareDir = target.appendingPathComponent("share", isDirectory: true)
-        ensureDirs()
-        thumbCache.removeAll()
-        items = merged
-        guard save() else {
-            // Could not write at the new place: stay where we were.
-            root = oldRoot
-            itemsDir = oldRoot.appendingPathComponent("items", isDirectory: true)
-            thumbsDir = oldRoot.appendingPathComponent("thumbs", isDirectory: true)
-            shareDir = oldRoot.appendingPathComponent("share", isDirectory: true)
-            load()
-            throw NSError(domain: "Pastory", code: 1, userInfo: [NSLocalizedDescriptionKey: "新位置写入失败，已留在原位置"])
-        }
-        Preferences.shared.customStoreDir = newRoot?.path
-        try? fm.moveItem(at: oldIndex, to: oldRoot.appendingPathComponent("index.moved.json"))
-    }
-
     // MARK: - Persistence
 
     /// One bad row must not take the whole index with it.
@@ -129,23 +77,25 @@ final class ClipStore {
     }
 
     private func load() {
-        guard let data = try? Data(contentsOf: indexURL) else { return }
-        let dec = JSONDecoder()
-        dec.dateDecodingStrategy = .iso8601
-        if let rows = try? dec.decode([Failable<ClipItem>].self, from: data) {
-            items = rows.compactMap(\.value)
-            if items.count < rows.count { quarantineIndex(reason: "partial") }   // keep the original around
-            return
+        do {
+            let d = try ClipDB(url: dbURL)
+            db = d
+            var rows = try d.loadAll()
+            // First run on a store from the JSON era: import, then retire the file.
+            if rows.isEmpty, let data = try? Data(contentsOf: indexURL) {
+                let dec = JSONDecoder(); dec.dateDecodingStrategy = .iso8601
+                let legacy = (try? dec.decode([Failable<ClipItem>].self, from: data))?.compactMap(\.value) ?? []
+                if !legacy.isEmpty {
+                    try d.saveAll(legacy)
+                    rows = legacy
+                }
+                try? FileManager.default.moveItem(at: indexURL, to: root.appendingPathComponent("index.migrated.json"))
+            }
+            items = rows
+        } catch {
+            items = []
+            reportStorageFailure(error)
         }
-        // Unreadable: keep the file, never overwrite it with an empty list.
-        quarantineIndex(reason: "unreadable")
-        items = []
-    }
-
-    private func quarantineIndex(reason: String) {
-        let f = DateFormatter(); f.dateFormat = "yyyyMMdd-HHmmss"
-        let dst = root.appendingPathComponent("index.\(reason).\(f.string(from: Date())).json")
-        try? FileManager.default.copyItem(at: indexURL, to: dst)
     }
 
     /// True after a write failed (full disk, unplugged volume). Retention holds off until a save succeeds again.
@@ -154,26 +104,26 @@ final class ClipStore {
 
     @discardableResult
     private func save() -> Bool {
-        let enc = JSONEncoder()
-        enc.dateEncodingStrategy = .iso8601
-        enc.outputFormatting = [.prettyPrinted, .sortedKeys]
         do {
-            let data = try enc.encode(items)
-            try data.write(to: indexURL, options: .atomic)
+            if db == nil { db = try ClipDB(url: dbURL) }
+            try db?.saveAll(items)
             lastSaveFailed = false
             return true
         } catch {
             lastSaveFailed = true
-            if !warnedSaveFailure {
-                warnedSaveFailure = true
-                let a = NSAlert()
-                a.messageText = "Pastory 写不进存储目录"
-                a.informativeText = "\(root.path)\n\n\(error.localizedDescription)\n\n在这之前的改动都在，但之后的记录、Pin、删除都没有保存。检查磁盘空间或外接盘是否还在。"
-                NSApp.activate(ignoringOtherApps: true)
-                a.runModal()
-            }
+            reportStorageFailure(error)
             return false
         }
+    }
+
+    private func reportStorageFailure(_ error: Error) {
+        guard !warnedSaveFailure else { return }
+        warnedSaveFailure = true
+        let a = NSAlert()
+        a.messageText = "Pastory 读写不了存储目录"
+        a.informativeText = "\(root.path)\n\n\(error.localizedDescription)\n\n之后的记录、Pin、删除可能没有保存。检查磁盘空间。"
+        NSApp.activate(ignoringOtherApps: true)
+        a.runModal()
     }
 
     func payloadURL(_ item: ClipItem) -> URL { itemsDir.appendingPathComponent(item.fileName) }

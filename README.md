@@ -15,7 +15,7 @@ Sources/SnipClip/
   App/               入口、菜单栏、全局快捷键、权限、偏好、设置窗口
   Capture/           ScreenCaptureKit 取图、框选覆盖层、坐标换算、区域录屏（SCRecordingOutput → mp4，可转 GIF）
   Annotate/          截图标注：Excalidraw 风手绘渲染（选择/矩形/椭圆/箭头/直线/画笔/文字/马赛克），OCR 面板
-  Clipboard/         NSPasteboard 监听、条目模型、JSON 索引 + 文件存储、保留期清理
+  Clipboard/         NSPasteboard 监听、条目模型、SQLite 索引 + 文件存储、保留期清理
   Shelf/             底部半屏货架：横向卡片、固定、保存到本地（Exporter 弹对话框）、搜索
 tools/               make-signing-cert.sh 等一次性脚本
 build/               构建产物，不进 git
@@ -31,14 +31,14 @@ build/               构建产物，不进 git
 
 | 路径 | 内容 |
 | --- | --- |
-| `index.json` | 条目元数据数组，新的在前：id、kind(text/url/image/files)、创建时间、来源 app、预览片段、OCR 文本、是否固定、内容哈希 |
+| `pastory.sqlite` | 索引（SQLite，WAL）：id、kind(text/url/image/files/video)、创建时间、来源 app、预览片段、OCR 文本、是否 Pin、标题、内容哈希。旧版 `index.json` 首次启动导入后改名 `index.migrated.json` |
 | `items/<id>.txt` | 文本 / 链接正文；富文本另存 `<id>.rtf` |
 | `items/<id>.png` | 图片原图，带显示器色彩描述文件，不重编码 |
 | `items/<id>.json` | 文件条目：路径列表 |
 | `items/<id>.mp4` / `.gif` | 录屏本体 |
 | `thumbs/<id>.png` | 货架缩略图（长边 640 px） |
 
-不用 SQLite：条目量级是几百，Codable 读写整个索引就够。
+索引用 SQLite（`Clipboard/ClipDB.swift`，系统自带 libsqlite3），正文仍是文件；整表在一个事务里写，几千条也快。
 自测可用环境变量 `SNIPCLIP_STORE=<dir>` 指到别的目录，不污染真实数据。
 
 - 「保存到本地」每次弹系统保存对话框让用户选位置（默认打开上次用过的文件夹），存储里的原条目不动。
@@ -46,11 +46,9 @@ build/               构建产物，不进 git
   任何时候运行检查：过了今天的 X 就清「昨天及更早」（N=1），今天 0:00 之后的一律不动；没到 X 只清「前天及更早」。
   无状态、可重复执行，不需要记"删过没有"；Pin 住的永远不清。触发点：启动、下一个 X 点的自到期定时器（休眠错过会在唤醒时补发）、每次打开货架。
   用户手动删除即落盘并删文件，重开不会回来（自测 `--selftest retention` 覆盖以上场景）。
-  索引读取逐条容错，读不出来的文件会另存为 `index.<原因>.<时间>.json` 而不是被空列表覆盖；
-  写索引失败会弹一次提示，且清理暂停直到写回成功。缩短保留天数会先告知将清掉多少条再执行。
+  索引读写失败会弹一次提示，且清理暂停直到写回成功。缩短保留天数会先告知将清掉多少条再执行。
 - 带 `org.nspasteboard.ConcealedType` / `TransientType` 标记的内容（密码管理器等）不记录。
-- 存放位置可在设置里改（`ClipStore.relocate`）：现有内容复制到新目录后切换，旧目录保留由用户自行删除；
-  目标目录里若已有一份旧存储会按 id 合并。想跨设备就选 iCloud Drive 里的文件夹，本项目不碰服务器。
+- 存放位置固定在上面这个目录，设置里只显示路径和「打开」，不提供更改。不上云。
 
 ## 构建
 

@@ -59,24 +59,6 @@ enum SelfTest {
                 ok = okAll
             case "retention": ok = retention()
             case "gif": ok = await gif()
-            case "relocate":
-                // Store A with items → move to B → everything present in B → move back → still complete.
-                let store = ClipStore.shared
-                store.removeAll { _ in true }
-                let src = ClipStore.Source(bundleID: nil, name: "test")
-                store.insertText("relocate-one", rtf: nil, source: src)
-                if let img = renderSample(), let png = Screenshotter.pngData(img) { store.insertImage(png: png, source: src) }
-                let b = FileManager.default.temporaryDirectory.appendingPathComponent("snipclip-relocate-\(UUID().uuidString)")
-                try store.relocate(to: b)
-                let inB = store.root == b && store.items.allSatisfy { FileManager.default.fileExists(atPath: store.payloadURL($0).path) }
-                let idxB = FileManager.default.fileExists(atPath: b.appendingPathComponent("index.json").path)
-                try store.relocate(to: nil)
-                let back = store.items.count == 2 && store.items.allSatisfy { FileManager.default.fileExists(atPath: store.payloadURL($0).path) }
-                print("moved to B: \(inB && idxB) · back to default: \(back) · items: \(store.items.count)")
-                store.removeAll { _ in true }
-                try? FileManager.default.removeItem(at: b)
-                Preferences.shared.customStoreDir = nil
-                ok = inB && idxB && back
             case "pbfiles":
                 PasteboardWriter.writeFiles([URL(fileURLWithPath: rest.first ?? "/Users/cici/Project/Claude/snip clip/README.md")], itemID: "test")
                 print((NSPasteboard.general.types ?? []).map(\.rawValue).joined(separator: "\n"))

@@ -5,7 +5,7 @@ struct SettingsPane: View {
     @Bindable var model: ShelfModel
     @State private var prefs = PrefsMirror()
     @State private var cleared = false
-    @State private var storeError: String?
+
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -81,13 +81,10 @@ struct SettingsPane: View {
                             row("剪贴板内容临时存放位置") {
                                 HStack(spacing: 8) {
                                     Text((ClipStore.shared.root.path as NSString).abbreviatingWithTildeInPath)
-                                        .font(.system(size: 12)).foregroundStyle(Color.shelfMuted).lineLimit(1).truncationMode(.middle).frame(maxWidth: 220, alignment: .trailing)
-                                    if Preferences.shared.customStoreDir != nil { pill("默认") { relocateStore(to: nil) } }
-                                    pill("选择…") { chooseStoreFolder() }
+                                        .font(.system(size: 12)).foregroundStyle(Color.shelfMuted).lineLimit(1).truncationMode(.middle).frame(maxWidth: 300, alignment: .trailing)
                                     pill("打开") { NSWorkspace.shared.open(ClipStore.shared.root) }
                                 }
                             }
-                            if let e = storeError { Text(e).font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.tagMP4)).padding(.horizontal, 16) }
                         }
                         section("系统") {
                             row("登录时启动") { Toggle("", isOn: $prefs.launchAtLogin).labelsHidden().toggleStyle(.switch).tint(Color.purple) }
@@ -169,22 +166,6 @@ struct SettingsPane: View {
             }
         }
         prefs.retentionDays = days
-    }
-
-    private func chooseStoreFolder() {
-        let picked: URL? = ShelfPanelController.shared.withDialog {
-            let panel = NSOpenPanel()
-            panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.canCreateDirectories = true
-            panel.prompt = "用这个文件夹"
-            panel.message = "现有内容会复制过去；原文件夹保留，可以自己删。"
-            return panel.runModal() == .OK ? panel.url : nil
-        }
-        if let picked { relocateStore(to: picked) }
-    }
-
-    private func relocateStore(to url: URL?) {
-        do { try ClipStore.shared.relocate(to: url); storeError = nil }
-        catch { storeError = "搬不过去：\(error.localizedDescription)" }
     }
 
     private func chooseFolder() {
