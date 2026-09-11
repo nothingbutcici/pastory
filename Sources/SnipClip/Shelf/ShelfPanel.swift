@@ -74,6 +74,7 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
         let cmd = event.modifierFlags.contains(.command)
         switch Int(event.keyCode) {
         case kVK_Escape:
+            if model.renamingID != nil { model.renamingID = nil; return true }
             if typing, !model.query.isEmpty { model.query = ""; return true }
             if model.showSettings { model.showSettings = false; return true }
             hide(); return true
@@ -155,6 +156,8 @@ enum ShelfFilter: String, CaseIterable, Identifiable {
 final class ShelfModel {
     var query = ""
     var showSettings = false
+    /// Card whose title is being edited inline.
+    var renamingID: String?
     var filter: ShelfFilter = .all
     var selectedID: String? { didSet { ShelfPanelController.shared.quickLookSelectionChanged() } }
     var focusSearch = 0
@@ -187,13 +190,14 @@ final class ShelfModel {
             }
             guard !q.isEmpty else { return true }
             return item.snippet.lowercased().contains(q) || (item.ocrText?.lowercased().contains(q) ?? false)
-                || (item.sourceAppName?.lowercased().contains(q) ?? false)
+                || (item.sourceAppName?.lowercased().contains(q) ?? false) || (item.title?.lowercased().contains(q) ?? false)
         }
     }
 
     func reset() {
         query = ""
         showSettings = false
+        renamingID = nil
         filter = .all
         orderSnapshot = Dictionary(uniqueKeysWithValues: ClipStore.shared.items.enumerated().map { ($1.id, $0) })
         selectedID = ClipStore.shared.items.first?.id

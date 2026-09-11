@@ -7,6 +7,7 @@ final class TextEditorWindow: NSObject, NSWindowDelegate {
     private let item: ClipItem
     private let window: NSWindow
     private let textView = NSTextView()
+    private let titleField = NSTextField()
     private let count = NSTextField(labelWithString: "")
 
     static func open(_ item: ClipItem) {
@@ -64,6 +65,19 @@ final class TextEditorWindow: NSObject, NSWindowDelegate {
         textView.delegate = self
         scroll.documentView = textView
 
+        titleField.stringValue = item.title ?? ""
+        titleField.placeholderAttributedString = NSAttributedString(string: "标题（可选，例如：翻译 prompt）", attributes: [
+            .foregroundColor: Theme.shelfMuted, .font: NSFont.systemFont(ofSize: 14, weight: .semibold)])
+        titleField.font = NSFont.systemFont(ofSize: 14, weight: .semibold)
+        titleField.textColor = Theme.shelfInk
+        titleField.isBordered = false
+        titleField.drawsBackground = true
+        titleField.backgroundColor = Theme.shelfCard
+        titleField.focusRingType = .none
+        titleField.wantsLayer = true
+        titleField.layer?.cornerRadius = 10
+        titleField.cell?.usesSingleLineMode = true
+        (titleField.cell as? NSTextFieldCell)?.lineBreakMode = .byTruncatingTail
         count.font = NSFont.systemFont(ofSize: 12)
         count.textColor = Theme.shelfMuted
         let cancel = pill("取消", fill: Theme.shelfCard, ink: Theme.shelfInk, action: #selector(cancelTapped))
@@ -73,9 +87,26 @@ final class TextEditorWindow: NSObject, NSWindowDelegate {
         save.keyEquivalentModifierMask = [.command]
         let buttons = NSStackView(views: [cancel, save])
         buttons.spacing = 8
-        for v in [scroll, count, buttons] { v.translatesAutoresizingMaskIntoConstraints = false; content.addSubview(v) }
+        let titleWrap = NSView()
+        titleWrap.wantsLayer = true
+        titleWrap.layer?.backgroundColor = Theme.shelfCard.cgColor
+        titleWrap.layer?.cornerRadius = 10
+        titleWrap.layer?.borderWidth = 1
+        titleWrap.layer?.borderColor = Theme.shelfBorder.cgColor
+        titleField.translatesAutoresizingMaskIntoConstraints = false
+        titleWrap.addSubview(titleField)
         NSLayoutConstraint.activate([
-            scroll.topAnchor.constraint(equalTo: content.topAnchor, constant: 44),
+            titleField.leadingAnchor.constraint(equalTo: titleWrap.leadingAnchor, constant: 12),
+            titleField.trailingAnchor.constraint(equalTo: titleWrap.trailingAnchor, constant: -12),
+            titleField.centerYAnchor.constraint(equalTo: titleWrap.centerYAnchor),
+            titleWrap.heightAnchor.constraint(equalToConstant: 38),
+        ])
+        for v in [titleWrap, scroll, count, buttons] { v.translatesAutoresizingMaskIntoConstraints = false; content.addSubview(v) }
+        NSLayoutConstraint.activate([
+            titleWrap.topAnchor.constraint(equalTo: content.topAnchor, constant: 44),
+            titleWrap.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 16),
+            titleWrap.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -16),
+            scroll.topAnchor.constraint(equalTo: titleWrap.bottomAnchor, constant: 10),
             scroll.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 16),
             scroll.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -16),
             scroll.bottomAnchor.constraint(equalTo: buttons.topAnchor, constant: -14),
@@ -110,6 +141,7 @@ final class TextEditorWindow: NSObject, NSWindowDelegate {
         let text = textView.string
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { NSSound.beep(); return }
         ClipStore.shared.updateText(item.id, text: text)
+        ClipStore.shared.setTitle(titleField.stringValue, for: item.id)
         if let updated = ClipStore.shared.items.first(where: { $0.id == item.id }) { ClipStore.shared.copyToPasteboard(updated) }
         window.close()
     }

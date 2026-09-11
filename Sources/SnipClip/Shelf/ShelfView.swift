@@ -175,6 +175,7 @@ struct ShelfView: View {
                 LazyHStack(alignment: .top, spacing: 14) {
                     ForEach(items) { item in
                         ClipCardView(item: item, selected: item.id == model.selectedID, onClipboard: item.id == ClipStore.shared.items.first?.id,
+                                     renaming: Binding(get: { model.renamingID == item.id }, set: { model.renamingID = $0 ? item.id : nil }),
                                      onCopy: { model.copy(item) },
                                      onCopyAndClose: { model.copyAndClose(item) },
                                      onPreview: { model.selectedID = item.id; model.previewSelected() },
@@ -246,6 +247,8 @@ struct ShelfView: View {
     private func menu(for item: ClipItem) -> some View {
         Button("复制") { model.copy(item) }
         Button("复制并关闭") { model.copyAndClose(item) }
+        Button(item.title == nil ? "命名…" : "重命名…") { model.selectedID = item.id; model.renamingID = item.id }
+        if item.title != nil { Button("去掉标题") { ClipStore.shared.setTitle(nil, for: item.id) } }
         if item.kind == .text || item.kind == .url || item.kind == .image {
             Button("编辑") { model.selectedID = item.id; model.edit(item) }
         }

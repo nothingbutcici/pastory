@@ -32,6 +32,8 @@ struct ClipItem: Codable, Identifiable, Equatable {
     var byteCount: Int
     /// Seconds, for recordings.
     var duration: Double?
+    /// User-given name ("翻译 prompt"), shown above the content and searchable.
+    var title: String?
     /// Hash of the payload, for de-duplicating back-to-back copies.
     var contentHash: Int
 

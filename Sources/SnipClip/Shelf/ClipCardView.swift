@@ -6,6 +6,7 @@ struct ClipCardView: View {
     let selected: Bool
     /// This item is what the pasteboard holds right now.
     let onClipboard: Bool
+    @Binding var renaming: Bool
     let onCopy: () -> Void
     let onCopyAndClose: () -> Void
     let onPreview: () -> Void
@@ -13,9 +14,13 @@ struct ClipCardView: View {
 
     static let width: CGFloat = 268
 
+    @State private var draftTitle = ""
+    @FocusState private var titleFocused: Bool
+
     var body: some View {
         VStack(spacing: 0) {
             header
+            titleRow
             paper
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(.horizontal, 14)
@@ -49,6 +54,37 @@ struct ClipCardView: View {
         .padding(.horizontal, 16)
         .padding(.top, 14)
         .padding(.bottom, 12)
+    }
+
+    /// Optional user title under the header; tap to rename, ⏎ saves, ⎋ cancels.
+    @ViewBuilder
+    private var titleRow: some View {
+        if renaming {
+            HStack(spacing: 8) {
+                Image(systemName: "tag").font(.system(size: 12)).foregroundStyle(Color.purple)
+                TextField("", text: $draftTitle, prompt: Text("输入标题").foregroundStyle(Color.shelfMuted))
+                    .textFieldStyle(.plain).font(.system(size: 14.5, weight: .semibold))
+                    .foregroundColor(Color.shelfInk).tint(Color.purple)
+                    .focused($titleFocused)
+                    .onSubmit { ClipStore.shared.setTitle(draftTitle, for: item.id); renaming = false }
+            }
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.purple.opacity(0.7), lineWidth: 1))
+            .padding(.horizontal, 14).padding(.bottom, 10)
+            .onAppear { draftTitle = item.title ?? ""; titleFocused = true }
+            .onChange(of: titleFocused) { _, f in if !f, renaming { ClipStore.shared.setTitle(draftTitle, for: item.id); renaming = false } }
+        } else if let t = item.title, !t.isEmpty {
+            HStack(spacing: 6) {
+                Image(systemName: "tag.fill").font(.system(size: 11)).foregroundStyle(Color.purple)
+                Text(t).font(.system(size: 14.5, weight: .semibold)).foregroundStyle(Color.shelfInk).lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 16).padding(.bottom, 10)
+            .contentShape(Rectangle())
+            .onTapGesture { renaming = true }
+            .help("点击重命名")
+        }
     }
 
     /// Cream panel holding the content; images fill it edge to edge.
