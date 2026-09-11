@@ -232,36 +232,4 @@ final class ClipStore {
         }
         bump(item.id)
     }
-
-    /// Export to the user's folder. Returns the written URL(s).
-    func export(_ item: ClipItem) -> [URL] {
-        let dir = Preferences.shared.exportDirectory()
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd HH.mm.ss"
-        let stamp = f.string(from: item.createdAt)
-        let fm = FileManager.default
-        func unique(_ base: String, _ ext: String) -> URL {
-            var url = dir.appendingPathComponent("\(base).\(ext)")
-            var n = 2
-            while fm.fileExists(atPath: url.path) { url = dir.appendingPathComponent("\(base) \(n).\(ext)"); n += 1 }
-            return url
-        }
-        var out: [URL] = []
-        switch item.kind {
-        case .image:
-            let url = unique("Snip \(stamp)", "png")
-            if (try? fm.copyItem(at: payloadURL(item), to: url)) != nil { out.append(url) }
-        case .text, .url:
-            let url = unique("Clip \(stamp)", "txt")
-            if (try? fm.copyItem(at: payloadURL(item), to: url)) != nil { out.append(url) }
-        case .files:
-            for src in fileURLs(of: item) where fm.fileExists(atPath: src.path) {
-                let name = src.deletingPathExtension().lastPathComponent
-                let url = unique(name, src.pathExtension)
-                if (try? fm.copyItem(at: src, to: url)) != nil { out.append(url) }
-            }
-        }
-        if !out.isEmpty { NSWorkspace.shared.activateFileViewerSelecting(out) }
-        return out
-    }
 }

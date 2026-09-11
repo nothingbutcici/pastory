@@ -80,7 +80,7 @@ struct SettingsView: View {
                     }.disabled(cleared)
                 }
             }
-            Section("「保存到本地」的位置") {
+            Section("「保存到本地」默认打开的文件夹（每次保存都会再问你）") {
                 HStack {
                     Text(prefs.exportDir.isEmpty ? "~/Downloads" : prefs.exportDir)
                         .font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.head)

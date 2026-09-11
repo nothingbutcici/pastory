@@ -9,8 +9,12 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
     static let shared = ShelfPanelController()
     private var panel: NSPanel?
     let model = ShelfModel()
+    /// True while a save dialog is up, so losing key status does not slide the shelf away.
+    var holdOpen = false
 
     var isVisible: Bool { panel?.isVisible ?? false }
+
+    func refocus() { if let p = panel, p.isVisible { p.makeKey() } }
 
     func toggle() { isVisible ? hide() : show() }
 
@@ -60,7 +64,7 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
         return p
     }
 
-    func windowDidResignKey(_ notification: Notification) { hide() }
+    func windowDidResignKey(_ notification: Notification) { if !holdOpen { hide() } }
 
     // MARK: Keys (only while visible)
 
@@ -144,7 +148,7 @@ final class ShelfModel {
     }
     func copySelected() { if let s = selected { copy(s) } }
     func pinSelected() { if let s = selected { ClipStore.shared.togglePin(s.id) } }
-    func exportSelected() { if let s = selected { _ = ClipStore.shared.export(s) } }
+    func exportSelected() { if let s = selected { Exporter.export(s) } }
     func deleteSelected() {
         guard let s = selected else { return }
         let list = items
