@@ -1,9 +1,9 @@
 import AppKit
 
-/// Draws annotations into a y-down CGContext measured in canvas points.
-/// Used live by AnnotateView and offline by `render` (which scales up to image pixels).
+/// Excalidraw-flavoured drawing: every stroke is flattened to points, nudged by smooth
+/// low-frequency noise and drawn twice, so shapes look hand-drawn but stay legible.
+/// Contexts are y-down and measured in canvas points; `render` scales that up to image pixels.
 enum AnnotationRenderer {
-    /// Composite annotations onto the capture. Output keeps the capture's size and color space.
     static func render(_ image: CGImage, annotations: [Annotation], canvasSize: CGSize) -> CGImage? {
         guard !annotations.isEmpty else { return image }
         let w = image.width, h = image.height
@@ -27,64 +27,125 @@ enum AnnotationRenderer {
         defer { ctx.restoreGState() }
         ctx.setStrokeColor(a.color.cgColor)
         ctx.setFillColor(a.color.cgColor)
-        ctx.setLineWidth(CGFloat(a.size.rawValue))
+        ctx.setLineWidth(a.size.lineWidth)
         ctx.setLineCap(.round)
         ctx.setLineJoin(.round)
+        if a.dashed { ctx.setLineDash(phase: 0, lengths: [a.size.lineWidth * 3.5, a.size.lineWidth * 3]) }
+        var rng = Seeded(a.seed)
         switch a.tool {
+        case .select:
+            break
         case .rect:
-            ctx.stroke(a.rect)
+            let r = a.rect
+            let radius = min(12, min(r.width, r.height) * 0.2)
+            sketch(NSBezierPath(roundedRect: r, xRadius: radius, yRadius: radius), closed: true, size: a.size, rng: &rng, in: ctx)
         case .ellipse:
-            ctx.strokeEllipse(in: a.rect)
-        case .arrow:
+            sketch(NSBezierPath(ovalIn: a.rect), closed: true, size: a.size, rng: &rng, in: ctx)
+        case .line, .arrow:
             guard a.points.count >= 2 else { return }
-            drawArrow(from: a.points[0], to: a.points[a.points.count - 1], width: CGFloat(a.size.rawValue), in: ctx)
+            let p0 = a.points[0], p1 = a.points[a.points.count - 1]
+            let path = NSBezierPath()
+            path.move(to: p0); path.line(to: p1)
+            sketch(path, closed: false, size: a.size, rng: &rng, in: ctx)
+            if a.tool == .arrow {
+                ctx.setLineDash(phase: 0, lengths: [])
+                arrowHead(from: p0, to: p1, size: a.size, rng: &rng, in: ctx)
+            }
         case .pen:
             guard a.points.count > 1 else { return }
-            ctx.beginPath()
-            ctx.move(to: a.points[0])
-            for p in a.points.dropFirst() { ctx.addLine(to: p) }
+            ctx.addPath(smoothPath(a.points))
             ctx.strokePath()
         case .text:
             guard let p = a.points.first, !a.text.isEmpty else { return }
-            let attrs: [NSAttributedString.Key: Any] = [
-                .font: NSFont.systemFont(ofSize: a.size.fontSize, weight: .semibold),
-                .foregroundColor: a.color,
-                .strokeColor: a.color.isLight ? NSColor.black.withAlphaComponent(0.6) : NSColor.white.withAlphaComponent(0.6),
-                .strokeWidth: -2.0,
-            ]
-            (a.text as NSString).draw(at: p, withAttributes: attrs)
+            (a.text as NSString).draw(at: p, withAttributes: a.textAttributes)
         case .mosaic:
             pixelate(a.rect, source: source, pixelsPerPoint: pixelsPerPoint, in: ctx)
-        case .badge:
-            guard let p = a.points.first else { return }
-            let r = a.size.badgeRadius
-            ctx.fillEllipse(in: CGRect(x: p.x - r, y: p.y - r, width: 2 * r, height: 2 * r))
-            let attrs: [NSAttributedString.Key: Any] = [
-                .font: NSFont.systemFont(ofSize: r * 1.15, weight: .bold),
-                .foregroundColor: a.color.isLight ? NSColor.black : NSColor.white,
-            ]
-            let s = "\(a.number)" as NSString
-            let size = s.size(withAttributes: attrs)
-            s.draw(at: CGPoint(x: p.x - size.width / 2, y: p.y - size.height / 2), withAttributes: attrs)
         }
     }
 
-    private static func drawArrow(from a: CGPoint, to b: CGPoint, width: CGFloat, in ctx: CGContext) {
+    // MARK: Hand-drawn strokes
+
+    /// Two jittered passes over the flattened path.
+    private static func sketch(_ path: NSBezierPath, closed: Bool, size: StrokeSize, rng: inout Seeded, in ctx: CGContext) {
+        path.flatness = 0.3
+        let pts = flatten(path)
+        guard pts.count > 1 else { return }
+        let amp = 0.9 + size.lineWidth * 0.25
+        for pass in 0..<2 {
+            let f1 = closed ? CGFloat(Int.random(in: 2...3, using: &rng)) : CGFloat(Int.random(in: 1...2, using: &rng))
+            let f2 = closed ? CGFloat(Int.random(in: 5...7, using: &rng)) : CGFloat(Int.random(in: 3...5, using: &rng))
+            let ph1 = CGFloat.random(in: 0...(2 * .pi), using: &rng), ph2 = CGFloat.random(in: 0...(2 * .pi), using: &rng)
+            let ph3 = CGFloat.random(in: 0...(2 * .pi), using: &rng)
+            let scaleAmp = pass == 0 ? amp : amp * 0.8
+            let out = CGMutablePath()
+            for (i, p) in pts.enumerated() {
+                let t = CGFloat(i) / CGFloat(pts.count - 1)
+                var n = sin(2 * .pi * f1 * t + ph1) * 0.6 + sin(2 * .pi * f2 * t + ph2) * 0.4
+                var m = cos(2 * .pi * f1 * t + ph3) * 0.5
+                if !closed { let taper = sin(t * .pi); n *= taper; m *= taper }
+                let q = CGPoint(x: p.x + n * scaleAmp, y: p.y + m * scaleAmp)
+                if i == 0 { out.move(to: q) } else { out.addLine(to: q) }
+            }
+            if closed { out.closeSubpath() }
+            ctx.addPath(out)
+            ctx.strokePath()
+        }
+    }
+
+    private static func flatten(_ path: NSBezierPath) -> [CGPoint] {
+        let flat = path.flattened
+        var pts: [CGPoint] = []
+        var buf = [NSPoint](repeating: .zero, count: 3)
+        for i in 0..<flat.elementCount {
+            let el = flat.element(at: i, associatedPoints: &buf)
+            switch el {
+            case .moveTo, .lineTo: pts.append(buf[0])
+            case .closePath: if let f = pts.first { pts.append(f) }
+            default: break
+            }
+        }
+        // Densify long segments so the noise has something to bend.
+        var dense: [CGPoint] = []
+        for i in 0..<pts.count {
+            let p = pts[i]
+            if i > 0 {
+                let q = pts[i - 1]
+                let d = hypot(p.x - q.x, p.y - q.y)
+                let n = Int(d / 6)
+                if n > 1 { for k in 1..<n { let t = CGFloat(k) / CGFloat(n); dense.append(CGPoint(x: q.x + (p.x - q.x) * t, y: q.y + (p.y - q.y) * t)) } }
+            }
+            dense.append(p)
+        }
+        return dense
+    }
+
+    /// Open V head, like Excalidraw's default arrow.
+    private static func arrowHead(from a: CGPoint, to b: CGPoint, size: StrokeSize, rng: inout Seeded, in ctx: CGContext) {
         let dx = b.x - a.x, dy = b.y - a.y
         let len = max(1, hypot(dx, dy))
         let ux = dx / len, uy = dy / len
-        let head = min(len * 0.5, 10 + width * 3)
-        let base = CGPoint(x: b.x - ux * head, y: b.y - uy * head)
-        let half = head * 0.45
-        let left = CGPoint(x: base.x - uy * half, y: base.y + ux * half)
-        let right = CGPoint(x: base.x + uy * half, y: base.y - ux * half)
-        ctx.beginPath()
-        ctx.move(to: a)
-        ctx.addLine(to: CGPoint(x: b.x - ux * head * 0.6, y: b.y - uy * head * 0.6))
-        ctx.strokePath()
-        ctx.beginPath()
-        ctx.move(to: b); ctx.addLine(to: left); ctx.addLine(to: right); ctx.closePath()
-        ctx.fillPath()
+        let head = min(len * 0.6, 12 + size.lineWidth * 3.5)
+        let ang: CGFloat = 0.42
+        for s in [CGFloat(1), -1] {
+            let vx = ux * cos(ang) - s * uy * sin(ang), vy = s * ux * sin(ang) + uy * cos(ang)
+            let p = CGPoint(x: b.x - vx * head, y: b.y - vy * head)
+            let path = NSBezierPath()
+            path.move(to: p); path.line(to: b)
+            sketch(path, closed: false, size: size, rng: &rng, in: ctx)
+        }
+    }
+
+    /// Quadratic curve through midpoints: smooth freehand without over-rounding.
+    private static func smoothPath(_ pts: [CGPoint]) -> CGPath {
+        let path = CGMutablePath()
+        path.move(to: pts[0])
+        if pts.count == 2 { path.addLine(to: pts[1]); return path }
+        for i in 1..<(pts.count - 1) {
+            let mid = CGPoint(x: (pts[i].x + pts[i + 1].x) / 2, y: (pts[i].y + pts[i + 1].y) / 2)
+            path.addQuadCurve(to: mid, control: pts[i])
+        }
+        path.addLine(to: pts[pts.count - 1])
+        return path
     }
 
     /// Block-average the region: shrink to a few cells, blow back up without interpolation.
@@ -102,17 +163,40 @@ enum AnnotationRenderer {
         guard let tiny = small.makeImage() else { return }
         ctx.saveGState()
         ctx.interpolationQuality = .none
-        // The context is y-down; flip locally so the image is upright.
         ctx.translateBy(x: 0, y: rect.maxY)
         ctx.scaleBy(x: 1, y: -1)
         ctx.draw(tiny, in: CGRect(x: rect.minX, y: 0, width: rect.width, height: rect.height))
         ctx.restoreGState()
     }
+
+    /// Dashed box + corner dots around the selected annotation (live view only).
+    static func drawSelection(_ a: Annotation, in ctx: CGContext) {
+        let r = a.bounds.insetBy(dx: -6, dy: -6)
+        ctx.saveGState()
+        ctx.setStrokeColor(AnnotatePalette.accent.cgColor)
+        ctx.setLineWidth(1)
+        ctx.setLineDash(phase: 0, lengths: [4, 3])
+        ctx.stroke(r)
+        ctx.setLineDash(phase: 0, lengths: [])
+        ctx.setFillColor(NSColor.white.cgColor)
+        for p in [CGPoint(x: r.minX, y: r.minY), CGPoint(x: r.maxX, y: r.minY), CGPoint(x: r.minX, y: r.maxY), CGPoint(x: r.maxX, y: r.maxY)] {
+            let d = CGRect(x: p.x - 3.5, y: p.y - 3.5, width: 7, height: 7)
+            ctx.fillEllipse(in: d)
+            ctx.strokeEllipse(in: d)
+        }
+        ctx.restoreGState()
+    }
 }
 
-extension NSColor {
-    var isLight: Bool {
-        guard let c = usingColorSpace(.sRGB) else { return false }
-        return 0.299 * c.redComponent + 0.587 * c.greenComponent + 0.114 * c.blueComponent > 0.7
+/// Tiny deterministic generator (SplitMix64) so a shape's wobble never changes between frames.
+struct Seeded: RandomNumberGenerator {
+    private var state: UInt64
+    init(_ seed: UInt64) { state = seed }
+    mutating func next() -> UInt64 {
+        state &+= 0x9E37_79B9_7F4A_7C15
+        var z = state
+        z = (z ^ (z >> 30)) &* 0xBF58_476D_1CE4_E5B9
+        z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
+        return z ^ (z >> 31)
     }
 }

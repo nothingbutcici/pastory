@@ -228,17 +228,17 @@ enum SelfTest {
         w.contentView = stage
         w.isReleasedWhenClosed = false
 
-        let red = AnnotatePalette.colors[0], blue = AnnotatePalette.colors[3], yellow = AnnotatePalette.colors[1]
+        let ink = AnnotatePalette.colors[0], red = AnnotatePalette.colors[1], blue = AnnotatePalette.colors[4], orange = AnnotatePalette.colors[2]
         canvas.debugSet([
-            Annotation(tool: .rect, color: red, size: .medium, points: [CGPoint(x: 12, y: 8), CGPoint(x: 250, y: 44)]),
-            Annotation(tool: .arrow, color: blue, size: .thick, points: [CGPoint(x: 300, y: 110), CGPoint(x: 200, y: 50)]),
-            Annotation(tool: .ellipse, color: yellow, size: .thin, points: [CGPoint(x: 20, y: 60), CGPoint(x: 180, y: 100)]),
-            Annotation(tool: .pen, color: red, size: .medium, points: stride(from: 0, to: 120, by: 4).map { CGPoint(x: 260 + CGFloat($0), y: 90 + 10 * sin(CGFloat($0) / 8)) }),
-            Annotation(tool: .mosaic, color: red, size: .medium, points: [CGPoint(x: 20, y: 72), CGPoint(x: 200, y: 108)]),
-            Annotation(tool: .text, color: blue, size: .medium, points: [CGPoint(x: 240, y: 10)], text: "标注文字 Text"),
-            Annotation(tool: .badge, color: red, size: .medium, points: [CGPoint(x: 420, y: 30)], number: 1),
-            Annotation(tool: .badge, color: red, size: .medium, points: [CGPoint(x: 420, y: 70)], number: 2),
-        ])
+            Annotation(tool: .rect, color: red, size: .m, points: [CGPoint(x: 12, y: 8), CGPoint(x: 250, y: 44)]),
+            Annotation(tool: .arrow, color: blue, size: .l, points: [CGPoint(x: 300, y: 118), CGPoint(x: 215, y: 52)]),
+            Annotation(tool: .ellipse, color: orange, size: .s, points: [CGPoint(x: 20, y: 56), CGPoint(x: 180, y: 104)]),
+            Annotation(tool: .line, color: ink, size: .m, dashed: true, points: [CGPoint(x: 260, y: 60), CGPoint(x: 430, y: 60)]),
+            Annotation(tool: .pen, color: red, size: .m, points: stride(from: 0, to: 120, by: 3).map { CGPoint(x: 280 + CGFloat($0), y: 96 + 9 * sin(CGFloat($0) / 7)) }),
+            Annotation(tool: .mosaic, color: red, size: .m, points: [CGPoint(x: 20, y: 72), CGPoint(x: 200, y: 108)]),
+            Annotation(tool: .text, color: blue, size: .m, points: [CGPoint(x: 262, y: 6)], text: "你好，今天天气怎么样？"),
+            Annotation(tool: .text, color: ink, size: .s, points: [CGPoint(x: 300, y: 32)], text: "Hello Snip Clip"),
+        ], select: 0)
         guard snapshot(stage, to: out) else { return false }
         // Also the flattened export, at full pixel size.
         let flat = canvas.renderedImage()
