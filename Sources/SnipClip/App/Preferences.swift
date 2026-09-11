@@ -69,6 +69,7 @@ final class Preferences {
         static let hotkeyCapture = "hotkeyCapture"
         static let hotkeyShelf = "hotkeyShelf"
         static let retentionDays = "retentionDays"
+        static let cleanupHour = "cleanupHour"
         static let exportDir = "exportDir"
         static let monitoringPaused = "monitoringPaused"
         static let ocrImages = "ocrImages"
@@ -79,6 +80,7 @@ final class Preferences {
             Key.hotkeyCapture: Shortcut(keyCode: 1, carbonModifiers: UInt32(optionKey | cmdKey)).encoded,  // ⌥⌘S（⌃⌘A 被微信占用）
             Key.hotkeyShelf: Shortcut(keyCode: 9, carbonModifiers: UInt32(shiftKey | cmdKey)).encoded,     // ⇧⌘V
             Key.retentionDays: 1,
+            Key.cleanupHour: 4,
             Key.monitoringPaused: false,
             Key.ocrImages: true
         ])
@@ -90,10 +92,15 @@ final class Preferences {
     }
     func setShortcut(_ s: Shortcut, for key: String) { d.set(s.encoded, forKey: key) }
 
-    /// Unpinned items older than this many "days" (4 am boundary) are cleared. 1 = clear yesterday's.
+    /// Calendar days kept for unpinned items. 1 = yesterday and earlier go at the cleanup hour.
     var retentionDays: Int {
         get { max(1, d.integer(forKey: Key.retentionDays)) }
         set { d.set(max(1, newValue), forKey: Key.retentionDays) }
+    }
+    /// Hour of day (0–23) when expired items are cleared.
+    var cleanupHour: Int {
+        get { min(23, max(0, d.integer(forKey: Key.cleanupHour))) }
+        set { d.set(min(23, max(0, newValue)), forKey: Key.cleanupHour) }
     }
     var monitoringPaused: Bool { get { d.bool(forKey: Key.monitoringPaused) } set { d.set(newValue, forKey: Key.monitoringPaused) } }
     var ocrImages: Bool { get { d.bool(forKey: Key.ocrImages) } set { d.set(newValue, forKey: Key.ocrImages) } }

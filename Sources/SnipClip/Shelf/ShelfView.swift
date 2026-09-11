@@ -114,7 +114,7 @@ struct ShelfView: View {
 
     private var retentionShort: String {
         let d = Preferences.shared.retentionDays
-        return d <= 1 ? "未 Pin 次日 04:00 清理" : "未 Pin \(d) 天后清理"
+        return d <= 1 ? "未 Pin 次日 %02d:00 清理".replacingOccurrences(of: "%02d", with: String(format: "%02d", Preferences.shared.cleanupHour)) : "未 Pin \(d) 天后清理"
     }
 
     private func rule(icon: String, tint: Color, _ text: String) -> some View {

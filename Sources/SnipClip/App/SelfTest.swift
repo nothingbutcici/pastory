@@ -164,41 +164,63 @@ enum SelfTest {
         return ctx.makeImage()
     }
 
-    /// Seeds items dated today / yesterday / 3 days ago (pinned + not), sweeps, checks survivors.
+    /// Calendar-day rule, cleanup at 04:00, checked at several clock times. Pinned never goes; re-running changes nothing.
     @MainActor
     private static func retention() -> Bool {
         let store = ClipStore.shared
-        store.removeAll { _ in true }
+        let cal = Calendar.current
         let src = ClipStore.Source(bundleID: nil, name: "test")
-        let day: TimeInterval = 86400
-        let now = Date()
-        func make(_ label: String, age: TimeInterval, pinned: Bool) {
-            guard let it = store.insertText("\(label) \(UUID().uuidString)", rtf: nil, source: src) else { return }
-            store.debugSetDate(now.addingTimeInterval(-age), for: it.id)
-            if pinned { store.togglePin(it.id) }
+        func at(_ dayOffset: Int, _ hour: Int, _ minute: Int = 0) -> Date {
+            let day = cal.date(byAdding: .day, value: dayOffset, to: cal.startOfDay(for: Date()))!
+            return cal.date(bySettingHour: hour, minute: minute, second: 0, of: day)!
         }
-        make("today", age: 3600, pinned: false)
-        make("yesterday", age: day + 3600, pinned: false)
-        make("yesterday-pinned", age: day + 3600, pinned: true)
-        make("3days", age: 3 * day, pinned: false)
+        func seed() {
+            store.removeAll { _ in true }
+            let rows: [(String, Date, Bool)] = [
+                ("dayBefore", at(-2, 15), false), ("yesterday", at(-1, 15), false), ("yesterdayPinned", at(-1, 16), true),
+                ("today0001", at(0, 0, 1), false), ("today0130", at(0, 1, 30), false), ("today0300", at(0, 3), false), ("today0900", at(0, 9), false),
+            ]
+            for (label, date, pinned) in rows {
+                guard let it = store.insertText("\(label) \(UUID().uuidString)", rtf: nil, source: src) else { continue }
+                store.debugSetDate(date, for: it.id)
+                if pinned { store.togglePin(it.id) }
+            }
+        }
+        func survivors() -> [String] { store.items.map { String($0.snippet.split(separator: " ")[0]) }.sorted() }
+        func check(_ name: String, now: Date, days: Int = 1, expect: [String]) -> Bool {
+            seed()
+            Preferences.shared.cleanupHour = 4
+            Preferences.shared.retentionDays = days
+            Retention.sweep(now: now)
+            let once = survivors()
+            Retention.sweep(now: now)                     // idempotent
+            let twice = survivors()
+            let ok = once == expect.sorted() && twice == once
+            print("\(ok ? "ok  " : "FAIL") \(name): \(once)")
+            return ok
+        }
+        var ok = true
+        ok = check("08:00 — 3am shutdown, 8am boot: yesterday goes, today's small hours stay", now: at(0, 8),
+                   expect: ["yesterdayPinned", "today0001", "today0130", "today0300", "today0900"]) && ok
+        ok = check("03:00 — before cleanup: yesterday still kept, day before goes", now: at(0, 3),
+                   expect: ["yesterday", "yesterdayPinned", "today0001", "today0130", "today0300", "today0900"]) && ok
+        ok = check("04:00 sharp", now: at(0, 4),
+                   expect: ["yesterdayPinned", "today0001", "today0130", "today0300", "today0900"]) && ok
+        ok = check("08:00 with 3-day retention: nothing expires", now: at(0, 8), days: 3,
+                   expect: ["dayBefore", "yesterday", "yesterdayPinned", "today0001", "today0130", "today0300", "today0900"]) && ok
+        // Manual delete stays deleted: remove one, sweep, re-open the store from disk.
+        seed()
+        if let victim = store.items.first(where: { $0.snippet.hasPrefix("today0900") }) {
+            store.remove(victim.id)
+            Retention.sweep(now: at(0, 8))
+            let reloaded = ClipStore(root: store.root)
+            let back = reloaded.items.contains { $0.snippet.hasPrefix("today0900") }
+            print(back ? "FAIL manual delete came back" : "ok   manual delete stays deleted after reload")
+            ok = ok && !back
+        }
+        store.removeAll { _ in true }
         Preferences.shared.retentionDays = 1
-        Retention.sweep(now: now)
-        let left = store.items.map { String($0.snippet.split(separator: " ")[0]) }.sorted()
-        print("retentionDays=1 survivors: \(left)")
-        let expect1 = ["today", "yesterday-pinned"]
-        // Edge: at 03:00 "yesterday" is still the same day → survives.
-        store.removeAll { _ in true }
-        var cal = Calendar.current
-        cal.timeZone = .current
-        let threeAM = cal.date(bySettingHour: 3, minute: 0, second: 0, of: now)!
-        make("lastnight", age: 0, pinned: false)
-        store.debugSetDate(threeAM.addingTimeInterval(-5 * 3600), for: store.items[0].id)   // 22:00 the evening before
-        Retention.sweep(now: threeAM)
-        let left2 = store.items.map { String($0.snippet.split(separator: " ")[0]) }
-        print("at 03:00, 22:00-last-night item survives: \(left2 == ["lastnight"])")
-        store.removeAll { _ in true }
-        let ok = left == expect1 && left2 == ["lastnight"]
-        print(ok ? "retention OK" : "retention FAILED (expected \(expect1))")
+        print(ok ? "retention OK" : "retention FAILED")
         return ok
     }
 

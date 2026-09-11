@@ -1,34 +1,65 @@
 import AppKit
 import Foundation
 
-/// Days roll over at 04:00 local time, so a late-night session counts as one day.
+/// Calendar-day retention, stateless and idempotent.
+///
+/// Rule: pick a cleanup hour X (default 04:00) and a retention of N days. Whenever `sweep` runs:
+///   - if today's X has passed, "yesterday and earlier" (for N = 1) is expired; today's items are never touched;
+///   - if today's X has not come yet, only "the day before yesterday and earlier" is expired.
+/// N = 3 shifts the line back two more days. Pinned items are never expired by this code.
+/// Running it once or a hundred times gives the same result, so it needs no "already cleaned" flag.
+/// It runs at launch, at the next X (a self re-arming timer), and every time the shelf opens.
 enum Retention {
-    static let rolloverHour = 4
+    private static var timer: Timer?
 
-    static func dayIndex(_ date: Date, calendar: Calendar = .current) -> Int {
-        let shifted = date.addingTimeInterval(-TimeInterval(rolloverHour * 3600))
-        let start = calendar.startOfDay(for: shifted)
-        return Int(start.timeIntervalSince1970 / 86400)
+    /// First calendar day that is still kept, for `now`.
+    static func keepFromDay(now: Date, cleanupHour: Int, retentionDays: Int, calendar: Calendar = .current) -> Date {
+        let today = calendar.startOfDay(for: now)
+        let todaysCleanup = calendar.date(bySettingHour: cleanupHour, minute: 0, second: 0, of: today) ?? today
+        // Before today's cleanup time, yesterday still counts as "current".
+        let cutoff = now >= todaysCleanup ? today : calendar.date(byAdding: .day, value: -1, to: today)!
+        return calendar.date(byAdding: .day, value: -(max(1, retentionDays) - 1), to: cutoff)!
     }
 
-    /// Drop unpinned items whose day is at least `days` days behind today.
+    static func isExpired(_ item: ClipItem, now: Date, cleanupHour: Int, retentionDays: Int, calendar: Calendar = .current) -> Bool {
+        guard !item.pinned else { return false }        // Pin = keep, always
+        let day = calendar.startOfDay(for: item.createdAt)
+        return day < keepFromDay(now: now, cleanupHour: cleanupHour, retentionDays: retentionDays, calendar: calendar)
+    }
+
     @MainActor
     static func sweep(now: Date = Date()) {
-        let days = Preferences.shared.retentionDays
-        let today = dayIndex(now)
-        ClipStore.shared.removeAll { !$0.pinned && dayIndex($0.createdAt) <= today - days }
+        let p = Preferences.shared
+        let hour = p.cleanupHour, days = p.retentionDays
+        ClipStore.shared.removeAll { isExpired($0, now: now, cleanupHour: hour, retentionDays: days) }
     }
 
-    /// At launch, every hour, and right after the Mac wakes (a 04:00 rollover that happened during sleep
-    /// is applied at wake, not an hour later).
+    /// Launch: sweep now and arm the timer for the next cleanup time.
     @MainActor
     static func schedule() {
         sweep()
-        let t = Timer(timeInterval: 3600, repeats: true) { _ in MainActor.assumeIsolated { sweep() } }
-        t.tolerance = 300
-        RunLoop.main.add(t, forMode: .common)
-        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { _ in
-            MainActor.assumeIsolated { sweep() }
+        armTimer()
+    }
+
+    /// Call after the cleanup hour changes in settings.
+    @MainActor
+    static func reschedule() { armTimer() }
+
+    @MainActor
+    private static func armTimer() {
+        timer?.invalidate()
+        let hour = Preferences.shared.cleanupHour
+        guard let next = Calendar.current.nextDate(after: Date(), matching: DateComponents(hour: hour, minute: 0, second: 5),
+                                                   matchingPolicy: .nextTime) else { return }
+        // A timer that was due during sleep fires as soon as the Mac wakes, so sleep needs no special case.
+        let t = Timer(fire: next, interval: 0, repeats: false) { _ in
+            MainActor.assumeIsolated {
+                sweep()
+                armTimer()          // and again tomorrow
+            }
         }
+        t.tolerance = 60
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
     }
 }

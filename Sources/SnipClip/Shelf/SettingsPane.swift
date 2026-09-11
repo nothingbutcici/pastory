@@ -38,9 +38,24 @@ struct SettingsPane: View {
                             row("显示 / 隐藏剪贴板") { ShortcutRecorder(key: Preferences.Key.hotkeyShelf) }
                         }
                         section("剪贴板") {
+                            row("每天清理时刻") {
+                                HStack(spacing: 2) {
+                                    stepButton("chevron.left") { prefs.cleanupHour = (prefs.cleanupHour + 23) % 24 }
+                                    Text(String(format: "%02d:00", prefs.cleanupHour))
+                                        .font(.system(size: 13.5, weight: .semibold).monospacedDigit()).foregroundStyle(Color.shelfInk)
+                                        .frame(width: 58)
+                                    stepButton("chevron.right") { prefs.cleanupHour = (prefs.cleanupHour + 1) % 24 }
+                                }
+                                .padding(3)
+                                .background(Color.black.opacity(0.25), in: Capsule())
+                                .overlay(Capsule().stroke(Color.shelfBorder, lineWidth: 1))
+                            }
+                            Text("到点清掉「\(prefs.retentionDays == 1 ? "昨天" : "\(prefs.retentionDays) 天前")及更早」的未 Pin 内容，按自然日算，当天的不动；Pin 住的永远不清。")
+                                .font(.system(size: 12)).foregroundStyle(Color.shelfMuted)
+                                .padding(.horizontal, 16).padding(.bottom, 4)
                             row("未 Pin 的内容保留") {
                                 HStack(spacing: 4) {
-                                    ForEach([(1, "次日 04:00"), (3, "3 天"), (7, "7 天"), (30, "30 天")], id: \.0) { days, label in
+                                    ForEach([(1, "1 天"), (3, "3 天"), (7, "7 天"), (30, "30 天")], id: \.0) { days, label in
                                         let on = prefs.retentionDays == days
                                         Button { prefs.retentionDays = days } label: {
                                             Text(label).font(.system(size: 12.5, weight: on ? .semibold : .medium))
@@ -113,6 +128,16 @@ struct SettingsPane: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 9)
+    }
+
+    private func stepButton(_ symbol: String, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol).font(.system(size: 11, weight: .bold)).foregroundStyle(Color.shelfInk)
+                .frame(width: 26, height: 26)
+                .background(Color.white.opacity(0.06), in: Capsule())
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     private func pill(_ title: String, disabled: Bool = false, _ action: @escaping () -> Void) -> some View {

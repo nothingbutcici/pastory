@@ -18,7 +18,8 @@ final class SettingsWindowController {
 
 @Observable
 final class PrefsMirror {
-    var retentionDays: Int { didSet { Preferences.shared.retentionDays = retentionDays } }
+    var retentionDays: Int { didSet { Preferences.shared.retentionDays = retentionDays; Task { @MainActor in Retention.sweep() } } }
+    var cleanupHour: Int { didSet { Preferences.shared.cleanupHour = cleanupHour; Task { @MainActor in Retention.reschedule(); Retention.sweep() } } }
     var exportDir: String { didSet { Preferences.shared.customExportDir = exportDir.isEmpty ? nil : exportDir } }
     var ocrImages: Bool { didSet { Preferences.shared.ocrImages = ocrImages } }
     var paused: Bool { didSet { Preferences.shared.monitoringPaused = paused } }
@@ -36,7 +37,7 @@ final class PrefsMirror {
 
     init() {
         let p = Preferences.shared
-        retentionDays = p.retentionDays; exportDir = p.customExportDir ?? ""
+        retentionDays = p.retentionDays; cleanupHour = p.cleanupHour; exportDir = p.customExportDir ?? ""
         ocrImages = p.ocrImages; paused = p.monitoringPaused
         launchAtLogin = SMAppService.mainApp.status == .enabled
     }
