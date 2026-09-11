@@ -23,13 +23,13 @@ enum Theme {
     static let creamInk = NSColor(srgbRed: 0.13, green: 0.12, blue: 0.11, alpha: 1)
     static let purple = NSColor(srgbRed: 0.71, green: 0.64, blue: 0.95, alpha: 1)       // #B5A3F2
     static let onPurple = NSColor(srgbRed: 0.12, green: 0.09, blue: 0.20, alpha: 1)
-    // Kind tags (pastel fill, dark text)
-    static let tagMP4 = NSColor(srgbRed: 0.95, green: 0.82, blue: 0.55, alpha: 1)       // amber
-    static let tagGIF = NSColor(srgbRed: 0.96, green: 0.64, blue: 0.55, alpha: 1)       // coral
-    static let tagImage = NSColor(srgbRed: 0.61, green: 0.80, blue: 0.97, alpha: 1)     // sky
-    static let tagText = NSColor(srgbRed: 0.56, green: 0.85, blue: 0.81, alpha: 1)      // teal
-    static let tagLink = NSColor(srgbRed: 0.79, green: 0.74, blue: 0.96, alpha: 1)      // lavender
-    static let tagFiles = NSColor(srgbRed: 0.78, green: 0.78, blue: 0.82, alpha: 1)     // gray
+    // Kind tags (outline + text in the colour, no fill)
+    static let tagMP4 = NSColor(srgbRed: 0.98, green: 0.75, blue: 0.52, alpha: 1)       // apricot
+    static let tagGIF = NSColor(srgbRed: 0.97, green: 0.64, blue: 0.78, alpha: 1)       // pink
+    static let tagImage = NSColor(srgbRed: 0.96, green: 0.87, blue: 0.50, alpha: 1)     // pale yellow
+    static let tagText = NSColor(srgbRed: 0.60, green: 0.78, blue: 0.96, alpha: 1)      // sky
+    static let tagLink = NSColor(srgbRed: 0.77, green: 0.70, blue: 0.97, alpha: 1)      // lavender
+    static let tagFiles = NSColor(srgbRed: 0.70, green: 0.70, blue: 0.75, alpha: 1)     // gray
 
     static func shadow() -> NSShadow {
         let s = NSShadow()

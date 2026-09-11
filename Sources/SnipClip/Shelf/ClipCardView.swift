@@ -119,24 +119,22 @@ struct ClipCardView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
+    /// One row: outlined kind tag on the left, solid lime 已复制 on the right when this is on the clipboard.
     private var captionRow: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if onClipboard {
-                HStack(spacing: 6) {
-                    Image(systemName: "checkmark.circle.fill").font(.system(size: 13)).foregroundStyle(Color.lime)
-                    Text("已复制").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.shelfInk)
-                }
-                .padding(.horizontal, 12).padding(.vertical, 6)
-                .background(Color.white.opacity(0.08), in: Capsule())
-                .overlay(Capsule().stroke(Color.shelfBorder, lineWidth: 1))
-            }
+        HStack(spacing: 8) {
             Text(caption)
-                .font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.creamInk)
-                .padding(.horizontal, 11).padding(.vertical, 5)
-                .background(Color(nsColor: tagColor), in: Capsule())
+                .font(.system(size: 12.5, weight: .medium)).foregroundStyle(Color(nsColor: tagColor))
+                .padding(.horizontal, 10).padding(.vertical, 4)
+                .overlay(Capsule().stroke(Color(nsColor: tagColor).opacity(0.85), lineWidth: 1))
                 .lineLimit(1)
+            Spacer(minLength: 0)
+            if onClipboard {
+                Text("已复制")
+                    .font(.system(size: 12.5, weight: .semibold)).foregroundStyle(Color(nsColor: Theme.onLime))
+                    .padding(.horizontal, 11).padding(.vertical, 5)
+                    .background(Color.lime, in: Capsule())
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
         .padding(.top, 12)
         .padding(.bottom, 12)
