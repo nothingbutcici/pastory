@@ -8,7 +8,7 @@ enum Theme {
     static let onLime = NSColor(srgbRed: 0.08, green: 0.09, blue: 0.06, alpha: 1)
     static let text = NSColor(calibratedWhite: 0.96, alpha: 1)
     static let muted = NSColor(srgbRed: 0.60, green: 0.60, blue: 0.63, alpha: 1)       // #9A9AA0
-    static let divider = NSColor(calibratedWhite: 1, alpha: 0.12)
+    static let divider = NSColor(calibratedWhite: 1, alpha: 0.22)
     static let red = NSColor(srgbRed: 0.90, green: 0.28, blue: 0.30, alpha: 1)         // #E5484D
     static let cornerRadius: CGFloat = 14
 
