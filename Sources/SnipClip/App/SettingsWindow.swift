@@ -61,6 +61,7 @@ struct ShortcutRecorder: View {
     @State private var taken = false
     @State private var notice: String?
     @State private var flagsMonitor: Any?
+    @State private var resignObserver: Any?
     @State private var sawModifiers = false
     @State private var sawKey = false
 
@@ -106,18 +107,29 @@ struct ShortcutRecorder: View {
             let mods = event.modifierFlags.intersection([.command, .shift, .option, .control])
             if !mods.isEmpty { sawModifiers = true; sawKey = false }
             else if sawModifiers, !sawKey, capturing {
-                notice = "刚才的组合没有传到这里，多半已被其他应用（如飞书、微信）占用，换一个"
-                sawModifiers = false
+                swallowed()
             }
             return event
         }
+        // Feishu / WeChat screenshot hotkeys bring their own UI to the front, so we never even see the
+        // modifiers come back up. Losing active status mid-recording with no key received means the same thing.
+        resignObserver = NotificationCenter.default.addObserver(forName: NSApplication.didResignActiveNotification, object: nil, queue: .main) { _ in
+            if capturing, !sawKey { swallowed() }
+        }
+    }
+
+    private func swallowed() {
+        stop(nil)
+        notice = "刚才的组合被其他应用（如飞书、微信）的全局快捷键抢走了，这里收不到，换一个"
     }
 
     private func stop(_ newValue: Shortcut?) {
         if let monitor { NSEvent.removeMonitor(monitor) }
         if let flagsMonitor { NSEvent.removeMonitor(flagsMonitor) }
+        if let resignObserver { NotificationCenter.default.removeObserver(resignObserver) }
         monitor = nil
         flagsMonitor = nil
+        resignObserver = nil
         capturing = false
         guard let newValue else { return }
         notice = nil
