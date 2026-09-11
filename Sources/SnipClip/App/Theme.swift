@@ -23,6 +23,8 @@ enum Theme {
     static let cream = NSColor(srgbRed: 0.95, green: 0.93, blue: 0.89, alpha: 1)        // #F2EDE3 content paper
     static let creamInk = NSColor(srgbRed: 0.13, green: 0.12, blue: 0.11, alpha: 1)
     static let purple = NSColor(srgbRed: 0.71, green: 0.64, blue: 0.95, alpha: 1)       // #B5A3F2
+    static let yellow = NSColor(srgbRed: 0.97, green: 0.84, blue: 0.45, alpha: 1)       // #F7D673 mascot yellow
+    static let paleGreen = NSColor(srgbRed: 0.72, green: 0.89, blue: 0.70, alpha: 1)    // #B8E3B3 「已复制」
     static let onPurple = NSColor(srgbRed: 0.12, green: 0.09, blue: 0.20, alpha: 1)
     // Kind tags: low-saturation outline colours; the label itself stays gray
     static let tagMP4 = NSColor(srgbRed: 0.78, green: 0.64, blue: 0.54, alpha: 1)       // dusty peach
@@ -44,6 +46,13 @@ enum Theme {
     static let logo: NSImage? = resource("Logo.png")
     /// The mascot on the shelf sidebar.
     static let mascot: NSImage? = resource("Mascot.png")
+    /// Menu bar glyph: the logo's clip strokes as a template image.
+    static let menuIcon: NSImage? = {
+        guard let img = resource("MenuIcon@2x.png") ?? resource("MenuIcon.png") else { return nil }
+        img.size = CGSize(width: 18, height: 18)
+        img.isTemplate = true
+        return img
+    }()
 
     private static func resource(_ name: String) -> NSImage? {
         if let url = Bundle.main.resourceURL?.appendingPathComponent(name), let img = NSImage(contentsOf: url) { return img }

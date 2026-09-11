@@ -23,7 +23,7 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
         let p = panel ?? makePanel()
         panel = p
         let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main ?? NSScreen.screens[0]
-        let height = max(420, (screen.frame.height * 0.55).rounded())
+        let height = max(380, (screen.frame.height * 0.36).rounded())
         let target = CGRect(x: screen.frame.minX, y: screen.frame.minY, width: screen.frame.width, height: height)
         let start = target.offsetBy(dx: 0, dy: -height)
         model.reset()
@@ -161,6 +161,18 @@ final class ShelfModel {
     /// Card order is frozen while the shelf is open, so copying (which bumps the item in the store)
     /// does not make cards jump around. Rebuilt on every show.
     private var orderSnapshot: [String: Int] = [:]
+
+    /// Totals per filter (ignoring the search box), for the pills.
+    func count(for f: ShelfFilter) -> Int {
+        let all = ClipStore.shared.items
+        switch f {
+        case .all: return all.count
+        case .pinned: return all.filter(\.pinned).count
+        case .images: return all.filter { $0.kind == .image }.count
+        case .videos: return all.filter { $0.kind == .video }.count
+        case .text: return all.filter { $0.kind == .text || $0.kind == .url }.count
+        }
+    }
 
     var items: [ClipItem] {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()

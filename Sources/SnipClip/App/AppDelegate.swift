@@ -10,7 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if SelfTest.handleCommandLine() { return }
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusItem.button?.image = NSImage(systemSymbolName: "scissors", accessibilityDescription: "Snip Clip")
+        statusItem.button?.image = Theme.menuIcon ?? NSImage(systemSymbolName: "scissors", accessibilityDescription: "Snip Clip")
         statusItem.button?.image?.isTemplate = true
         menu.delegate = self
         statusItem.button?.target = self

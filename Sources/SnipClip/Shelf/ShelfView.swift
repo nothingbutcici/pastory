@@ -63,8 +63,8 @@ struct ShelfView: View {
             VStack(alignment: .leading, spacing: 10) {
                 if let m = Theme.mascot { Image(nsImage: m).resizable().scaledToFit().frame(width: 44, height: 44) }
                 Text("今日暂存").font(.system(size: 15, weight: .bold)).foregroundStyle(Color.shelfInk).padding(.top, 2)
-                rule(icon: "pin.fill", tint: Color.purple, "Pin 后一直保留")
-                rule(icon: "clock", tint: Color.purple, retentionShort)
+                rule(icon: "pin.fill", tint: Color(nsColor: Theme.yellow), "Pin 后一直保留")
+                rule(icon: "clock", tint: Color(nsColor: Theme.yellow), retentionShort)
             }
             .padding(.horizontal, 22)
             .padding(.bottom, 22)
@@ -82,7 +82,7 @@ struct ShelfView: View {
                 Text(title).font(.system(size: 16, weight: active ? .semibold : .medium))
                 Spacer(minLength: 0)
             }
-            .foregroundStyle(active ? Color.purple : Color.shelfInk)
+            .foregroundStyle(Color.shelfInk)
             .padding(.leading, 22)
             .frame(height: 54)
             .frame(maxWidth: .infinity)
@@ -110,7 +110,7 @@ struct ShelfView: View {
         HStack(spacing: 9) {
             Image(systemName: icon).font(.system(size: 11, weight: .semibold)).foregroundStyle(.white)
                 .frame(width: 22, height: 22)
-                .background(tint.opacity(0.35), in: RoundedRectangle(cornerRadius: 6))
+                .background(tint.opacity(0.28), in: RoundedRectangle(cornerRadius: 6))
             Text(text).font(.system(size: 13)).foregroundStyle(Color.shelfInk).lineLimit(1).minimumScaleFactor(0.85)
         }
     }
@@ -122,12 +122,18 @@ struct ShelfView: View {
             ForEach(ShelfFilter.allCases) { f in
                 let on = model.filter == f
                 Button { model.filter = f } label: {
-                    Text(f.rawValue)
-                        .font(.system(size: 14.5, weight: on ? .semibold : .medium))
-                        .foregroundStyle(on ? Color.onPurple : Color.shelfInk)
-                        .padding(.horizontal, 22).padding(.vertical, 9)
-                        .background(on ? Color.purple : Color.shelfCard, in: Capsule())
-                        .overlay(Capsule().stroke(on ? Color.clear : Color.shelfBorder, lineWidth: 1))
+                    HStack(spacing: 6) {
+                        Text(f.rawValue).font(.system(size: 14.5, weight: on ? .semibold : .medium))
+                        Text("\(model.count(for: f))")
+                            .font(.system(size: 12, weight: .semibold).monospacedDigit())
+                            .foregroundStyle(on ? Color.onPurple.opacity(0.7) : Color.shelfMuted)
+                            .padding(.horizontal, 6).padding(.vertical, 1)
+                            .background((on ? Color.black.opacity(0.12) : Color.white.opacity(0.07)), in: Capsule())
+                    }
+                    .foregroundStyle(on ? Color.onPurple : Color.shelfInk)
+                    .padding(.leading, 18).padding(.trailing, 12).padding(.vertical, 8)
+                    .background(on ? Color.purple : Color.shelfCard, in: Capsule())
+                    .overlay(Capsule().stroke(on ? Color.clear : Color.shelfBorder, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
             }
