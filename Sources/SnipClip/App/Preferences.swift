@@ -77,7 +77,6 @@ final class Preferences {
         static let hotkeyCapture = "hotkeyCapture"
         static let hotkeyShelf = "hotkeyShelf"
         static let hotkeySearch = "hotkeySearch"
-        static let storeDir = "storeDir"
         static let retentionDays = "retentionDays"
         static let cleanupHour = "cleanupHour"
         static let exportDir = "exportDir"
@@ -103,11 +102,12 @@ final class Preferences {
     }
     func setShortcut(_ s: Shortcut, for key: String) { d.set(s.encoded, forKey: key) }
 
-    /// Calendar days kept for unpinned items. 1 = yesterday and earlier go at the cleanup hour.
+    /// Calendar days kept for unpinned items. 1 = yesterday and earlier go at the cleanup hour. 0 = never clean up.
     var retentionDays: Int {
-        get { max(1, d.integer(forKey: Key.retentionDays)) }
-        set { d.set(max(1, newValue), forKey: Key.retentionDays) }
+        get { max(0, d.integer(forKey: Key.retentionDays)) }
+        set { d.set(max(0, newValue), forKey: Key.retentionDays) }
     }
+    var neverCleans: Bool { retentionDays == 0 }
     /// Hour of day (0–23) when expired items are cleared.
     var cleanupHour: Int {
         get { min(23, max(0, d.integer(forKey: Key.cleanupHour))) }
@@ -115,12 +115,6 @@ final class Preferences {
     }
     var monitoringPaused: Bool { get { d.bool(forKey: Key.monitoringPaused) } set { d.set(newValue, forKey: Key.monitoringPaused) } }
     var ocrImages: Bool { get { d.bool(forKey: Key.ocrImages) } set { d.set(newValue, forKey: Key.ocrImages) } }
-
-    /// Where the clipboard store lives; nil = ~/Library/Application Support/Snip Clip.
-    var customStoreDir: String? {
-        get { d.string(forKey: Key.storeDir) }
-        set { d.set(newValue, forKey: Key.storeDir) }
-    }
 
     var customExportDir: String? {
         get { d.string(forKey: Key.exportDir) }

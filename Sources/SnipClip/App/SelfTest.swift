@@ -12,7 +12,7 @@ enum SelfTest {
         let cmd = args[i + 1]
         let rest = Array(args[(i + 2)...])
         // Anything that writes to a store must run inside SNIPCLIP_STORE. Never against the user's data.
-        let mutating: Set<String> = ["clipboard", "retention", "relocate", "shelf", "settings", "editors"]
+        let mutating: Set<String> = ["clipboard", "retention", "shelf", "settings", "editors"]
         if mutating.contains(cmd) {
             let env = ProcessInfo.processInfo.environment["SNIPCLIP_STORE"] ?? ""
             let real = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Snip Clip").path
@@ -228,6 +228,15 @@ enum SelfTest {
             print(back ? "FAIL manual delete came back" : "ok   manual delete stays deleted after reload")
             ok = ok && !back
         }
+        // Never: nothing expires, no timer.
+        seed()
+        Preferences.shared.cleanupHour = 4
+        Preferences.shared.retentionDays = 0
+        Retention.sweep(now: at(0, 8))
+        Retention.reschedule()
+        let neverOK = store.items.count == 7 && Retention.nextFire == nil
+        print("\(neverOK ? "ok  " : "FAIL") never: all 7 kept, no timer")
+        ok = ok && neverOK
         // Timer cadence: with 7-day retention the next check is the oldest unpinned item's day + 7 at X, not tomorrow.
         seed()
         Preferences.shared.cleanupHour = 4

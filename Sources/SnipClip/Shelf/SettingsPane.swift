@@ -42,7 +42,7 @@ struct SettingsPane: View {
                         section("剪贴板") {
                             row("未 Pin 的内容保留") {
                                 HStack(spacing: 4) {
-                                    ForEach([(1, "1 天"), (3, "3 天"), (7, "7 天"), (30, "30 天"), (365, "一年")], id: \.0) { days, label in
+                                    ForEach([(1, "1 天"), (3, "3 天"), (7, "7 天"), (30, "30 天"), (365, "一年"), (0, "永不")], id: \.0) { days, label in
                                         let on = prefs.retentionDays == days
                                         Button { changeRetention(to: days) } label: {
                                             Text(label).font(.system(size: 12.5, weight: on ? .semibold : .medium))
@@ -57,7 +57,11 @@ struct SettingsPane: View {
                                 .background(Color.black.opacity(0.25), in: Capsule())
                                 .overlay(Capsule().stroke(Color.shelfBorder, lineWidth: 1))
                             }
-                            row("当日清理时间") { HourWheel(hour: $prefs.cleanupHour) }
+                            row("当日清理时间") {
+                                HourWheel(hour: $prefs.cleanupHour)
+                                    .opacity(prefs.retentionDays == 0 ? 0.35 : 1)
+                                    .allowsHitTesting(prefs.retentionDays != 0)
+                            }
                             row("图片自动识别文字（可按文字搜图）") { Toggle("", isOn: $prefs.ocrImages).labelsHidden().toggleStyle(.switch).tint(Color.purple) }
                             row("暂停同步至剪贴板") { Toggle("", isOn: $prefs.paused).labelsHidden().toggleStyle(.switch).tint(Color.purple) }
                             row("手动清空一次（不含已 Pin 内容）") {
@@ -79,11 +83,9 @@ struct SettingsPane: View {
                                 }
                             }
                             row("剪贴板内容临时存放位置") {
-                                HStack(spacing: 8) {
-                                    Text((ClipStore.shared.root.path as NSString).abbreviatingWithTildeInPath)
-                                        .font(.system(size: 12)).foregroundStyle(Color.shelfMuted).lineLimit(1).truncationMode(.middle).frame(maxWidth: 300, alignment: .trailing)
-                                    pill("打开") { NSWorkspace.shared.open(ClipStore.shared.root) }
-                                }
+                                Text((ClipStore.shared.root.path as NSString).abbreviatingWithTildeInPath)
+                                    .font(.system(size: 12)).foregroundStyle(Color.shelfMuted).lineLimit(1).truncationMode(.middle).frame(maxWidth: 340, alignment: .trailing)
+                                    .textSelection(.enabled)
                             }
                         }
                         section("系统") {
@@ -151,7 +153,8 @@ struct SettingsPane: View {
     /// Shortening the retention can wipe a lot at once; say how much and ask.
     private func changeRetention(to days: Int) {
         let p = Preferences.shared
-        if days < prefs.retentionDays {
+        let effective: (Int) -> Int = { $0 == 0 ? Int.max : $0 }
+        if effective(days) < effective(prefs.retentionDays) {
             let doomed = ClipStore.shared.items.filter { Retention.isExpired($0, now: Date(), cleanupHour: p.cleanupHour, retentionDays: days) }.count
             if doomed > 0 {
                 let go = ShelfPanelController.shared.withDialog { () -> Bool in

@@ -8,8 +8,9 @@ import Foundation
 ///   - if today's X has not come yet, only "the day before yesterday and earlier" is expired.
 /// N = 3 shifts the line back two more days. Pinned items are never expired by this code.
 /// Running it once or a hundred times gives the same result, so it needs no "already cleaned" flag.
-/// It runs at launch, when the shelf opens, and from one timer set to the moment the oldest unpinned item
-/// expires (its day + N days, at X) — so with N = 7 the timer sleeps for days, not once per day.
+/// N = 0 means never: nothing expires and no timer is armed.
+/// It runs at launch and from one timer set to the moment the oldest unpinned item expires
+/// (its day + N days, at X) — so with N = 7 the timer sleeps for days, not once per day.
 enum Retention {
     private static var timer: Timer?
 
@@ -24,6 +25,7 @@ enum Retention {
 
     static func isExpired(_ item: ClipItem, now: Date, cleanupHour: Int, retentionDays: Int, calendar: Calendar = .current) -> Bool {
         guard !item.pinned else { return false }        // Pin = keep, always
+        guard retentionDays > 0 else { return false }   // never clean up
         let day = calendar.startOfDay(for: item.createdAt)
         return day < keepFromDay(now: now, cleanupHour: cleanupHour, retentionDays: retentionDays, calendar: calendar)
     }
@@ -32,6 +34,7 @@ enum Retention {
     static func sweep(now: Date = Date()) {
         guard !ClipStore.shared.lastSaveFailed else { return }      // never delete files when the index cannot be written
         let p = Preferences.shared
+        guard !p.neverCleans else { return }
         let hour = p.cleanupHour, days = p.retentionDays
         ClipStore.shared.removeAll { isExpired($0, now: now, cleanupHour: hour, retentionDays: days) }
     }
@@ -64,6 +67,7 @@ enum Retention {
         timer = nil
         let p = Preferences.shared
         let hour = p.cleanupHour, days = p.retentionDays
+        guard days > 0 else { return }                              // never: no timer at all
         // Earliest expiry among unpinned items; nothing unpinned → nothing to schedule.
         let moments = ClipStore.shared.items.filter { !$0.pinned }.compactMap { expiryMoment(of: $0, cleanupHour: hour, retentionDays: days) }
         guard let earliest = moments.min() else { return }
