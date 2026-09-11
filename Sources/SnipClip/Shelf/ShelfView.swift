@@ -59,27 +59,27 @@ struct ShelfView: View {
             navRow(icon: "clipboard", "剪贴板", active: !model.showSettings) { model.showSettings = false }
             navRow(icon: "gearshape", "设置", active: model.showSettings) { model.showSettings = true }
             Spacer()
-            // 今日暂存: a translucent sticky note, taped on, everything centred.
-            ZStack(alignment: .top) {
+            // 今日暂存: a slightly crooked paper note, taped across its top-left corner.
+            ZStack(alignment: .topLeading) {
                 VStack(spacing: 6) {
                     HStack(spacing: 8) {
                         if let m = Theme.mascot { Image(nsImage: m).resizable().scaledToFit().frame(width: 44, height: 44) }
                         Text("今日暂存").font(.system(size: 15, weight: .bold)).foregroundStyle(Color.shelfInk)
                     }
-                    .padding(.top, 14)
+                    .padding(.top, 16)
                     Text("Pin 一下长期保存").font(.system(size: 12.5)).foregroundStyle(Color.shelfMuted)
                     Text("未 Pin 内容定时清空").font(.system(size: 12.5)).foregroundStyle(Color.shelfMuted)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.bottom, 14)
-                .background(Color.shelfCard, in: RoundedRectangle(cornerRadius: 12))     // opaque: the grid stays behind it
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.shelfBorder, lineWidth: 1))
-                // Tape
+                .padding(.bottom, 16)
+                .background(NoteShape().fill(Color.shelfCard))
+                .rotationEffect(.degrees(-1.5))
+                // Tape across the corner
                 RoundedRectangle(cornerRadius: 2)
                     .fill(Color.white.opacity(0.22))
-                    .frame(width: 46, height: 13)
-                    .rotationEffect(.degrees(-6))
-                    .offset(y: -6)
+                    .frame(width: 48, height: 13)
+                    .rotationEffect(.degrees(-38))
+                    .offset(x: -6, y: 2)
             }
             .padding(.horizontal, 18)
             .padding(.bottom, 20)
@@ -302,5 +302,24 @@ struct GridPattern: View {
             ctx.stroke(path, with: .color(Color(nsColor: Theme.shelfGrid)), lineWidth: 1)
         }
         .allowsHitTesting(false)
+    }
+}
+
+/// Hand-cut paper: four corners nudged a few points so no edge is quite straight, soft corners.
+struct NoteShape: Shape {
+    func path(in r: CGRect) -> Path {
+        let tl = CGPoint(x: r.minX + 2, y: r.minY + 4)
+        let tr = CGPoint(x: r.maxX - 1, y: r.minY)
+        let br = CGPoint(x: r.maxX - 3, y: r.maxY - 2)
+        let bl = CGPoint(x: r.minX, y: r.maxY - 5)
+        let k: CGFloat = 10
+        var p = Path()
+        p.move(to: CGPoint(x: tl.x + k, y: tl.y))
+        p.addLine(to: CGPoint(x: tr.x - k, y: tr.y)); p.addQuadCurve(to: CGPoint(x: tr.x, y: tr.y + k), control: tr)
+        p.addLine(to: CGPoint(x: br.x, y: br.y - k)); p.addQuadCurve(to: CGPoint(x: br.x - k, y: br.y), control: br)
+        p.addLine(to: CGPoint(x: bl.x + k, y: bl.y)); p.addQuadCurve(to: CGPoint(x: bl.x, y: bl.y - k), control: bl)
+        p.addLine(to: CGPoint(x: tl.x, y: tl.y + k)); p.addQuadCurve(to: CGPoint(x: tl.x + k, y: tl.y), control: tl)
+        p.closeSubpath()
+        return p
     }
 }
