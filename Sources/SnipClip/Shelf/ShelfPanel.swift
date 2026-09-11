@@ -190,11 +190,18 @@ final class ShelfModel {
     private var selected: ClipItem? { items.first { $0.id == selectedID } ?? items.first }
     var selectedItem: ClipItem? { selected }
 
+    /// Single click: copy and stay (the 已复制 tag moves to the card).
     func copy(_ item: ClipItem) {
         ClipStore.shared.copyToPasteboard(item)
+        selectedID = item.id
+    }
+    /// ⏎ / double-click: copy and put the shelf away.
+    func copyAndClose(_ item: ClipItem) {
+        copy(item)
         ShelfPanelController.shared.hide()
     }
-    func copySelected() { if let s = selected { copy(s) } }
+    func copySelected() { if let s = selected { copyAndClose(s) } }
+    func previewSelected() { ShelfPanelController.shared.toggleQuickLook() }
     func pinSelected() { if let s = selected { ClipStore.shared.togglePin(s.id) } }
     func exportSelected() { if let s = selected { Exporter.export(s) } }
     func deleteSelected() {

@@ -7,6 +7,8 @@ struct ClipCardView: View {
     /// This item is what the pasteboard holds right now.
     let onClipboard: Bool
     let onCopy: () -> Void
+    let onCopyAndClose: () -> Void
+    let onPreview: () -> Void
 
     static let width: CGFloat = 260
 
@@ -27,6 +29,7 @@ struct ClipCardView: View {
             .stroke(selected ? Color.lime : Color.shelfBorder, lineWidth: selected ? 2.5 : 1))
         .shadow(color: .black.opacity(0.05), radius: 6, y: 2)
         .contentShape(RoundedRectangle(cornerRadius: 16))
+        .onTapGesture(count: 2, perform: onCopyAndClose)
         .onTapGesture(count: 1, perform: onCopy)
     }
 
@@ -140,13 +143,18 @@ struct ClipCardView: View {
         return String(format: "%02d:%02d", s / 60, s % 60)
     }
 
+    /// 预览 · Pin · (保存，仅图片 / 录屏) · 删除
     private var actions: some View {
         HStack {
             Spacer()
+            action("eye", "预览完整内容", onPreview)
+            Spacer()
             action("pin", "Pin 住，不会被自动清理", active: item.pinned) { ClipStore.shared.togglePin(item.id) }
             Spacer()
-            action("arrow.down.to.line", "保存到本地…") { Exporter.export(item) }
-            Spacer()
+            if item.kind == .image || item.kind == .video {
+                action("arrow.down.to.line", "保存到本地…") { Exporter.export(item) }
+                Spacer()
+            }
             action("trash", "删除") { ClipStore.shared.remove(item.id) }
             Spacer()
         }

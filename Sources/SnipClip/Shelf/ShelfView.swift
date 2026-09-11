@@ -122,7 +122,9 @@ struct ShelfView: View {
                 LazyHStack(alignment: .top, spacing: 14) {
                     ForEach(items) { item in
                         ClipCardView(item: item, selected: item.id == model.selectedID, onClipboard: item.id == ClipStore.shared.items.first?.id,
-                                     onCopy: { model.selectedID = item.id; model.copy(item) })
+                                     onCopy: { model.copy(item) },
+                                     onCopyAndClose: { model.copyAndClose(item) },
+                                     onPreview: { model.selectedID = item.id; model.previewSelected() })
                             .id(item.id)
                             .contextMenu { menu(for: item) }
                     }
@@ -171,7 +173,7 @@ struct ShelfView: View {
             .frame(height: 6)
             Button { model.move(3) } label: { Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)) }
                 .buttonStyle(.plain).foregroundStyle(Color.shelfMuted)
-            Text("点按复制 · 空格预览").font(.system(size: 13)).foregroundStyle(Color.shelfMuted).padding(.leading, 12)
+            Text("点按复制 · 双击复制并关闭").font(.system(size: 13)).foregroundStyle(Color.shelfMuted).padding(.leading, 12)
         }
         .padding(.top, 14)
         .padding(.bottom, 18)
@@ -180,7 +182,8 @@ struct ShelfView: View {
     @ViewBuilder
     private func menu(for item: ClipItem) -> some View {
         Button("复制") { model.copy(item) }
-        Button("预览（空格）") { model.selectedID = item.id; ShelfPanelController.shared.toggleQuickLook() }
+        Button("复制并关闭") { model.copyAndClose(item) }
+        Button("预览") { model.selectedID = item.id; model.previewSelected() }
         Button(item.pinned ? "取消 Pin" : "Pin") { ClipStore.shared.togglePin(item.id) }
         Button("保存到本地…") { Exporter.export(item) }
         if item.kind == .files {
