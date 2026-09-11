@@ -83,9 +83,14 @@ struct SettingsPane: View {
                                 }
                             }
                             row("剪贴板内容临时存放位置") {
-                                Text((ClipStore.shared.root.path as NSString).abbreviatingWithTildeInPath)
-                                    .font(.system(size: 12)).foregroundStyle(Color.shelfMuted).lineLimit(1).truncationMode(.middle).frame(maxWidth: 340, alignment: .trailing)
-                                    .textSelection(.enabled)
+                                HStack(spacing: 8) {
+                                    Text("SQLite").font(.system(size: 11, weight: .semibold)).foregroundStyle(Color.purple)
+                                        .padding(.horizontal, 7).padding(.vertical, 2)
+                                        .overlay(Capsule().stroke(Color.purple.opacity(0.7), lineWidth: 1))
+                                    Text((ClipStore.shared.root.appendingPathComponent("pastory.sqlite").path as NSString).abbreviatingWithTildeInPath)
+                                        .font(.system(size: 12)).foregroundStyle(Color.shelfMuted).lineLimit(1).truncationMode(.middle).frame(maxWidth: 340, alignment: .trailing)
+                                        .textSelection(.enabled)
+                                }
                             }
                         }
                         section("系统") {
