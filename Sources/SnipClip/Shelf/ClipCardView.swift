@@ -84,6 +84,17 @@ struct ClipCardView: View {
             .contentShape(Rectangle())
             .onTapGesture { renaming = true }
             .help("点击重命名")
+        } else {
+            // No title yet: a quiet entry point right on the card.
+            HStack(spacing: 6) {
+                Image(systemName: "plus").font(.system(size: 10, weight: .semibold))
+                Text("起个标题").font(.system(size: 13))
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(Color.shelfMuted.opacity(0.8))
+            .padding(.horizontal, 16).padding(.bottom, 10)
+            .contentShape(Rectangle())
+            .onTapGesture { renaming = true }
         }
     }
 
