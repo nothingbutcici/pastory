@@ -34,7 +34,7 @@ enum SelfTest {
                 model.reset()
                 model.showSettings = true
                 let host = NSHostingView(rootView: ShelfView(model: model))
-                host.frame = CGRect(x: 0, y: 0, width: 1600, height: 560)
+                host.frame = CGRect(x: 0, y: 0, width: 1600, height: 450)
                 let w = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
                 w.contentView = host
                 w.isReleasedWhenClosed = false
@@ -324,7 +324,7 @@ enum SelfTest {
         let model = ShelfPanelController.shared.model
         model.reset()
         let host = NSHostingView(rootView: ShelfView(model: model))
-        host.frame = CGRect(x: 0, y: 0, width: 1600, height: 560)
+        host.frame = CGRect(x: 0, y: 0, width: 1600, height: 450)
         // Needs a window for materials + layout to resolve.
         let w = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
         w.contentView = host

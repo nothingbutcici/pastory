@@ -31,10 +31,20 @@ struct ClipCardView: View {
             actions
         }
         .frame(width: Self.width)
-        .background(ZStack { paperColor; Grain(opacity: 0.07) })
+        .background(ZStack { paperColor; Grain(opacity: 0.11) })
         .clipShape(TicketShape(notchFromBottom: Self.stubHeight))
         .overlay(TicketShape(notchFromBottom: Self.stubHeight).stroke(selected ? Color.ink.opacity(0.9) : Color.black.opacity(0.18), lineWidth: selected ? 1.5 : 1))
         .shadow(color: .black.opacity(0.45), radius: 10, x: 2, y: 6)
+        // A second sheet tucked behind, tilted a touch; direction and tilt vary per card so the stack looks natural.
+        .background {
+            let tilt = Double(abs(item.id.hashValue) % 5) - 2          // -2 … 2 degrees
+            let dx: CGFloat = tilt >= 0 ? 7 : -7
+            ZStack { Color.paperDim; Grain(opacity: 0.12) }
+                .clipShape(TornPaper(top: true, right: true, seed: UInt64(abs(item.id.hashValue) % 1000)))
+                .rotationEffect(.degrees(tilt == 0 ? 1.5 : tilt))
+                .offset(x: dx, y: -6)
+                .shadow(color: .black.opacity(0.35), radius: 6, x: 1, y: 4)
+        }
         .contentShape(Rectangle())
         .onTapGesture(count: 2, perform: onCopyAndClose)
         .onTapGesture(count: 1, perform: onCopy)

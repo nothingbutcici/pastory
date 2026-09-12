@@ -63,7 +63,7 @@ struct ShelfView: View {
                 .padding(.horizontal, 20)
             }
         }
-        .background(ZStack { Color.brown; Grain(opacity: 0.10) })
+        .background(ZStack { Color.brown; Grain(opacity: 0.16) })
         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 14, topTrailingRadius: 14))
         .onChange(of: model.focusSearch) { _, _ in searchFocused = true }
     }
@@ -98,11 +98,7 @@ struct ShelfView: View {
             .frame(height: 56)
             .frame(maxWidth: .infinity)
             .background(alignment: .leading) {
-                if active {
-                    ZStack { Color.paperBlue; Grain(opacity: 0.08) }
-                        .padding(.trailing, 8)
-                        .shadow(color: .black.opacity(0.35), radius: 6, x: 2, y: 3)
-                }
+                if active { PaperPatch(right: true, seed: 11).padding(.trailing, 8) }
             }
             .contentShape(Rectangle())
         }
@@ -123,10 +119,7 @@ struct ShelfView: View {
                     .foregroundStyle(on ? Color.ink : Color.onBrown)
                     .padding(.horizontal, 18).frame(height: 40)
                     .background {
-                        if on {
-                            ZStack { Color.paperBlue; Grain(opacity: 0.08) }
-                                .shadow(color: .black.opacity(0.35), radius: 5, x: 1, y: 3)
-                        }
+                        if on { PaperPatch(top: true, right: true, bottom: true, seed: 23) }
                     }
                     .overlay {
                         if !on { Rectangle().stroke(Color.onBrown.opacity(0.35), lineWidth: 1) }
@@ -266,5 +259,55 @@ struct ShelfView: View {
         }
         Divider()
         Button("删除", role: .destructive) { ClipStore.shared.remove(item.id) }
+    }
+}
+
+/// A rectangle whose chosen edges are torn: small irregular teeth, fixed per `seed` so it never shimmers.
+struct TornPaper: Shape {
+    var top = false, right = false, bottom = false, left = false
+    var seed: UInt64 = 7
+    var amplitude: CGFloat = 3
+    var step: CGFloat = 7
+
+    func path(in r: CGRect) -> Path {
+        var g = Seeded(seed)
+        func jitter() -> CGFloat { CGFloat(Double(g.next() % 1000) / 1000.0 - 0.5) * 2 * amplitude }
+        var p = Path()
+        // top-left → top-right
+        p.move(to: CGPoint(x: r.minX, y: r.minY))
+        if top {
+            var x = r.minX + step
+            while x < r.maxX { p.addLine(to: CGPoint(x: x, y: r.minY + jitter())); x += step }
+        }
+        p.addLine(to: CGPoint(x: r.maxX, y: r.minY))
+        if right {
+            var y = r.minY + step
+            while y < r.maxY { p.addLine(to: CGPoint(x: r.maxX + jitter(), y: y)); y += step }
+        }
+        p.addLine(to: CGPoint(x: r.maxX, y: r.maxY))
+        if bottom {
+            var x = r.maxX - step
+            while x > r.minX { p.addLine(to: CGPoint(x: x, y: r.maxY + jitter())); x -= step }
+        }
+        p.addLine(to: CGPoint(x: r.minX, y: r.maxY))
+        if left {
+            var y = r.maxY - step
+            while y > r.minY { p.addLine(to: CGPoint(x: r.minX + jitter(), y: y)); y -= step }
+        }
+        p.closeSubpath()
+        return p
+    }
+}
+
+/// Paper with grain, torn where asked, with a soft drop shadow.
+struct PaperPatch: View {
+    var color: Color = .paperBlue
+    var top = false, right = false, bottom = false, left = false
+    var seed: UInt64 = 7
+    var body: some View {
+        let shape = TornPaper(top: top, right: right, bottom: bottom, left: left, seed: seed)
+        ZStack { color; Grain(opacity: 0.12) }
+            .clipShape(shape)
+            .shadow(color: .black.opacity(0.4), radius: 5, x: 1, y: 3)
     }
 }
