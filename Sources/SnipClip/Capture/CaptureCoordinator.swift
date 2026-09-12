@@ -46,7 +46,7 @@ final class CaptureCoordinator: AnnotateDelegate {
         Task { @MainActor in
             do {
                 let colorSpaceName = screen?.colorSpace?.cgColorSpace?.name
-                let image = try await Screenshotter.captureDisplay(display, excluding: Set(overlay.ownWindowIDs), screen: screen, colorSpaceName: colorSpaceName)
+                let image = try await Screenshotter.captureDisplay(display, excluding: Set(overlay.ownWindowIDs), backingScale: screen?.backingScaleFactor, colorSpaceName: colorSpaceName)
                 fullImage = image
                 fullScale = CGFloat(image.width) / (screen?.frame.width ?? CGFloat(image.width))
                 overlay.cropProvider = { [weak self] local in self?.crop(local) }

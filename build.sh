@@ -17,8 +17,20 @@ if [ -z "${SIGN_ID:-}" ]; then
     fi
 fi
 
-swift build -c "$CONFIG"
-BIN="$(swift build -c "$CONFIG" --show-bin-path)/SnipClip"
+# ARCHS="arm64 x86_64" builds each slice (per-triple, works without full Xcode) and lipo's them; default is this machine only.
+if [ -n "${ARCHS:-}" ]; then
+    SLICES=()
+    for a in $ARCHS; do
+        swift build -c "$CONFIG" --triple "$a-apple-macosx"
+        SLICES+=("$(swift build -c "$CONFIG" --triple "$a-apple-macosx" --show-bin-path)/SnipClip")
+    done
+    mkdir -p build
+    lipo -create "${SLICES[@]}" -output build/SnipClip-universal
+    BIN="build/SnipClip-universal"
+else
+    swift build -c "$CONFIG"
+    BIN="$(swift build -c "$CONFIG" --show-bin-path)/SnipClip"
+fi
 
 APP="build/Pastory.app"
 rm -rf "$APP"

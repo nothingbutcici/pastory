@@ -37,8 +37,8 @@ final class RecordingSession {
                 recorder.onFailure = { [weak self] err in
                     Task { @MainActor in self?.fail(err) }
                 }
-                let screen = NSScreen.screens.first { $0.frame.intersects(regionScreenRect) }
-                try await recorder.start(target: target, excluding: own, screen: screen, outputURL: tmpURL)
+                let scale = NSScreen.screens.first { $0.frame.intersects(regionScreenRect) }?.backingScaleFactor
+                try await recorder.start(target: target, excluding: own, backingScale: scale, outputURL: tmpURL)
                 isRecording = true
                 started = Date()
                 let t = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in MainActor.assumeIsolated { self?.tick() } }

@@ -12,7 +12,7 @@ final class ScreenRecorder: NSObject, SCStreamDelegate, SCRecordingOutputDelegat
     private(set) var pixelSize = CGSize.zero
     var onFailure: ((Error) -> Void)?
 
-    func start(target: CaptureTarget, excluding windows: [SCWindow], screen: NSScreen?, outputURL: URL) async throws {
+    func start(target: CaptureTarget, excluding windows: [SCWindow], backingScale: CGFloat?, outputURL: URL) async throws {
         let filter: SCContentFilter
         switch target {
         case .display(let d), .region(let d, _):
@@ -28,7 +28,7 @@ final class ScreenRecorder: NSObject, SCStreamDelegate, SCRecordingOutputDelegat
         cfg.captureResolution = .best
         cfg.showsCursor = true
         cfg.capturesAudio = false
-        let scale = Screenshotter.pixelScale(filter, screen: screen)
+        let scale = Screenshotter.pixelScale(filter, backingScale: backingScale)
         let pointSize: CGSize
         switch target {
         case .region(_, let r):

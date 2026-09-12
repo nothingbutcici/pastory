@@ -4,7 +4,8 @@
 # Without an Apple Developer ID + notarization, recipients must approve the app once (see dist/首次打开.txt).
 set -euo pipefail
 cd "$(dirname "$0")"
-SIGN_ID="-" ./build.sh
+# Universal: Intel Macs get "你无法打开这个软件" from an arm64-only binary.
+ARCHS="arm64 x86_64" SIGN_ID="-" ./build.sh
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' build/Pastory.app/Contents/Info.plist)"
 mkdir -p dist
 rm -f "dist/Pastory-$VERSION.zip"
@@ -13,7 +14,7 @@ ditto -c -k --sequesterRsrc --keepParent build/Pastory.app "dist/Pastory-$VERSIO
 cat > dist/首次打开.txt <<'TXT'
 Pastory 首次打开说明
 
-需要 macOS 15 (Sequoia) 或更新。
+需要 macOS 15 (Sequoia) 或更新；Intel 和 Apple 芯片的 Mac 都可以。
 
 1. 解压后把 Pastory.app 拖进「应用程序」文件夹。
 2. 第一次打开：双击 Pastory.app。系统会说「无法打开，因为 Apple 无法检查其是否包含恶意软件」，点「完成」。

@@ -19,7 +19,7 @@ enum Screenshotter {
         cfg.showsCursor = false
         cfg.ignoreShadowsSingleWindow = true
         cfg.scalesToFit = false
-        let scale = Self.pixelScale(filter, screen: screen(for: target, snapshot: snapshot))
+        let scale = Self.pixelScale(filter, backingScale: screen(for: target, snapshot: snapshot)?.backingScaleFactor)
         let pointSize: CGSize
         switch target {
         case .region(_, let r):
@@ -39,7 +39,7 @@ enum Screenshotter {
 
     /// Whole display, excluding just the given windows (the picker's masks), fetched fresh.
     /// Other Pastory windows, the shelf included, stay in the picture. Region / window shots are crops of this.
-    static func captureDisplay(_ display: SCDisplay, excluding ids: Set<CGWindowID>, screen: NSScreen?, colorSpaceName: CFString?) async throws -> CGImage {
+    static func captureDisplay(_ display: SCDisplay, excluding ids: Set<CGWindowID>, backingScale: CGFloat?, colorSpaceName: CFString?) async throws -> CGImage {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
         let own = content.windows.filter { ids.contains($0.windowID) }
         let filter = SCContentFilter(display: display, excludingWindows: own)
@@ -48,7 +48,7 @@ enum Screenshotter {
         cfg.captureResolution = .best
         cfg.showsCursor = false
         cfg.scalesToFit = false
-        let scale = pixelScale(filter, screen: screen)
+        let scale = pixelScale(filter, backingScale: backingScale)
         cfg.width = Int((filter.contentRect.width * scale).rounded())
         cfg.height = Int((filter.contentRect.height * scale).rounded())
         if let colorSpaceName { cfg.colorSpaceName = colorSpaceName }
@@ -57,8 +57,8 @@ enum Screenshotter {
 
     /// Pixels per point for the output size. The screen's backing scale is what the user sees;
     /// `pointPixelScale` alone has come back as 1 on some displays and produced half-resolution pictures.
-    static func pixelScale(_ filter: SCContentFilter, screen: NSScreen?) -> CGFloat {
-        max(CGFloat(filter.pointPixelScale), screen?.backingScaleFactor ?? 1, 1)
+    static func pixelScale(_ filter: SCContentFilter, backingScale: CGFloat?) -> CGFloat {
+        max(CGFloat(filter.pointPixelScale), backingScale ?? 1, 1)
     }
 
     static func screen(for target: CaptureTarget, snapshot: ShareableSnapshot) -> NSScreen? {
