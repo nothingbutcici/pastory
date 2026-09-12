@@ -59,8 +59,8 @@ struct SettingsPane: View {
                                 HourWheel(hour: $prefs.cleanupHour, enabled: prefs.retentionDays != 0)
                                     .opacity(prefs.retentionDays == 0 ? 0.35 : 1)
                             }
-                            row("图片自动识别文字（可按文字搜图）") { Toggle("", isOn: $prefs.ocrImages).labelsHidden().toggleStyle(.switch).tint(Color.paperBlue) }
-                            row("暂停同步至剪贴板") { Toggle("", isOn: $prefs.paused).labelsHidden().toggleStyle(.switch).tint(Color.paperBlue) }
+                            row("图片自动识别文字（可按文字搜图）") { PaperToggle(isOn: $prefs.ocrImages) }
+                            row("暂停同步至剪贴板") { PaperToggle(isOn: $prefs.paused) }
                             row("手动清空一次（不含已 Pin 内容）") {
                                 pill(cleared ? "已清空" : "现在清空", disabled: cleared) {
                                     ClipStore.shared.removeAll { !$0.pinned }
@@ -91,7 +91,7 @@ struct SettingsPane: View {
                             }
                         }
                         section("系统") {
-                            row("登录时启动") { Toggle("", isOn: $prefs.launchAtLogin).labelsHidden().toggleStyle(.switch).tint(Color.paperBlue) }
+                            row("登录时启动") { PaperToggle(isOn: $prefs.launchAtLogin) }
                             if let e = prefs.loginError { Text(e).font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.tagMP4)).padding(.horizontal, 16) }
                             row("屏幕录制权限（截图、录屏需要）") {
                                 HStack(spacing: 8) {
@@ -233,5 +233,25 @@ struct ScrollSteps: NSViewRepresentable {
         override func mouseDown(with event: NSEvent) { superview?.mouseDown(with: event) }
         override func mouseDragged(with event: NSEvent) { superview?.mouseDragged(with: event) }
         override func mouseUp(with event: NSEvent) { superview?.mouseUp(with: event) }
+    }
+}
+
+/// Switch in the paper palette: blue track when on, cream track with an ink outline when off, paper knob.
+struct PaperToggle: View {
+    @Binding var isOn: Bool
+    var body: some View {
+        Button { withAnimation(.easeOut(duration: 0.15)) { isOn.toggle() } } label: {
+            ZStack(alignment: isOn ? .trailing : .leading) {
+                Capsule().fill(isOn ? Color.paperBlue : Color.paperDim)
+                Capsule().stroke(Color.ink.opacity(isOn ? 0.35 : 0.5), lineWidth: 1)
+                Circle().fill(Color.paper)
+                    .overlay(Circle().stroke(Color.ink.opacity(0.45), lineWidth: 1))
+                    .shadow(color: .black.opacity(0.25), radius: 1.5, y: 1)
+                    .padding(2)
+            }
+            .frame(width: 44, height: 24)
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 }

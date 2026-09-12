@@ -57,7 +57,7 @@ struct ClipCardView: View {
                 Spacer()
                 Text(item.createdAt, style: .time).font(.serif(14)).foregroundStyle(Color.ink.opacity(0.75))
             }
-            .padding(.horizontal, 18).padding(.top, 14).padding(.bottom, 8)
+            .padding(.horizontal, 18).padding(.top, deco == .pin ? 32 : 14).padding(.bottom, 8)
             Rectangle().fill(Color.ink.opacity(0.7)).frame(height: 1).padding(.horizontal, 18)
         }
     }
@@ -255,14 +255,49 @@ struct ClipCardView: View {
 
     private var stableSeed: UInt64 { UInt64(truncatingIfNeeded: stableHash(Data(item.id.utf8))) }
 
-    /// One bulldog clip per screenful (every sixth card), only on cream cards, never on the copied blue one.
+    /// Stationery, placed the way it is really used: the clip bites the top edge, the pushpin sits inside the
+    /// card, the seal and the tape hang over a corner onto the ground. An 8-slot rotation keeps any screenful
+    /// of five cards from repeating an item. The copied blue card only ever gets the pushpin.
+    private enum Deco { case none, clip, pin, tape, seal }
+    private var deco: Deco {
+        let pattern: [Deco] = [.pin, .none, .clip, .tape, .none, .seal, .none, .none]
+        let d = pattern[index % pattern.count]
+        if onClipboard && d != .pin { return .none }
+        return d
+    }
+
     @ViewBuilder
     private var decoration: some View {
-        if index % 6 == 2, !onClipboard, let img = Theme.clip {
-            Image(nsImage: img).resizable().scaledToFit()
-                .frame(width: 84)
-                .shadow(color: .black.opacity(0.3), radius: 4, x: 1, y: 4)
-                .offset(x: 12, y: -34)          // plate over the card top edge, clear of the time
+        switch deco {
+        case .clip:
+            if let img = Theme.clip {
+                Image(nsImage: img).resizable().scaledToFit().frame(width: 84)
+                    .shadow(color: .black.opacity(0.3), radius: 4, x: 1, y: 4)
+                    .offset(x: 12, y: -34)
+            }
+        case .pin:
+            if let img = Theme.pushpin {
+                Image(nsImage: img).resizable().scaledToFit().frame(height: 38)
+                    .shadow(color: .black.opacity(0.35), radius: 3, x: 2, y: 4)
+                    .offset(x: 0, y: -4)                                 // pushed through the top margin, centred
+            }
+        case .seal:
+            if let img = Theme.seal {
+                Image(nsImage: img).resizable().scaledToFit().frame(width: 58)
+                    .rotationEffect(.degrees(-12))
+                    .shadow(color: .black.opacity(0.35), radius: 4, x: 1, y: 3)
+                    .offset(x: Self.width / 2 - 22, y: -20)            // hanging over the top-right corner
+            }
+        case .tape:
+            if let img = Theme.tape {
+                Image(nsImage: img).resizable().scaledToFit().frame(width: 96)
+                    .opacity(0.92)
+                    .rotationEffect(.degrees(-38))
+                    .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
+                    .offset(x: -Self.width / 2 + 26, y: 6)             // across the top-left corner
+            }
+        case .none:
+            EmptyView()
         }
     }
 
