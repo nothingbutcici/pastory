@@ -95,7 +95,7 @@ enum SelfTest {
                 panel.begin { _ in }
                 var waited = 0.0
                 while !panel.isVisible, waited < 30 {
-                    RunLoop.main.run(until: Date().addingTimeInterval(0.05)); waited += 0.05
+                    try? await Task.sleep(nanoseconds: 50_000_000); waited += 0.05
                 }
                 print(String(format: "open panel visible after %.2f s (visible=%@)", Date().timeIntervalSince(t0), panel.isVisible ? "yes" : "no"))
                 panel.cancel(nil)
