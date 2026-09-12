@@ -24,6 +24,8 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
         let level = panel?.level ?? .statusBar
         panel?.level = .normal
         panel?.orderBack(nil)
+        // Modern activation first; the legacy call stays as the fallback for macOS 14's cooperative rules.
+        NSApp.activate()
         NSApp.activate(ignoringOtherApps: true)
         defer {
             panel?.level = level

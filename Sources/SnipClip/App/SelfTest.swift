@@ -85,6 +85,21 @@ enum SelfTest {
                 print("readObjects → \(urls?.map(\.lastPathComponent) ?? [])")
                 ok = (urls?.count ?? 0) == 1
             case "ingest": ok = ingest()
+            case "openpanel":
+                // How long until the system open panel is actually on screen (first show in this process)?
+                let t0 = Date()
+                let panel = NSOpenPanel()
+                panel.canChooseDirectories = true; panel.canChooseFiles = true
+                panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser
+                NSApp.activate(ignoringOtherApps: true)
+                panel.begin { _ in }
+                var waited = 0.0
+                while !panel.isVisible, waited < 30 {
+                    RunLoop.main.run(until: Date().addingTimeInterval(0.05)); waited += 0.05
+                }
+                print(String(format: "open panel visible after %.2f s (visible=%@)", Date().timeIntervalSince(t0), panel.isVisible ? "yes" : "no"))
+                panel.cancel(nil)
+                ok = panel.isVisible || waited < 30
             case "annotate": ok = renderAnnotate(out: rest.first ?? "snipclip-annotate.png")
             default: print("unknown selftest \(cmd)")
             }

@@ -180,6 +180,7 @@ struct SettingsPane: View {
         let picked: URL? = ShelfPanelController.shared.withDialog {
             let panel = NSOpenPanel()
             panel.canChooseDirectories = true; panel.canChooseFiles = true; panel.prompt = "扫描"
+            panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support")
             panel.message = "选另一个剪贴板工具的数据库文件或它的数据文件夹，或另一台机器的 Pastory 文件夹"
             return panel.runModal() == .OK ? panel.url : nil
         }
