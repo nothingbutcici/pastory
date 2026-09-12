@@ -34,9 +34,8 @@ struct ClipCardView: View {
         }
         .frame(width: Self.width)
         .background(ZStack { paperColor; Grain(opacity: 0.11) })
-        .clipShape(TicketShape(notchFromBottom: Self.stubHeight))
+        .clipShape(TicketShape(notchFromBottom: index % 2 == 0 ? Self.stubHeight : nil, notchFromTop: index % 2 == 1 ? 54 : nil))
         .shadow(color: .black.opacity(selected ? 0.55 : 0.4), radius: selected ? 14 : 9, x: 2, y: selected ? 9 : 6)
-        .overlay(alignment: .bottomTrailing) { if stableSeed % 3 == 0 { DogEar(color: paperColor).frame(width: 24, height: 24).rotationEffect(.degrees(90)) } }
         .overlay(alignment: .top) { decoration }
         .contentShape(Rectangle())
         .onTapGesture(count: 2, perform: onCopyAndClose)
@@ -57,7 +56,7 @@ struct ClipCardView: View {
                 Spacer()
                 Text(item.createdAt, style: .time).font(.serif(14)).foregroundStyle(Color.ink.opacity(0.75))
             }
-            .padding(.horizontal, 18).padding(.top, deco == .pin ? 32 : 14).padding(.bottom, 8)
+            .padding(.horizontal, 18).padding(.top, hasPin ? 34 : 14).padding(.bottom, 8)
             Rectangle().fill(Color.ink.opacity(0.7)).frame(height: 1).padding(.horizontal, 18)
         }
     }
@@ -255,49 +254,15 @@ struct ClipCardView: View {
 
     private var stableSeed: UInt64 { UInt64(truncatingIfNeeded: stableHash(Data(item.id.utf8))) }
 
-    /// Stationery, placed the way it is really used: the clip bites the top edge, the pushpin sits inside the
-    /// card, the seal and the tape hang over a corner onto the ground. An 8-slot rotation keeps any screenful
-    /// of five cards from repeating an item. The copied blue card only ever gets the pushpin.
-    private enum Deco { case none, clip, pin, tape, seal }
-    private var deco: Deco {
-        let pattern: [Deco] = [.pin, .none, .clip, .tape, .none, .seal, .none, .none]
-        let d = pattern[index % pattern.count]
-        if onClipboard && d != .pin { return .none }
-        return d
-    }
+    /// Only the copied card wears the pink pushpin, pushed through its top margin.
+    private var hasPin: Bool { onClipboard }
 
     @ViewBuilder
     private var decoration: some View {
-        switch deco {
-        case .clip:
-            if let img = Theme.clip {
-                Image(nsImage: img).resizable().scaledToFit().frame(width: 84)
-                    .shadow(color: .black.opacity(0.3), radius: 4, x: 1, y: 4)
-                    .offset(x: 12, y: -34)
-            }
-        case .pin:
-            if let img = Theme.pushpin {
-                Image(nsImage: img).resizable().scaledToFit().frame(height: 38)
-                    .shadow(color: .black.opacity(0.35), radius: 3, x: 2, y: 4)
-                    .offset(x: 0, y: -4)                                 // pushed through the top margin, centred
-            }
-        case .seal:
-            if let img = Theme.seal {
-                Image(nsImage: img).resizable().scaledToFit().frame(width: 58)
-                    .rotationEffect(.degrees(-12))
-                    .shadow(color: .black.opacity(0.35), radius: 4, x: 1, y: 3)
-                    .offset(x: Self.width / 2 - 22, y: -20)            // hanging over the top-right corner
-            }
-        case .tape:
-            if let img = Theme.tape {
-                Image(nsImage: img).resizable().scaledToFit().frame(width: 96)
-                    .opacity(0.92)
-                    .rotationEffect(.degrees(-38))
-                    .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
-                    .offset(x: -Self.width / 2 + 26, y: 6)             // across the top-left corner
-            }
-        case .none:
-            EmptyView()
+        if hasPin, let img = Theme.pushpin {
+            Image(nsImage: img).resizable().interpolation(.high).scaledToFit().frame(height: 44)
+                .shadow(color: .black.opacity(0.28), radius: 2, x: 1, y: 2)      // tight contact shadow, not a blur cloud
+                .offset(x: 0, y: -6)
         }
     }
 
@@ -333,25 +298,31 @@ struct ClipCardView: View {
     }
 }
 
-/// Rounded rectangle with a half-circle notch cut into each side, `notchFromBottom` up from the bottom edge.
+/// Rounded rectangle with a half-circle notch cut into each side, either `notchFromBottom` up from the bottom
+/// edge or `notchFromTop` down from the top edge (odd cards punch low, even cards punch high).
 struct TicketShape: Shape {
-    var notchFromBottom: CGFloat
+    var notchFromBottom: CGFloat?
+    var notchFromTop: CGFloat?
     var radius: CGFloat = 5
     var notch: CGFloat = 11
     func path(in r: CGRect) -> Path {
-        let y = r.maxY - notchFromBottom
+        let y: CGFloat? = notchFromBottom.map { r.maxY - $0 } ?? notchFromTop.map { r.minY + $0 }
         var p = Path()
         p.move(to: CGPoint(x: r.minX + radius, y: r.minY))
         p.addLine(to: CGPoint(x: r.maxX - radius, y: r.minY))
         p.addArc(center: CGPoint(x: r.maxX - radius, y: r.minY + radius), radius: radius, startAngle: .degrees(-90), endAngle: .degrees(0), clockwise: false)
-        p.addLine(to: CGPoint(x: r.maxX, y: y - notch))
-        p.addArc(center: CGPoint(x: r.maxX, y: y), radius: notch, startAngle: .degrees(-90), endAngle: .degrees(90), clockwise: true)
+        if let y {
+            p.addLine(to: CGPoint(x: r.maxX, y: y - notch))
+            p.addArc(center: CGPoint(x: r.maxX, y: y), radius: notch, startAngle: .degrees(-90), endAngle: .degrees(90), clockwise: true)
+        }
         p.addLine(to: CGPoint(x: r.maxX, y: r.maxY - radius))
         p.addArc(center: CGPoint(x: r.maxX - radius, y: r.maxY - radius), radius: radius, startAngle: .degrees(0), endAngle: .degrees(90), clockwise: false)
         p.addLine(to: CGPoint(x: r.minX + radius, y: r.maxY))
         p.addArc(center: CGPoint(x: r.minX + radius, y: r.maxY - radius), radius: radius, startAngle: .degrees(90), endAngle: .degrees(180), clockwise: false)
-        p.addLine(to: CGPoint(x: r.minX, y: y + notch))
-        p.addArc(center: CGPoint(x: r.minX, y: y), radius: notch, startAngle: .degrees(90), endAngle: .degrees(-90), clockwise: true)
+        if let y {
+            p.addLine(to: CGPoint(x: r.minX, y: y + notch))
+            p.addArc(center: CGPoint(x: r.minX, y: y), radius: notch, startAngle: .degrees(90), endAngle: .degrees(-90), clockwise: true)
+        }
         p.addLine(to: CGPoint(x: r.minX, y: r.minY + radius))
         p.addArc(center: CGPoint(x: r.minX + radius, y: r.minY + radius), radius: radius, startAngle: .degrees(180), endAngle: .degrees(270), clockwise: false)
         p.closeSubpath()
@@ -363,20 +334,3 @@ struct Line: Shape {
     func path(in r: CGRect) -> Path { var p = Path(); p.move(to: CGPoint(x: r.minX, y: r.midY)); p.addLine(to: CGPoint(x: r.maxX, y: r.midY)); return p }
 }
 
-/// A folded-over corner: the brown ground shows through the cut, the flap is a darker triangle with a shadow.
-struct DogEar: View {
-    var color: Color
-    var body: some View {
-        Canvas { ctx, size in
-            let w = size.width, h = size.height
-            let cut = Path { p in p.move(to: CGPoint(x: 0, y: 0)); p.addLine(to: CGPoint(x: w, y: 0)); p.addLine(to: CGPoint(x: w, y: h)); p.closeSubpath() }
-            ctx.fill(cut, with: .color(Color.brown))
-            let flap = Path { p in p.move(to: CGPoint(x: 0, y: 0)); p.addLine(to: CGPoint(x: w, y: h)); p.addLine(to: CGPoint(x: 0, y: h)); p.closeSubpath() }
-            var sh = ctx; sh.translateBy(x: -1, y: 1)
-            sh.fill(flap, with: .color(.black.opacity(0.28)))
-            ctx.fill(flap, with: .linearGradient(Gradient(colors: [color.opacity(0.9), Color.paperDim]), startPoint: CGPoint(x: 0, y: h), endPoint: CGPoint(x: w * 0.7, y: h * 0.3)))
-            ctx.stroke(Path { p in p.move(to: CGPoint(x: 0, y: 0)); p.addLine(to: CGPoint(x: w, y: h)) }, with: .color(.black.opacity(0.15)), lineWidth: 0.6)
-        }
-        .allowsHitTesting(false)
-    }
-}
