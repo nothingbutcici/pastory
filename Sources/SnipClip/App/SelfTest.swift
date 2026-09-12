@@ -12,7 +12,7 @@ enum SelfTest {
         let cmd = args[i + 1]
         let rest = Array(args[(i + 2)...])
         // Anything that writes to a store must run inside SNIPCLIP_STORE. Never against the user's data.
-        let mutating: Set<String> = ["clipboard", "retention", "shelf", "settings", "editors", "import"]
+        let mutating: Set<String> = ["clipboard", "retention", "shelf", "settings", "editors", "import", "ingest"]
         if mutating.contains(cmd) {
             let env = ProcessInfo.processInfo.environment["SNIPCLIP_STORE"] ?? ""
             // Nothing under Application Support counts as a sandbox, whatever the folder is called.
@@ -84,6 +84,7 @@ enum SelfTest {
                 let urls = NSPasteboard.general.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL]
                 print("readObjects → \(urls?.map(\.lastPathComponent) ?? [])")
                 ok = (urls?.count ?? 0) == 1
+            case "ingest": ok = ingest()
             case "annotate": ok = renderAnnotate(out: rest.first ?? "snipclip-annotate.png")
             default: print("unknown selftest \(cmd)")
             }
@@ -417,5 +418,47 @@ enum SelfTest {
         ClipboardMonitor.shared.stop()
         print("recorded \(seen.count) item(s); store now holds \(ClipStore.shared.items.count)")
         return true
+    }
+}
+
+// MARK: - Pasteboard ingest rules
+
+extension SelfTest {
+    /// What other tools put on the board must land as the right kind: bitmap + temp file URL = image (thumbnail, OCR);
+    /// a document copied in Finder = files; a lone temp image file = image.
+    @MainActor static func ingest() -> Bool {
+        let store = ClipStore.shared
+        store.removeAll { _ in true }
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("snipclip-ingest-\(UUID().uuidString).png")
+        let img = NSImage(size: CGSize(width: 40, height: 30), flipped: false) { r in NSColor.orange.setFill(); r.fill(); return true }
+        guard let tiff = img.tiffRepresentation, let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) else { return false }
+        try? png.write(to: tmp)
+        defer { try? FileManager.default.removeItem(at: tmp) }
+        func board(_ fill: (NSPasteboard) -> Void) -> ClipItem? {
+            let pb = NSPasteboard(name: NSPasteboard.Name("snipclip.selftest.\(UUID().uuidString)"))
+            pb.clearContents()
+            fill(pb)
+            defer { pb.releaseGlobally() }
+            return ClipboardMonitor.shared.ingest(pb)
+        }
+        var ok = true
+        func check(_ name: String, _ item: ClipItem?, _ kind: ClipKind) {
+            let got = item?.kind.rawValue ?? "nil"
+            print("\(got == kind.rawValue ? "ok  " : "FAIL") \(name): \(got) (want \(kind.rawValue))")
+            if got != kind.rawValue { ok = false }
+            store.removeAll { _ in true }
+        }
+        check("bitmap + temp file url (WeChat / Feishu style)", board { pb in
+            pb.setData(png, forType: .png)
+            pb.writeObjects([tmp as NSURL])
+        }, .image)
+        check("finder copy of a document", board { pb in
+            pb.writeObjects([URL(fileURLWithPath: "/Users/cici/Project/Claude/snip clip/README.md") as NSURL])
+        }, .files)
+        check("lone temp image file", board { pb in pb.writeObjects([tmp as NSURL]) }, .image)
+        check("plain text", board { pb in pb.setString("hello", forType: .string) }, .text)
+        check("bitmap only", board { pb in pb.setData(png, forType: .png) }, .image)
+        store.removeAll { _ in true }
+        return ok
     }
 }

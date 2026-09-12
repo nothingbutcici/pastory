@@ -67,14 +67,19 @@ final class ClipboardMonitor {
         let store = ClipStore.shared
         let source = ClipStore.Source.frontmost
 
-        if let urls = pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL], !urls.isEmpty {
-            return store.insertFiles(urls, source: source)
+        let hasBitmap = types.contains(.png) || types.contains(.tiff)
+        let urls = (pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL]) ?? []
+        // Other screenshot tools (WeChat, Feishu, CleanShot…) put the picture on the board together with a file URL
+        // to their own temp copy. That is a picture, not a "file": keep the bitmap so it gets a thumbnail and OCR.
+        if hasBitmap, urls.isEmpty || Self.isScreenshotHandoff(urls),
+           let png = pb.data(forType: .png) ?? pb.data(forType: .tiff).flatMap(Self.pngFromTIFF) {
+            return store.insertImage(png: png, source: source)
         }
-        if types.contains(.png) || types.contains(.tiff) {
-            if let png = pb.data(forType: .png) ?? pb.data(forType: .tiff).flatMap(Self.pngFromTIFF) {
-                return store.insertImage(png: png, source: source)
-            }
+        if let one = urls.first, urls.count == 1, Self.isImageFile(one), Self.isTemporary(one),
+           let data = try? Data(contentsOf: one), let png = Self.pngFromAny(data) {
+            return store.insertImage(png: png, source: source)      // tool copied only a temp file: same thing
         }
+        if !urls.isEmpty { return store.insertFiles(urls, source: source) }
         if let s = pb.string(forType: .string) {
             return store.insertText(s, rtf: pb.data(forType: .rtf), source: source)
         }
@@ -82,6 +87,19 @@ final class ClipboardMonitor {
             return store.insertText(s, rtf: nil, source: source)
         }
         return nil
+    }
+
+    /// Bitmap plus exactly one image file: a screenshot handed over. (Finder copies files without bitmap data.)
+    private static func isScreenshotHandoff(_ urls: [URL]) -> Bool { urls.count == 1 && isImageFile(urls[0]) }
+    private static func isImageFile(_ u: URL) -> Bool {
+        ["png", "jpg", "jpeg", "tiff", "tif", "heic", "gif", "webp", "bmp"].contains(u.pathExtension.lowercased())
+    }
+    private static func isTemporary(_ u: URL) -> Bool {
+        let p = u.path
+        return p.contains("/T/") || p.hasPrefix("/tmp") || p.hasPrefix("/private/tmp") || p.contains("/Caches/") || p.contains("/Library/Containers/")
+    }
+    private static func pngFromAny(_ data: Data) -> Data? {
+        data.starts(with: [0x89, 0x50, 0x4E, 0x47]) ? data : NSBitmapImageRep(data: data)?.representation(using: .png, properties: [:])
     }
 
     private static func pngFromTIFF(_ tiff: Data) -> Data? {

@@ -221,7 +221,8 @@ final class OverlayWindow: NSPanel {
     }
 
     override var canBecomeKey: Bool { true }
-    override var canBecomeMain: Bool { true }
+    // Becoming main would activate the app: the menu bar would switch to Pastory's (empty) one and end up in the picture.
+    override var canBecomeMain: Bool { false }
 }
 
 final class OverlayView: NSView {
