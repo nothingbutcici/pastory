@@ -132,7 +132,7 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
 - **卡片标题**：输入框无论怎么离开（⏎、✓、点别处、切到别的卡、⎋）都算保存，删空即去掉标题；草稿没变就不写盘。
 - **取屏浮层不激活自己**：遮罩是 `.nonactivatingPanel`，前台应用的弹窗 / 菜单不会因为按下截图键而收起，
   第一下按压就开始框选（`acceptsFirstMouse`）。
-- **导入**：设置 → 剪贴板 → 「从其他剪贴板工具导入（SQLite）」：选 .sqlite/.db 或另一台机器的 Pastory 文件夹，
+- **导入**：设置 → 剪贴板 → 「从其他剪贴板工具导入（SQLite）」：选数据库文件（任意扩展名）或一个文件夹（Pastory 库，或任何目录：按文件头找出里面的 SQLite 文件，最多向下三层，全部读），
   `Clipboard/Importer.swift` 先复制一份再读（连同 -wal/-shm），Pastory 库按 schema 精确导，其他库按启发式：
   文本列 / UTF-8 blob 当文本、PNG/JPEG/TIFF blob 当图片、名字像 date/time/copied 的列当时间（识别 1970 秒、2001 秒、毫秒、ISO），
   像 pin/favorite 的列当 Pin；Core Data 子表通过整数列关联到有日期的父表，同一条的多种表示（plain+rtf、png+tiff）只留一份。

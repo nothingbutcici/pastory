@@ -22,13 +22,38 @@ enum Importer {
         }
     }
 
-    /// `url` may be a .sqlite/.db file or a folder holding pastory.sqlite.
+    /// `url` may be a database file (any extension) or a folder: a Pastory store, or any folder that has
+    /// SQLite files somewhere inside (found by file header, up to three levels down) — all of them are read.
     static func scan(_ url: URL) throws -> Scan {
-        var file = url
         var isDir: ObjCBool = false
-        if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue {
-            file = url.appendingPathComponent("pastory.sqlite")
+        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue else { return try scanFile(url) }
+        let own = url.appendingPathComponent("pastory.sqlite")
+        if FileManager.default.fileExists(atPath: own.path) { return try scanFile(own) }
+        var merged = Scan()
+        var lastError: Error = Failure.notSQLite
+        for f in sqliteFiles(under: url) {
+            do {
+                let s = try scanFile(f)
+                merged.entries += s.entries
+                merged.tables += s.tables.map { "\(f.lastPathComponent):\($0)" }
+            } catch { lastError = error }
         }
+        guard !merged.entries.isEmpty else { throw lastError }
+        return merged
+    }
+
+    private static func sqliteFiles(under dir: URL, depth: Int = 3) -> [URL] {
+        guard depth >= 0, let kids = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) else { return [] }
+        var out: [URL] = []
+        for k in kids {
+            if (try? k.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true { out += sqliteFiles(under: k, depth: depth - 1); continue }
+            if k.pathExtension.lowercased().hasSuffix("wal") || k.pathExtension.lowercased().hasSuffix("shm") { continue }
+            if let h = FileHandle(forReadingAtPath: k.path), let head = try? h.read(upToCount: 16), head == Data("SQLite format 3\0".utf8) { out.append(k) }
+        }
+        return out
+    }
+
+    private static func scanFile(_ file: URL) throws -> Scan {
         // Work on a copy (with its WAL/SHM) so a database the other app has open is never touched.
         let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("pastory-import-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
