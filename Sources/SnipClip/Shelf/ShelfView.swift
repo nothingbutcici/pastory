@@ -63,7 +63,11 @@ struct ShelfView: View {
                 .padding(.horizontal, 20)
             }
         }
-        .background(ZStack { Color.brown; Grain(opacity: 0.16) })
+        .background(ZStack {
+            Color.brown
+            Grain(opacity: 0.22)
+            Image(nsImage: Theme.noiseTile).resizable(resizingMode: .tile).scaleEffect(2.3).opacity(0.05).blendMode(.plusLighter).allowsHitTesting(false)
+        })
         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 14, topTrailingRadius: 14))
         .onChange(of: model.focusSearch) { _, _ in searchFocused = true }
     }
@@ -72,8 +76,8 @@ struct ShelfView: View {
 
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Pastory").font(.script(34)).foregroundStyle(Color.onBrown)
-                .padding(.leading, 22).padding(.top, 14).padding(.bottom, 26)
+            Text("Pastory").font(.script(42)).foregroundStyle(Color.onBrown)
+                .padding(.leading, 22).padding(.top, 10).padding(.bottom, 22)
             navRow(icon: "clipboard", "剪贴板", active: !model.showSettings) { model.showSettings = false }
             navRow(icon: "gearshape", "设置", active: model.showSettings) { model.showSettings = true }
             Spacer()
@@ -99,10 +103,13 @@ struct ShelfView: View {
             }
             .foregroundStyle(active ? Color.ink : Color.onBrown)
             .padding(.leading, 22)
-            .frame(height: 56)
+            .frame(height: 60)
             .frame(maxWidth: .infinity)
             .background(alignment: .leading) {
-                if active { PaperPatch(right: true, seed: 11).padding(.trailing, 8) }
+                if active {
+                    PaperPatch(color: .paperBlue, top: true, right: true, bottom: true, left: true, seed: 11, amplitude: 2.2)
+                        .padding(.leading, 6).padding(.trailing, 10)
+                }
             }
             .contentShape(Rectangle())
         }
@@ -118,23 +125,24 @@ struct ShelfView: View {
             ForEach(Array(ShelfFilter.allCases.enumerated()), id: \.element.id) { i, f in
                 let on = model.filter == f
                 Button { model.filter = f } label: {
-                    HStack(spacing: 14) {
-                        Text(f.rawValue).font(.serif(16))
-                        Text("\(model.count(for: f))").font(.serif(15))
+                    HStack(spacing: 22) {
+                        Text(f.rawValue).font(.serif(18))
+                        Text("\(model.count(for: f))").font(.serif(17))
                     }
                     .foregroundStyle(on ? Color.ink : Color.onBrown)
-                    .padding(.horizontal, 18).frame(height: 40)
+                    .padding(.horizontal, 22).frame(height: 52)
                     .background {
-                        if on { PaperPatch(top: true, right: true, bottom: true, seed: 23 + UInt64(i)) }
+                        if on { PaperPatch(color: .paperBlue, top: true, right: true, bottom: true, left: true, seed: 23 + UInt64(i), amplitude: 2).padding(.vertical, 2) }
                     }
                     .overlay(alignment: .bottom) {
-                        if !on { Rectangle().fill(Color.onBrown.opacity(0.35)).frame(height: 1) }
-                    }
-                    .overlay(alignment: .leading) {
-                        if i > 0 { Rectangle().fill(Color.onBrown.opacity(0.35)).frame(width: 1, height: 40) }
+                        if !on { Rectangle().fill(Color.onBrown.opacity(0.4)).frame(height: 1).padding(.horizontal, 6) }
                     }
                 }
                 .buttonStyle(.plain)
+                .padding(.trailing, 14)
+                .overlay(alignment: .trailing) {
+                    if i < ShelfFilter.allCases.count - 1 { Rectangle().fill(Color.onBrown.opacity(0.4)).frame(width: 1, height: 52).padding(.trailing, 7) }
+                }
             }
             Spacer()
             HStack(spacing: 10) {
@@ -170,8 +178,9 @@ struct ShelfView: View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(alignment: .top, spacing: 22) {
-                    ForEach(items) { item in
+                    ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                         ClipCardView(item: item, selected: item.id == model.selectedID, onClipboard: item.id == ClipStore.shared.items.first?.id,
+                                     index: index,
                                      renaming: Binding(get: { model.renamingID == item.id },
                                                        set: { if $0 { model.selectedID = item.id; model.renamingID = item.id } else if model.renamingID == item.id { model.renamingID = nil } }),
                                      onCopy: { model.copy(item) },
@@ -312,8 +321,9 @@ struct PaperPatch: View {
     var color: Color = .paperBlue
     var top = false, right = false, bottom = false, left = false
     var seed: UInt64 = 7
+    var amplitude: CGFloat = 3
     var body: some View {
-        let shape = TornPaper(top: top, right: right, bottom: bottom, left: left, seed: seed)
+        let shape = TornPaper(top: top, right: right, bottom: bottom, left: left, seed: seed, amplitude: amplitude)
         ZStack { color; Grain(opacity: 0.12) }
             .clipShape(shape)
             .shadow(color: .black.opacity(0.4), radius: 5, x: 1, y: 3)
