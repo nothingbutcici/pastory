@@ -25,6 +25,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         Retention.schedule()
         ClipboardMonitor.shared.start()
         if !Permissions.hasScreenRecording { _ = Permissions.requestScreenRecording() }
+        if !Preferences.shared.didWelcome {
+            Preferences.shared.didWelcome = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { ShelfPanelController.shared.show() }
+        }
     }
 
     @objc private func statusClicked() {

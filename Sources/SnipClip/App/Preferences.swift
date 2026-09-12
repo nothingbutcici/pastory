@@ -115,6 +115,8 @@ final class Preferences {
     }
     var monitoringPaused: Bool { get { d.bool(forKey: Key.monitoringPaused) } set { d.set(newValue, forKey: Key.monitoringPaused) } }
     var ocrImages: Bool { get { d.bool(forKey: Key.ocrImages) } set { d.set(newValue, forKey: Key.ocrImages) } }
+    /// First launch on this Mac: the shelf opens once by itself, so a menu-bar-only app does not look like it failed to start.
+    var didWelcome: Bool { get { d.bool(forKey: "didWelcome") } set { d.set(newValue, forKey: "didWelcome") } }
 
     var customExportDir: String? {
         get { d.string(forKey: Key.exportDir) }

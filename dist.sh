@@ -13,14 +13,20 @@ ditto -c -k --sequesterRsrc --keepParent build/Pastory.app "dist/Pastory-$VERSIO
 cat > dist/首次打开.txt <<'TXT'
 Pastory 首次打开说明
 
+需要 macOS 15 (Sequoia) 或更新。
+
 1. 解压后把 Pastory.app 拖进「应用程序」文件夹。
-2. 第一次打开：右键 Pastory.app →「打开」。
-   如果系统说「无法打开，因为 Apple 无法检查其是否包含恶意软件」，
-   去「系统设置 › 隐私与安全性」，页面底部会有「仍要打开」，点一下再确认一次即可。
-   （这是因为 app 没有走 Apple 的开发者签名与公证，只需处理这一次。）
-3. 打开后菜单栏会出现 Pastory 图标。第一次截图会请求「屏幕录制」权限：
-   系统设置 › 隐私与安全性 › 屏幕录制，勾选 Pastory，然后退出 Pastory 重新打开。
-4. 默认快捷键：⌥⌘S 截图 / 录屏，⇧⌘V 打开剪贴板。可以在剪贴板面板左侧「设置」里改。
+2. 第一次打开：双击 Pastory.app。系统会说「无法打开，因为 Apple 无法检查其是否包含恶意软件」，点「完成」。
+   再去「系统设置 › 隐私与安全性」，往下滚到底，会有一行「已阻止使用 Pastory」和「仍要打开」按钮，
+   点它，输入一次密码。（app 没有走 Apple 的开发者签名与公证，只需处理这一次。）
+3. Pastory 没有主窗口：打开后只在屏幕右上角菜单栏出现一个手写的 P 图标，第一次会自动弹出底部的剪贴板面板。
+   如果什么都没出现，先看菜单栏有没有 P。
+4. 第一次截图会请求「屏幕录制」权限：系统设置 › 隐私与安全性 › 屏幕录制，打开 Pastory，然后退出 Pastory 重新打开。
+5. 默认快捷键：⌥⌘S 截图 / 录屏，⇧⌘V 打开剪贴板。可以在剪贴板面板左侧「设置」里改。
+
+还是打不开？在「终端」里粘贴这两行（去掉隔离标记后再打开）：
+  xattr -dr com.apple.quarantine /Applications/Pastory.app
+  open /Applications/Pastory.app
 
 所有内容只存在本机 ~/Library/Application Support/Pastory/，不联网、不上传。
 TXT
