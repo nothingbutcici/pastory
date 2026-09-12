@@ -180,7 +180,7 @@ final class ClipStore {
         let data = Data(text.utf8)
         guard data.count <= Self.maxTextBytes else { return nil }
         let hash = stableHash(data)
-        if let dup = dedupe(hash: hash) { return dup }
+        if let dup = dedupe(hash: hash, kinds: [.text, .url]) { return dup }
         var kind = ClipKind.text
         if let url = URL(string: text.trimmingCharacters(in: .whitespacesAndNewlines)),
            let s = url.scheme, ["http", "https"].contains(s), !text.contains("\n") { kind = .url }
@@ -200,7 +200,7 @@ final class ClipStore {
     @discardableResult
     func insertImage(png: Data, source: Source, ocrText: String? = nil) -> ClipItem? {
         let hash = stableHash(png)
-        if let dup = dedupe(hash: hash) { return dup }
+        if let dup = dedupe(hash: hash, kinds: [.image]) { return dup }
         guard let cg = Screenshotter.image(fromPNG: png) else { return nil }
         let item = ClipItem(id: UUID().uuidString, kind: .image, createdAt: Date(),
                             sourceBundleID: source.bundleID, sourceAppName: source.name,
@@ -227,7 +227,7 @@ final class ClipStore {
         let paths = urls.map(\.path)
         guard !paths.isEmpty, let data = try? JSONEncoder().encode(paths) else { return nil }
         let hash = stableHash(data)
-        if let dup = dedupe(hash: hash) { return dup }
+        if let dup = dedupe(hash: hash, kinds: [.files]) { return dup }
         let names = urls.map(\.lastPathComponent)
         let snippet = names.count <= 3 ? names.joined(separator: "\n") : names.prefix(3).joined(separator: "\n") + "\n… 共 \(names.count) 项"
         let item = ClipItem(id: UUID().uuidString, kind: .files, createdAt: Date(),
@@ -300,10 +300,11 @@ final class ClipStore {
         }
     }
 
-    /// Same payload as the newest item → just bump it.
-    private func dedupe(hash: Int) -> ClipItem? {
-        guard let first = items.first, first.contentHash == hash else { return nil }
-        bump(first.id)
+    /// Same payload anywhere in the history (same kind family) → bring that card to the front instead of making a twin;
+    /// its title and pin come along. Paste does the same by checksum.
+    private func dedupe(hash: Int, kinds: Set<ClipKind>) -> ClipItem? {
+        guard let hit = items.first(where: { $0.contentHash == hash && kinds.contains($0.kind) }) else { return nil }
+        bump(hit.id)
         return items.first
     }
 

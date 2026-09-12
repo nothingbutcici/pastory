@@ -132,6 +132,10 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
   `--selftest ingest` 用私有剪贴板验证五种组合。卡片缩略图长边 1200px。
 - **取图像素比**以 `NSScreen.backingScaleFactor` 为准（`Screenshotter.pixelScale`，和 `pointPixelScale` 取大），
   截图和录屏都用它；`pointPixelScale` 在部分显示器上返回过 1，导致存下来的图只有一半分辨率。
+- **去重**（2026-09-12 夜改）：再次复制历史里已有的内容（同 kind 家族、内容 hash 相同）不会生成新卡，而是把那张卡提到最前，
+  标题和 Pin 跟着；之前只和最新一条比。
+- **货架出场**：窗口固定在所在屏幕底部不越界，动画是窗口内内容上滑 28pt + 淡入，系统窗口阴影关掉
+  （之前从屏幕下方滑入 + 阴影，会在排列在下方的第二块屏顶部露出来）。
 - **SQLite 写法**（2026-09-12 晚改）：单条改动（复制置顶、Pin、标题、OCR 回写、编辑、新增、删除）走单行 upsert / delete，
   只有清空、导入、迁移走整表重写；写失败的语义不变（`lastSaveFailed`，UI 回滚）。
 - **录屏预览 / 转 GIF 期间按截图键**只响一声，不会丢弃录像；标注阶段 ⎋ 交回画布（先取消选中 / 退出文字框，再取消整次），

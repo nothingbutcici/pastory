@@ -50,29 +50,38 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
         let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main ?? NSScreen.screens[0]
         let height = max(360, (screen.frame.height * 0.44).rounded())
         let target = CGRect(x: screen.frame.minX, y: screen.frame.minY, width: screen.frame.width, height: height)
-        let start = target.offsetBy(dx: 0, dy: -height)
         model.reset()
-        p.setFrame(start, display: false)
-        p.alphaValue = 1
+        // The window itself never leaves this screen (a display arranged below would otherwise see it slide through);
+        // the slide happens to the content inside the window, together with a fade.
+        p.setFrame(target, display: false)
+        p.alphaValue = 0
+        p.contentView?.frame = CGRect(x: 0, y: -Self.slide, width: target.width, height: target.height)
         p.orderFrontRegardless()
         p.makeKey()
         p.makeFirstResponder(nil)          // keyboard goes to the shelf itself, not into the search box
         NSAnimationContext.runAnimationGroup { ctx in
             ctx.duration = 0.22
             ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            p.animator().setFrame(target, display: true)
+            p.animator().alphaValue = 1
+            p.contentView?.animator().frame = CGRect(origin: .zero, size: target.size)
         }
     }
+    private static let slide: CGFloat = 28
 
     func hide() {
         guard let p = panel, p.isVisible else { return }
-        let end = p.frame.offsetBy(dx: 0, dy: -p.frame.height)
+        let size = p.frame.size
         NSAnimationContext.runAnimationGroup({ ctx in
             ctx.duration = 0.18
             ctx.timingFunction = CAMediaTimingFunction(name: .easeIn)
-            p.animator().setFrame(end, display: true)
+            p.animator().alphaValue = 0
+            p.contentView?.animator().frame = CGRect(x: 0, y: -Self.slide, width: size.width, height: size.height)
         }, completionHandler: {
-            MainActor.assumeIsolated { p.orderOut(nil) }
+            MainActor.assumeIsolated {
+                p.orderOut(nil)
+                p.contentView?.frame = CGRect(origin: .zero, size: size)
+                p.alphaValue = 1
+            }
         })
     }
 
@@ -82,7 +91,7 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
         p.level = .statusBar
         p.isOpaque = false
         p.backgroundColor = .clear
-        p.hasShadow = true
+        p.hasShadow = false      // the system shadow spilled onto a display arranged below the shelf
         p.isReleasedWhenClosed = false
         p.hidesOnDeactivate = false
         p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
