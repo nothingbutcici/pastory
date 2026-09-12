@@ -213,15 +213,24 @@ struct SettingsPane: View {
                 case .failure(let e):
                     importNote = e.localizedDescription
                 case .success(let scan):
-                    let go = ShelfPanelController.shared.withDialog { () -> Bool in
+                    // Imported history is older than anything here, so a finite retention would sweep it at the next cleanup.
+                    let cleans = !Preferences.shared.neverCleans
+                    let choice = ShelfPanelController.shared.withDialog { () -> Int in
                         let a = NSAlert()
                         a.messageText = "找到 \(scan.texts) 条文本、\(scan.images) 张图片"
-                        a.informativeText = "来自 \(picked.lastPathComponent)。已经在 Pastory 里的内容会自动跳过，原来的时间和 Pin 会保留。"
-                        a.addButton(withTitle: "导入")
+                        a.informativeText = "来自 \(picked.lastPathComponent)。已经在 Pastory 里的内容会自动跳过，Pin 会保留；导入的内容排在 Pastory 自己记录的后面。"
+                            + (cleans ? "\n\n当前保留期是 \(Preferences.shared.retentionDays) 天，这些旧内容会在下次清理时被清掉（Pin 住的除外）。" : "")
+                        a.addButton(withTitle: cleans ? "导入并改为永不删除" : "导入")
+                        if cleans { a.addButton(withTitle: "只导入") }
                         a.addButton(withTitle: "取消")
-                        return a.runModal() == .alertFirstButtonReturn
+                        switch a.runModal() {
+                        case .alertFirstButtonReturn: return 1
+                        case .alertSecondButtonReturn: return cleans ? 2 : 0
+                        default: return 0
+                        }
                     }
-                    guard go else { importNote = nil; return }
+                    guard choice != 0 else { importNote = nil; return }
+                    if choice == 1, cleans { prefs.retentionDays = 0 }
                     let n = ClipStore.shared.importEntries(scan.entries)
                     importNote = n == 0 ? "没有新内容（都已存在）" : "已导入 \(n) 条"
                 }

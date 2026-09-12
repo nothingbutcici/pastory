@@ -150,7 +150,8 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
   `Clipboard/Importer.swift` 先复制一份再读（连同 -wal/-shm），Pastory 库按 schema 精确导，其他库按启发式：
   文本列 / UTF-8 blob 当文本、PNG/JPEG/TIFF blob 当图片、名字像 date/time/copied 的列当时间（识别 1970 秒、2001 秒、毫秒、ISO），
   像 pin/favorite 的列当 Pin；Core Data 子表通过整数列关联到有日期的父表，同一条的多种表示（plain+rtf、png+tiff）只留一份。
-  弹窗先报数量再导入，已存在的内容按 hash 跳过，保留原时间和 Pin。`--selftest import <db>` 可用假库验证。
+  弹窗先报数量再导入，已存在的内容按 hash 跳过，Pin 保留；导入的一批保持内部先后，整体后移到比 Pastory 自己最早的一条还早
+  （导入的历史永远排在自己记录的后面）。保留期不是「永不删除」时弹窗会提醒这些旧内容下次清理就会被清，可一键改为永不删除。`--selftest import <db>` 可用假库验证。
 - **⇧⌘V 剪贴板**：底部滑出（屏高 44%）纸感货架：左侧侧栏（手写 Pastory、剪贴板 / 设置两行、今日暂存 + Pin 说明），
   侧栏底部「Pin 后一直保留」和「设置」两行，设置在面板右半区内展开（`Shelf/SettingsPane`），不弹窗；
   顶部胶囊筛选 全部 / Pin / 图片 / 录屏 / 文本 + 搜索 + ✕，深色卡片配米色内容纸面（app 图标、时间、内容、

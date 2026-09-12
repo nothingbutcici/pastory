@@ -323,9 +323,15 @@ final class ClipStore {
         var title: String?
     }
 
-    /// Bulk insert from another store. Skips anything whose payload is already here (or repeated in the batch),
-    /// keeps the original dates so the cards land where they belong, and saves once. Returns how many were added.
+    /// Bulk insert from another store. Skips anything whose payload is already here (or repeated in the batch)
+    /// and saves once. Imported history always sorts behind everything Pastory captured itself: the batch keeps its
+    /// own internal order, shifted back so its newest entry is older than our oldest item. Returns how many were added.
     func importEntries(_ entries: [ImportEntry]) -> Int {
+        var entries = entries.sorted { $0.createdAt > $1.createdAt }
+        if let oldestOwn = items.map(\.createdAt).min(), let newestImport = entries.first?.createdAt {
+            let shift = newestImport.timeIntervalSince(oldestOwn) + 1
+            if shift > 0 { for i in entries.indices { entries[i].createdAt.addTimeInterval(-shift) } }
+        }
         var seen = Set(items.map(\.contentHash))
         let source = Source(bundleID: nil, name: "导入")
         var added: [ClipItem] = []
