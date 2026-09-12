@@ -75,9 +75,9 @@ struct ClipCardView: View {
                         .textFieldStyle(.plain).font(.script(26))
                         .foregroundColor(Color.ink).tint(Color.ink)
                         .focused($titleFocused)
-                        .onSubmit { ClipStore.shared.setTitle(draftTitle, for: item.id); renaming = false }
+                        .onSubmit { renaming = false }
                 }
-                Button { ClipStore.shared.setTitle(draftTitle, for: item.id); renaming = false } label: {
+                Button { renaming = false } label: {
                     Image(systemName: "checkmark").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.ink)
                 }
                 .buttonStyle(.plain).help("保存 ⏎")
@@ -86,6 +86,11 @@ struct ClipCardView: View {
             .overlay(alignment: .bottom) { Rectangle().fill(Color.ink.opacity(0.6)).frame(height: 1).padding(.horizontal, 18) }
             .onAppear { draftTitle = item.title ?? ""; titleFocused = true }
             .onChange(of: titleFocused) { _, f in if !f, renaming { renaming = false } }
+            // Leaving the box, by any route, is the save. An unchanged draft writes nothing.
+            .onDisappear {
+                let t = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                if t != (item.title ?? "") { ClipStore.shared.setTitle(t, for: item.id) }
+            }
         } else if let t = item.title, !t.isEmpty {
             Text(t).font(.script(30)).foregroundStyle(Color.ink).lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)

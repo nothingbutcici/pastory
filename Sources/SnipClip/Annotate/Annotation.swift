@@ -156,12 +156,12 @@ enum AnnotatePalette {
     /// Low-saturation set; purple first and default.
     static let colors: [NSColor] = [
         Theme.purple,                                                 // purple (default)
-        NSColor(srgbRed: 0x7F / 255, green: 0x03 / 255, blue: 0x03 / 255, alpha: 1),   // maroon #7F0303
-        NSColor(srgbRed: 0xD8 / 255, green: 0xBA / 255, blue: 0x98 / 255, alpha: 1),   // tan #D8BA98
-        NSColor(srgbRed: 0x83 / 255, green: 0x99 / 255, blue: 0x58 / 255, alpha: 1),   // olive #839958
-        NSColor(srgbRed: 0x96 / 255, green: 0xC0 / 255, blue: 0xCE / 255, alpha: 1),   // light blue #96C0CE
-        NSColor(srgbRed: 0x0F / 255, green: 0x41 / 255, blue: 0x4A / 255, alpha: 1),   // midnight blue #0F414A
-        NSColor(srgbRed: 0xEF / 255, green: 0xE8 / 255, blue: 0xDF / 255, alpha: 1),   // alabaster #EFE8DF
+        NSColor(srgbRed: 0xE9 / 255, green: 0x63 / 255, blue: 0x1A / 255, alpha: 1),   // orange #E9631A
+        NSColor(srgbRed: 0xC5 / 255, green: 0x6F / 255, blue: 0x8C / 255, alpha: 1),   // pink #C56F8C
+        NSColor(srgbRed: 0xA9 / 255, green: 0xC2 / 255, blue: 0xE0 / 255, alpha: 1),   // sky #A9C2E0
+        NSColor(srgbRed: 0x59 / 255, green: 0x38 / 255, blue: 0x2C / 255, alpha: 1),   // brown #59382C
+        NSColor(srgbRed: 0x1E / 255, green: 0x15 / 255, blue: 0x1C / 255, alpha: 1),   // ink #1E151C
+        NSColor(srgbRed: 0xEB / 255, green: 0xEB / 255, blue: 0xDF / 255, alpha: 1),   // chalk #EBEBDF
     ]
     static let accent = Theme.paperBlueDeep
 }

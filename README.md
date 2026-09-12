@@ -105,7 +105,7 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
   识别文字面板也全部是纸感（2026-09-12 晚统一）：米色纸条 `Theme.drawPaper` + 深棕桌面 `Theme.drawGround`，
   选中态是浅蓝纸，选区框 / 手柄 / 元素选中框用浅蓝和米纸；按钮统一 `Theme.paperButton`。`Theme.drawIsland` 只剩旧代码。
   截图浮层的条（顶栏 / 工具条 / 子条 / 尺寸角标 / 录屏控制条）2026-09-12 晚再改成和货架一样的深棕磨砂 `Theme.drawDesk`，
-  米字 + 浅蓝选中；标注调色盘 = 紫 + Maroon #7F0303 / Tan #D8BA98 / 橄榄 #839958 / Light blue #96C0CE / Midnight #0F414A / Alabaster #EFE8DF。
+  米字 + 浅蓝选中；标注调色盘 = 紫 + #E9631A / #C56F8C / #A9C2E0 / #59382C / #1E151C / #EBEBDF（用户 2026-09-12 晚定）。
   logo 用品牌稿 `Project/codex相关/pastory clipboard concepts/brand/signature-assets/Pastory Logo/`：
   `Resources/Logo.png` 与 `AppIcon.icns` 由 `pastory-app-icon-hd.png` 圆角化生成（1024 画布放 824 圆角方，半径 22.37%），
   `Resources/MenuIcon(@2x).png` 直接取自 `PastoryMenuBar.imageset`（template）。面包人 `Resources/Mascot.png` 目前没用上。
@@ -127,6 +127,9 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
 - **⌥⌘F 搜索剪贴板**：打开面板并直接聚焦搜索框。三个全局快捷键都在设置里改；录制时当场试注册，
   被其他应用占用、和自己的另一个快捷键重复会拒绝并提示；单个键（没有 ⌘⌥⌃⇧）提示「至少两个键」；
   只有 ⌘/⇧ 加单键（如 ⌘A）允许设置，但保存后提示「所有应用里的 ⌘A 都会变成这个功能」（2026-09-12 改，之前是直接拒绝）。
+- **截图中再按截图键 = 重新框选**，不是退出；打开着的「识别文字」面板会留在原地（这样才能截它），
+  完成时只带上属于这次截图的识别文本（OCR 面板带 token）。⎋ 仍是取消。
+- **卡片标题**：输入框无论怎么离开（⏎、✓、点别处、切到别的卡、⎋）都算保存，删空即去掉标题；草稿没变就不写盘。
 - **取屏浮层不激活自己**：遮罩是 `.nonactivatingPanel`，前台应用的弹窗 / 菜单不会因为按下截图键而收起，
   第一下按压就开始框选（`acceptsFirstMouse`）。
 - **导入**：设置 → 剪贴板 → 「从其他剪贴板工具导入（SQLite）」：选 .sqlite/.db 或另一台机器的 Pastory 文件夹，

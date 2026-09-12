@@ -208,7 +208,8 @@ enum Theme {
         b.layer?.borderColor = (onGround ? onBrown.withAlphaComponent(0.45) : Theme.ink.withAlphaComponent(0.55)).cgColor
         b.translatesAutoresizingMaskIntoConstraints = false
         b.heightAnchor.constraint(equalToConstant: 34).isActive = true
-        b.widthAnchor.constraint(greaterThanOrEqualToConstant: 84).isActive = true
+        let w = b.attributedTitle.size().width + 40
+        b.widthAnchor.constraint(equalToConstant: max(88, w.rounded(.up))).isActive = true
         return b
     }
 

@@ -9,6 +9,8 @@ final class OCRPanelController: NSObject, NSWindowDelegate {
     private var status: NSTextField?
     private var onCopy: ((String) -> Void)?
     private var task: Task<Void, Never>?
+    /// Which capture asked for this text; a later capture must not inherit it.
+    private(set) var token: UUID?
 
     /// Text as currently shown (edited or not); nil when the panel is not up.
     var currentText: String? {
@@ -17,8 +19,9 @@ final class OCRPanelController: NSObject, NSWindowDelegate {
         return s.isEmpty ? nil : s
     }
 
-    func show(near anchor: CGRect, image: CGImage, onCopy: @escaping (String) -> Void) {
+    func show(near anchor: CGRect, image: CGImage, token: UUID? = nil, onCopy: @escaping (String) -> Void) {
         self.onCopy = onCopy
+        self.token = token
         let p = panel ?? makePanel()
         panel = p
         textView?.string = ""
@@ -56,7 +59,7 @@ final class OCRPanelController: NSObject, NSWindowDelegate {
     }
 
     private func makePanel() -> NSPanel {
-        let p = NSPanel(contentRect: CGRect(x: 0, y: 0, width: 400, height: 320),
+        let p = NSPanel(contentRect: CGRect(x: 0, y: 0, width: 400, height: 350),
                         styleMask: [.titled, .closable, .utilityWindow, .nonactivatingPanel, .resizable, .fullSizeContentView],
                         backing: .buffered, defer: false)
         p.title = "识别文字"
@@ -106,8 +109,8 @@ final class OCRPanelController: NSObject, NSWindowDelegate {
 
         for v in [heading, scroll, st, copy, cancel] { v.translatesAutoresizingMaskIntoConstraints = false; content.addSubview(v) }
         NSLayoutConstraint.activate([
-            heading.topAnchor.constraint(equalTo: content.topAnchor, constant: 8),
-            heading.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 34),
+            heading.topAnchor.constraint(equalTo: content.topAnchor, constant: 30),
+            heading.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 18),
             scroll.topAnchor.constraint(equalTo: heading.bottomAnchor, constant: 8),
             scroll.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 14),
             scroll.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -14),

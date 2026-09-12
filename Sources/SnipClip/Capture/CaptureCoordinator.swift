@@ -10,13 +10,16 @@ final class CaptureCoordinator: AnnotateDelegate {
     private var fullScale: CGFloat = 2
     private var recording: RecordingSession?
     private(set) var isBusy = false
+    private var ocrToken = UUID()
     static let source = ClipStore.Source(bundleID: "com.cici.snipclip", name: "Pastory")
 
     private init() {}
 
     func start(mode: PickMode = .region) {
         if let recording, recording.isRecording { recording.stop(); return }   // hotkey again = stop recording
-        if isBusy { cancel(); return }      // pressing the hotkey again backs out
+        // Hotkey again while the picker or annotator is up: start over, but leave an open 识别文字 panel alone —
+        // being able to screenshot that panel is the point.
+        if isBusy { finish(keepOCRPanel: true) }
         guard Permissions.ensureScreenRecording() else { return }
         isBusy = true
         ShelfPanelController.shared.holdOpen = true      // the shelf may be what you want to capture
@@ -70,7 +73,7 @@ final class CaptureCoordinator: AnnotateDelegate {
 
     func annotateDidFinish(_ image: CGImage) {
         guard let png = Screenshotter.pngData(image) else { finish(); return }
-        let ocr = OCRPanelController.shared.currentText
+        let ocr = OCRPanelController.shared.token == ocrToken ? OCRPanelController.shared.currentText : nil
         let item = ClipStore.shared.insertImage(png: png, source: Self.source, ocrText: ocr)
         PasteboardWriter.writeImage(png: png, itemID: item?.id ?? "")
         finish()
@@ -99,7 +102,8 @@ final class CaptureCoordinator: AnnotateDelegate {
 
     func annotateRequestOCR(_ image: CGImage) {
         let anchor = SelectionOverlayController.shared.heldScreenRect ?? .zero
-        OCRPanelController.shared.show(near: anchor, image: image) { [weak self] text in
+        ocrToken = UUID()
+        OCRPanelController.shared.show(near: anchor, image: image, token: ocrToken) { [weak self] text in
             let item = ClipStore.shared.insertText(text, rtf: nil, source: Self.source)
             PasteboardWriter.writeText(text, rtf: nil, itemID: item?.id ?? "")
             self?.finish()
@@ -108,12 +112,12 @@ final class CaptureCoordinator: AnnotateDelegate {
 
     func cancelRecording() { recording?.cancel() }
 
-    private func finish() {
+    private func finish(keepOCRPanel: Bool = false) {
         if let recording { recording.cancel(); return }   // teardown calls back into finish()
         pickedTarget = nil
         fullImage = nil
         ShelfPanelController.shared.holdOpen = false
-        OCRPanelController.shared.close()
+        if !keepOCRPanel { OCRPanelController.shared.close() }
         SelectionOverlayController.shared.release()
         snapshot = nil
         isBusy = false
