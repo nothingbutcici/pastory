@@ -68,6 +68,43 @@ enum Theme {
         return NSImage(cgImage: cg, size: CGSize(width: n, height: n))
     }()
 
+    /// Paper / desk with the grain already multiplied in. SwiftUI tiles these as `ImagePaint`;
+    /// a live `blendMode(.multiply)` per card forced an offscreen pass for every card on every frame.
+    static let paperTile = bakedTile(paper, grain: 0.11)
+    static let paperBlueTile = bakedTile(paperBlue, grain: 0.11)
+    static let deskTile = bakedTile(brown, grain: 0.22)
+    private static func bakedTile(_ color: NSColor, grain: CGFloat) -> NSImage {
+        let n = noiseTile.size
+        return NSImage(size: n, flipped: false) { r in
+            color.setFill(); r.fill()
+            drawGrain(in: r, opacity: grain)
+            return true
+        }
+    }
+
+    /// App icons for the cards, desaturated once and cached per bundle id; a Launch Services lookup per body was the lag.
+    private static var iconCache: [String: NSImage?] = [:]
+    static func cardIcon(bundleID: String?) -> NSImage? {
+        guard let bundleID else { return nil }
+        if bundleID == "com.cici.snipclip" { return logo }
+        if let hit = iconCache[bundleID] { return hit }
+        var made: NSImage?
+        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
+            let src = NSWorkspace.shared.icon(forFile: url.path)
+            src.size = CGSize(width: 44, height: 44)
+            made = NSImage(size: src.size, flipped: false) { r in
+                src.draw(in: r)
+                // Grey it down so the paper stays quiet, keep the alpha.
+                NSColor(calibratedWhite: 0.45, alpha: 1).set()
+                r.fill(using: .color)
+                src.draw(in: r, from: .zero, operation: .destinationIn, fraction: 1)
+                return true
+            }
+        }
+        iconCache[bundleID] = made
+        return made
+    }
+
     // Kind tags: low-saturation outline colours; the label itself stays gray
     static let tagMP4 = NSColor(srgbRed: 0.78, green: 0.64, blue: 0.54, alpha: 1)       // dusty peach
     static let tagGIF = NSColor(srgbRed: 0.78, green: 0.60, blue: 0.68, alpha: 1)       // dusty rose

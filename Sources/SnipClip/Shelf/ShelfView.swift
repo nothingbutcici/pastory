@@ -31,13 +31,11 @@ extension Font {
     static func script(_ size: CGFloat) -> Font { Font(Theme.script(size: size)) }
 }
 
-/// Grain overlay; multiply on paper, soft-light on the ground.
-struct Grain: View {
-    var opacity: Double = 0.06
-    var body: some View {
-        Image(nsImage: Theme.noiseTile).resizable(resizingMode: .tile)
-            .opacity(opacity).blendMode(.multiply).allowsHitTesting(false)
-    }
+/// Pre-grained paints (see `Theme.paperTile`): fill shapes with these instead of colour + a blended grain layer.
+enum Paint {
+    static let paper = ImagePaint(image: Image(nsImage: Theme.paperTile))
+    static let paperBlue = ImagePaint(image: Image(nsImage: Theme.paperBlueTile))
+    static let desk = ImagePaint(image: Image(nsImage: Theme.deskTile))
 }
 
 struct ShelfView: View {
@@ -63,11 +61,7 @@ struct ShelfView: View {
                 .padding(.horizontal, 20)
             }
         }
-        .background(ZStack {
-            Color.brown
-            Grain(opacity: 0.22)
-            Image(nsImage: Theme.noiseTile).resizable(resizingMode: .tile).scaleEffect(2.3).opacity(0.05).blendMode(.plusLighter).allowsHitTesting(false)
-        }
+        .background(Rectangle().fill(Paint.desk)
         .contentShape(Rectangle())
         .onTapGesture { searchFocused = false; NSApp.keyWindow?.makeFirstResponder(nil) })
         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 14, topTrailingRadius: 14))
@@ -327,8 +321,7 @@ struct PaperPatch: View {
     var amplitude: CGFloat = 3
     var body: some View {
         let shape = TornPaper(top: top, right: right, bottom: bottom, left: left, seed: seed, amplitude: amplitude)
-        ZStack { color; Grain(opacity: 0.12) }
-            .clipShape(shape)
+        shape.fill(color == .paperBlue ? Paint.paperBlue : Paint.paper)
             .shadow(color: .black.opacity(0.4), radius: 5, x: 1, y: 3)
     }
 }

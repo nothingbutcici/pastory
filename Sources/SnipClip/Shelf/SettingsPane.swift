@@ -128,8 +128,7 @@ struct SettingsPane: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.bottom, 8)
         .background(
-            ZStack { Color.paper; Grain(opacity: 0.09) }
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+            RoundedRectangle(cornerRadius: 6).fill(Paint.paper)
                 .shadow(color: .black.opacity(0.35), radius: 8, x: 1, y: 4)      // the sheet casts it, the type does not
         )
     }

@@ -19,7 +19,8 @@ struct ClipCardView: View {
     @State private var draftTitle = ""
     @FocusState private var titleFocused: Bool
 
-    private var paperColor: Color { onClipboard ? .paperBlue : .paper }
+    private var paperPaint: ImagePaint { onClipboard ? Paint.paperBlue : Paint.paper }
+    private var ticket: TicketShape { TicketShape(notchFromBottom: index % 2 == 0 ? Self.stubHeight : nil, notchFromTop: nil) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -33,9 +34,9 @@ struct ClipCardView: View {
             actions
         }
         .frame(width: Self.width)
-        .background(ZStack { paperColor; Grain(opacity: 0.11) })
-        .clipShape(TicketShape(notchFromBottom: index % 2 == 0 ? Self.stubHeight : nil, notchFromTop: nil))
-        .shadow(color: .black.opacity(selected ? 0.55 : 0.4), radius: selected ? 14 : 9, x: 2, y: selected ? 9 : 6)
+        .clipShape(ticket)
+        // The sheet casts the shadow; shadowing the whole subtree (text, thumbnails) re-rasterised every card on every change.
+        .background(ticket.fill(paperPaint).shadow(color: .black.opacity(selected ? 0.55 : 0.4), radius: selected ? 14 : 9, x: 2, y: selected ? 9 : 6))
         .overlay(alignment: .top) { decoration }
         .contentShape(Rectangle())
         .onTapGesture(count: 2, perform: onCopyAndClose)
@@ -48,7 +49,7 @@ struct ClipCardView: View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
                 Group {
-                    if let icon = appIcon { Image(nsImage: icon).resizable().saturation(0).contrast(1.2) }
+                    if let icon = Theme.cardIcon(bundleID: item.sourceBundleID) { Image(nsImage: icon).resizable() }
                     else { Image(systemName: "doc.on.clipboard").font(.system(size: 13)) }
                 }
                 .frame(width: 22, height: 22)
@@ -228,8 +229,8 @@ struct ClipCardView: View {
                 .frame(width: 34, height: 30)
                 .background {
                     if item.pinned {
-                        ZStack { onClipboard ? Color.paper : Color.paperBlue; Grain(opacity: 0.1) }
-                            .clipShape(TornPaper(top: true, right: true, bottom: true, left: true, seed: 77, amplitude: 1.5, step: 5))
+                        TornPaper(top: true, right: true, bottom: true, left: true, seed: 77, amplitude: 1.5, step: 5)
+                            .fill(onClipboard ? Paint.paper : Paint.paperBlue)
                             .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
                     }
                 }
@@ -295,11 +296,6 @@ struct ClipCardView: View {
     private var durationText: String {
         let s = Int((item.duration ?? 0).rounded())
         return String(format: "%02d:%02d", s / 60, s % 60)
-    }
-    private var appIcon: NSImage? {
-        if item.sourceBundleID == "com.cici.snipclip" { return Theme.logo }
-        guard let id = item.sourceBundleID, let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id) else { return nil }
-        return NSWorkspace.shared.icon(forFile: url.path)
     }
 }
 
