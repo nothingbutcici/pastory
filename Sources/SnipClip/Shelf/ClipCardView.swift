@@ -24,9 +24,9 @@ struct ClipCardView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            titleRow
+            if renaming || selected || (item.title?.isEmpty == false) { titleRow }
             content
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: (item.kind == .image || item.kind == .video) && (item.title ?? "").isEmpty ? .center : .topLeading)
                 .clipped()
             perforation
             captionRow
@@ -36,10 +36,8 @@ struct ClipCardView: View {
         .background(ZStack { paperColor; Grain(opacity: 0.11) })
         .clipShape(TicketShape(notchFromBottom: Self.stubHeight))
         .shadow(color: .black.opacity(selected ? 0.55 : 0.4), radius: selected ? 14 : 9, x: 2, y: selected ? 9 : 6)
-        // Sheets tucked behind: one turned a few degrees so a corner shows at the top, sometimes a second one low.
-        // Colours alternate — blue behind cream, cream/white behind blue.
-        .background { backSheets }
-        .overlay(alignment: .topTrailing) { decoration }
+        .overlay(alignment: .bottomTrailing) { if stableSeed % 3 == 0 { DogEar(color: paperColor).frame(width: 24, height: 24).rotationEffect(.degrees(90)) } }
+        .overlay(alignment: .top) { decoration }
         .contentShape(Rectangle())
         .onTapGesture(count: 2, perform: onCopyAndClose)
         .onTapGesture(count: 1, perform: onCopy)
@@ -134,8 +132,7 @@ struct ClipCardView: View {
                         }
                         .shadow(color: .black.opacity(0.3), radius: 6, x: 1, y: 4)
                         .rotationEffect(.degrees(-1.6))
-                        .padding(.horizontal, 16).padding(.top, 14)
-                    Spacer(minLength: 0)
+                        .padding(.horizontal, 16).padding(.vertical, 14)
                 }
             } else {
                 Image(systemName: item.kind == .video ? "film" : "photo").font(.largeTitle).foregroundStyle(Color.inkMuted.opacity(0.5))
@@ -257,33 +254,14 @@ struct ClipCardView: View {
 
     private var stableSeed: UInt64 { UInt64(truncatingIfNeeded: stableHash(Data(item.id.utf8))) }
 
-    /// Sheets behind never reach past the card's left or right edge; they show as ragged slivers above and below.
-    private var backSheets: some View {
-        let seed = stableSeed
-        let first: Color = onClipboard ? .paper : ((index / 2) % 2 == 0 ? .paperBlue : Color.white.opacity(0.92))
-        let second: Color = first == .paperBlue ? Color.white.opacity(0.9) : .paperBlue
-        return ZStack {
-            if seed % 3 != 1 {
-                ZStack { second; Grain(opacity: 0.1) }
-                    .clipShape(TornPaper(bottom: true, seed: seed &+ 5, amplitude: 4, step: 9))
-                    .padding(.horizontal, 6).padding(.bottom, -7)
-                    .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
-            }
-            ZStack { first; Grain(opacity: 0.1) }
-                .clipShape(TornPaper(top: true, seed: seed, amplitude: 4, step: 9))
-                .padding(.horizontal, 3).padding(.top, -9)
-                .shadow(color: .black.opacity(0.3), radius: 5, y: 3)
-        }
-    }
-
-    /// Every other card gets a paper clip riding its right edge, tilted, never over the text. Blue and silver alternate.
+    /// One bulldog clip per screenful (every sixth card), only on cream cards, never on the copied blue one.
     @ViewBuilder
     private var decoration: some View {
-        if index % 2 == 0 {
-            PaperClip(silver: (index / 2) % 2 == 0)
-                .frame(width: 20, height: 62)
-                .rotationEffect(.degrees(12))
-                .offset(x: -92, y: -16)
+        if index % 6 == 2, !onClipboard, let img = Theme.clip {
+            Image(nsImage: img).resizable().scaledToFit()
+                .frame(width: 70)
+                .shadow(color: .black.opacity(0.35), radius: 3, x: 1, y: 3)
+                .offset(x: 52, y: -24)          // jaws over the card's top edge, head above it
         }
     }
 
@@ -349,43 +327,19 @@ struct Line: Shape {
     func path(in r: CGRect) -> Path { var p = Path(); p.move(to: CGPoint(x: r.minX, y: r.midY)); p.addLine(to: CGPoint(x: r.maxX, y: r.midY)); return p }
 }
 
-/// Paper clip with some metal to it: dark core, mid tone, and a thin light running along the wire,
-/// plus a soft cast shadow. Long outer loop, shorter inner loop, round ends.
-struct PaperClip: View {
-    var silver = true
+/// A folded-over corner: the brown ground shows through the cut, the flap is a darker triangle with a shadow.
+struct DogEar: View {
+    var color: Color
     var body: some View {
         Canvas { ctx, size in
             let w = size.width, h = size.height
-            let r = w * 0.5
-            let outer = Path { p in
-                p.move(to: CGPoint(x: w, y: h * 0.62))
-                p.addLine(to: CGPoint(x: w, y: r))
-                p.addArc(center: CGPoint(x: r, y: r), radius: r, startAngle: .degrees(0), endAngle: .degrees(180), clockwise: true)
-                p.addLine(to: CGPoint(x: 0, y: h - r))
-                p.addArc(center: CGPoint(x: r, y: h - r), radius: r, startAngle: .degrees(180), endAngle: .degrees(0), clockwise: true)
-                p.addLine(to: CGPoint(x: w, y: h * 0.30))
-            }
-            let ri = r * 0.5
-            let inner = Path { p in
-                p.move(to: CGPoint(x: w - (r - ri), y: h * 0.30))
-                p.addLine(to: CGPoint(x: w - (r - ri), y: h * 0.22 + ri))
-                p.addArc(center: CGPoint(x: r, y: h * 0.22 + ri), radius: ri, startAngle: .degrees(0), endAngle: .degrees(180), clockwise: true)
-                p.addLine(to: CGPoint(x: r - ri, y: h * 0.78))
-            }
-            let core: Color = silver ? Color(red: 0.36, green: 0.37, blue: 0.40) : Color(red: 0.22, green: 0.36, blue: 0.48)
-            let mid: Color = silver ? Color(red: 0.70, green: 0.71, blue: 0.74) : Color(red: 0.47, green: 0.63, blue: 0.76)
-            let light: Color = silver ? Color(red: 0.96, green: 0.96, blue: 0.97) : Color(red: 0.80, green: 0.89, blue: 0.95)
-            var shadow = ctx
-            shadow.translateBy(x: 1.5, y: 2.5)
-            for path in [outer, inner] {
-                shadow.stroke(path, with: .color(.black.opacity(0.32)), style: StrokeStyle(lineWidth: 3, lineCap: .round))
-            }
-            for path in [outer, inner] {
-                ctx.stroke(path, with: .color(core), style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                ctx.stroke(path, with: .color(mid), style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                var hl = ctx; hl.translateBy(x: -0.5, y: -0.5)
-                hl.stroke(path, with: .color(light.opacity(0.9)), style: StrokeStyle(lineWidth: 0.7, lineCap: .round))
-            }
+            let cut = Path { p in p.move(to: CGPoint(x: 0, y: 0)); p.addLine(to: CGPoint(x: w, y: 0)); p.addLine(to: CGPoint(x: w, y: h)); p.closeSubpath() }
+            ctx.fill(cut, with: .color(Color.brown))
+            let flap = Path { p in p.move(to: CGPoint(x: 0, y: 0)); p.addLine(to: CGPoint(x: w, y: h)); p.addLine(to: CGPoint(x: 0, y: h)); p.closeSubpath() }
+            var sh = ctx; sh.translateBy(x: -1, y: 1)
+            sh.fill(flap, with: .color(.black.opacity(0.28)))
+            ctx.fill(flap, with: .linearGradient(Gradient(colors: [color.opacity(0.9), Color.paperDim]), startPoint: CGPoint(x: 0, y: h), endPoint: CGPoint(x: w * 0.7, y: h * 0.3)))
+            ctx.stroke(Path { p in p.move(to: CGPoint(x: 0, y: 0)); p.addLine(to: CGPoint(x: w, y: h)) }, with: .color(.black.opacity(0.15)), lineWidth: 0.6)
         }
         .allowsHitTesting(false)
     }

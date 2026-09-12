@@ -67,7 +67,9 @@ struct ShelfView: View {
             Color.brown
             Grain(opacity: 0.22)
             Image(nsImage: Theme.noiseTile).resizable(resizingMode: .tile).scaleEffect(2.3).opacity(0.05).blendMode(.plusLighter).allowsHitTesting(false)
-        })
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { searchFocused = false; NSApp.keyWindow?.makeFirstResponder(nil) })
         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 14, topTrailingRadius: 14))
         .onChange(of: model.focusSearch) { _, _ in searchFocused = true }
         .onChange(of: model.openTick) { _, _ in searchFocused = false }
@@ -139,6 +141,7 @@ struct ShelfView: View {
                         // Hand-ruled: left, bottom, right — no top edge.
                         if !on { RuledBox(seed: 40 + UInt64(i)).stroke(Color.onBrown.opacity(0.5), lineWidth: 1) }
                     }
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .padding(.trailing, 12)
@@ -190,7 +193,8 @@ struct ShelfView: View {
                             .contextMenu { menu(for: item) }
                     }
                 }
-                .padding(.vertical, 6)
+                .padding(.top, 30)              // room for the clip's head above the cards
+                .padding(.bottom, 8)
                 .padding(.horizontal, 4)
             }
             .scrollPosition($scrollPos)

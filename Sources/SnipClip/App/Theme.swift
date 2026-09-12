@@ -88,6 +88,8 @@ enum Theme {
     static let logo: NSImage? = resource("Logo.png")
     /// The mascot on the shelf sidebar.
     static let mascot: NSImage? = resource("Mascot.png")
+    /// Baby-blue bulldog clip that holds one card per screen.
+    static let clip: NSImage? = resource("Clip.png")
     /// Brand typeface (Ysabeau Office, OFL) bundled in Resources/Fonts; registered for this process on first use.
     private static let brandRegistered: Bool = {
         let dev = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
