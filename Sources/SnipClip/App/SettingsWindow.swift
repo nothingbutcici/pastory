@@ -72,8 +72,8 @@ struct ShortcutRecorder: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            if let notice, !capturing { Text(notice).font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.purpleLight)) }
-            else if taken, !capturing { Text("被其他应用占用").font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.purpleLight)) }
+            if let notice, !capturing { Text(notice).font(.system(size: 12)).foregroundStyle(Color.inkMuted) }
+            else if taken, !capturing { Text("被其他应用占用").font(.system(size: 12)).foregroundStyle(Color.inkMuted) }
             HStack(spacing: 6) {
                 Button {
                     // The click-anywhere monitor already cancelled on mouse-down; do not re-arm on the mouse-up.
@@ -95,8 +95,8 @@ struct ShortcutRecorder: View {
                 }
             }
             .padding(.leading, 12).padding(.trailing, shortcut.isSet && !capturing ? 8 : 12).padding(.vertical, 7)
-            .background(capturing ? Color.purple : Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(taken ? Color(nsColor: Theme.tagMP4) : Color.shelfBorder, lineWidth: 1))
+            .background(capturing ? Color.paperBlue : Color.clear, in: RoundedRectangle(cornerRadius: 6))
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(taken ? Color(nsColor: Theme.tagMP4) : Color.ink.opacity(0.5), lineWidth: 1))
         }
         .onAppear { shortcut = Preferences.shared.shortcut(key); refreshTaken() }
         .onDisappear { stop(nil) }

@@ -99,7 +99,9 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
 - **⌥⌘S 截图**（⌃⌘A 被微信占用，系统只认先注册的）：拖拽选区；␣ 切窗口模式；F 整屏；单击空白 / 右键 / ⎋ 取消。
   框选时只显示尺寸角标，没有十字线和提示文字。选完立刻整屏取图（重新枚举窗口把遮罩排除掉），之后出现的工具条不会进图。
   ⏎ 或双击 = 复制到剪贴板并进货架；⌘Z 撤销一笔。
-- 视觉：深色浮岛（都带淡格纹，`Theme.drawIsland`）+ 淡紫强调（`App/Theme.swift` 统一取色；荧光绿只剩 logo 和货架「已复制」），
+- 视觉：货架是纸感（2026-09-12 改）：深棕纹理底，米色纸片卡带票根缺口和虚线，当前剪贴板那张是浅蓝纸；
+  正文宋体（Songti SC），标题和「Pastory」手写体（Caveat，CJK 回退翩翩体），设置页同样是纸片分区。
+  截图 / 录屏那套仍是深色浮岛（都带淡格纹，`Theme.drawIsland`）+ 淡紫强调，
   logo 在 `Resources/Logo.png`（P 字紫版，透明底），面包人在 `Resources/Mascot.png`（黄色，夹子染成品牌紫；
   原图棋盘格是画进去的，用局部纹理 + 边缘泛洪抠的），菜单栏图标 `Resources/MenuIcon(@2x).png` 来自设计稿
   `Project/codex相关/cc tools visual identity/.../pastory-menubar*.png`，作为 template 使用。

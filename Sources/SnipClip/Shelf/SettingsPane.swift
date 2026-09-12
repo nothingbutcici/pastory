@@ -10,21 +10,20 @@ struct SettingsPane: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 12) {
-                Text("设置").font(.system(size: 20, weight: .bold)).foregroundStyle(Color.shelfInk)
+                Text("设置").font(.serif(22, bold: true)).foregroundStyle(Color.onBrown)
                 Spacer()
                 Button { model.showSettings = false } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "chevron.left").font(.system(size: 12, weight: .semibold))
                         Text("返回剪贴板").font(.system(size: 13, weight: .medium))
                     }
-                    .foregroundStyle(Color.shelfInk)
+                    .foregroundStyle(Color.onBrown)
                     .padding(.horizontal, 12).padding(.vertical, 7)
-                    .background(Color.shelfCard, in: Capsule())
-                    .overlay(Capsule().stroke(Color.shelfBorder, lineWidth: 1))
+                    .overlay(Capsule().stroke(Color.onBrown.opacity(0.4), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
                 Button { ShelfPanelController.shared.hide() } label: {
-                    Image(systemName: "xmark").font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.shelfInk).frame(width: 36, height: 36)
+                    Image(systemName: "xmark").font(.system(size: 16, weight: .regular)).foregroundStyle(Color.onBrown).frame(width: 36, height: 36)
                 }
                 .buttonStyle(.plain)
             }
@@ -48,21 +47,20 @@ struct SettingsPane: View {
                                             Text(label).font(.system(size: 12.5, weight: on ? .semibold : .medium))
                                                 .foregroundStyle(on ? Color.onPurple : Color.shelfInk)
                                                 .padding(.horizontal, 11).padding(.vertical, 6)
-                                                .background(on ? Color.purple : Color.white.opacity(0.06), in: Capsule())
+                                                .background(on ? Color.paperBlue : Color.clear, in: Capsule())
                                         }
                                         .buttonStyle(.plain)
                                     }
                                 }
                                 .padding(3)
-                                .background(Color.black.opacity(0.25), in: Capsule())
-                                .overlay(Capsule().stroke(Color.shelfBorder, lineWidth: 1))
+                                .overlay(Capsule().stroke(Color.ink.opacity(0.5), lineWidth: 1))
                             }
                             row("当日清理时间") {
                                 HourWheel(hour: $prefs.cleanupHour, enabled: prefs.retentionDays != 0)
                                     .opacity(prefs.retentionDays == 0 ? 0.35 : 1)
                             }
-                            row("图片自动识别文字（可按文字搜图）") { Toggle("", isOn: $prefs.ocrImages).labelsHidden().toggleStyle(.switch).tint(Color.purple) }
-                            row("暂停同步至剪贴板") { Toggle("", isOn: $prefs.paused).labelsHidden().toggleStyle(.switch).tint(Color.purple) }
+                            row("图片自动识别文字（可按文字搜图）") { Toggle("", isOn: $prefs.ocrImages).labelsHidden().toggleStyle(.switch).tint(Color.paperBlueDeep) }
+                            row("暂停同步至剪贴板") { Toggle("", isOn: $prefs.paused).labelsHidden().toggleStyle(.switch).tint(Color.paperBlueDeep) }
                             row("手动清空一次（不含已 Pin 内容）") {
                                 pill(cleared ? "已清空" : "现在清空", disabled: cleared) {
                                     ClipStore.shared.removeAll { !$0.pinned }
@@ -93,7 +91,7 @@ struct SettingsPane: View {
                             }
                         }
                         section("系统") {
-                            row("登录时启动") { Toggle("", isOn: $prefs.launchAtLogin).labelsHidden().toggleStyle(.switch).tint(Color.purple) }
+                            row("登录时启动") { Toggle("", isOn: $prefs.launchAtLogin).labelsHidden().toggleStyle(.switch).tint(Color.paperBlueDeep) }
                             if let e = prefs.loginError { Text(e).font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.tagMP4)).padding(.horizontal, 16) }
                             row("屏幕录制权限（截图、录屏需要）") {
                                 HStack(spacing: 8) {
@@ -115,19 +113,19 @@ struct SettingsPane: View {
 
     private func section<V: View>(_ title: String, @ViewBuilder _ content: () -> V) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(title).font(.system(size: 12.5, weight: .semibold)).foregroundStyle(Color.shelfMuted)
+            Text(title).font(.serif(13, bold: true)).foregroundStyle(Color.shelfMuted)
                 .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 8)
             VStack(spacing: 0) { content() }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.bottom, 8)
-        .background(Color.shelfCard, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.shelfBorder, lineWidth: 1))
+        .background(ZStack { Color.paper; Grain(opacity: 0.07) }.clipShape(RoundedRectangle(cornerRadius: 6)))
+        .shadow(color: .black.opacity(0.35), radius: 8, x: 1, y: 4)
     }
 
     private func row<V: View>(_ label: String, @ViewBuilder _ trailing: () -> V) -> some View {
         HStack {
-            Text(label).font(.system(size: 14)).foregroundStyle(Color.shelfInk).lineLimit(1).truncationMode(.middle)
+            Text(label).font(.serif(15)).foregroundStyle(Color.shelfInk).lineLimit(1).truncationMode(.middle)
             Spacer(minLength: 12)
             trailing()
         }
@@ -139,7 +137,6 @@ struct SettingsPane: View {
         Button(action: action) {
             Image(systemName: symbol).font(.system(size: 11, weight: .bold)).foregroundStyle(Color.shelfInk)
                 .frame(width: 26, height: 26)
-                .background(Color.white.opacity(0.06), in: Capsule())
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -149,8 +146,7 @@ struct SettingsPane: View {
         Button(action: action) {
             Text(title).font(.system(size: 13, weight: .medium)).foregroundStyle(Color.shelfInk)
                 .padding(.horizontal, 12).padding(.vertical, 6)
-                .background(Color.white.opacity(0.08), in: Capsule())
-                .overlay(Capsule().stroke(Color.shelfBorder, lineWidth: 1))
+                .overlay(Capsule().stroke(Color.ink.opacity(0.6), lineWidth: 1))
         }
         .buttonStyle(.plain)
         .disabled(disabled)
@@ -204,8 +200,7 @@ struct HourWheel: View {
             .buttonStyle(.plain).foregroundStyle(Color.shelfMuted)
         }
         .padding(.leading, 12).padding(.trailing, 6).padding(.vertical, 5)
-        .background(Color.black.opacity(0.25), in: Capsule())
-        .overlay(Capsule().stroke(Color.shelfBorder, lineWidth: 1))
+        .overlay(Capsule().stroke(Color.ink.opacity(0.5), lineWidth: 1))
         .overlay(ScrollSteps(enabled: enabled) { step in hour = (hour + step + 24) % 24 })
         .help("上下滑动或点箭头调整")
     }

@@ -1,17 +1,43 @@
 import SwiftUI
 
+// Paper theme tokens. `shelfInk` & co. are what the settings pane paints its paper sections with.
 extension Color {
+    static let brown = Color(nsColor: Theme.brown)
+    static let brownDeep = Color(nsColor: Theme.brownDeep)
+    static let paper = Color(nsColor: Theme.paper)
+    static let paperDim = Color(nsColor: Theme.paperDim)
+    static let paperBlue = Color(nsColor: Theme.paperBlue)
+    static let paperBlueDeep = Color(nsColor: Theme.paperBlueDeep)
+    static let ink = Color(nsColor: Theme.ink)
+    static let inkMuted = Color(nsColor: Theme.inkMuted)
+    static let onBrown = Color(nsColor: Theme.onBrown)
+    static let onBrownMuted = Color(nsColor: Theme.onBrownMuted)
+    // legacy names still used by the settings pane
+    static let shelfBG = brown
+    static let shelfSide = brownDeep
+    static let shelfCard = paper
+    static let shelfInk = ink
+    static let shelfMuted = inkMuted
+    static let shelfBorder = Color(nsColor: Theme.ink).opacity(0.22)
+    static let purple = paperBlueDeep
+    static let onPurple = ink
     static let lime = Color(nsColor: Theme.lime)
-    static let shelfBG = Color(nsColor: Theme.shelfBG)
-    static let shelfSide = Color(nsColor: Theme.shelfSide)
-    static let shelfCard = Color(nsColor: Theme.shelfCard)
-    static let shelfInk = Color(nsColor: Theme.shelfInk)
-    static let shelfMuted = Color(nsColor: Theme.shelfMuted)
-    static let shelfBorder = Color(nsColor: Theme.shelfBorder)
-    static let cream = Color(nsColor: Theme.cream)
-    static let creamInk = Color(nsColor: Theme.creamInk)
-    static let purple = Color(nsColor: Theme.purple)
-    static let onPurple = Color(nsColor: Theme.onPurple)
+    static let cream = paper
+    static let creamInk = ink
+}
+
+extension Font {
+    static func serif(_ size: CGFloat, bold: Bool = false) -> Font { Font(Theme.serif(size: size, bold: bold)) }
+    static func script(_ size: CGFloat) -> Font { Font(Theme.script(size: size)) }
+}
+
+/// Grain overlay; multiply on paper, soft-light on the ground.
+struct Grain: View {
+    var opacity: Double = 0.06
+    var body: some View {
+        Image(nsImage: Theme.noiseTile).resizable(resizingMode: .tile)
+            .opacity(opacity).blendMode(.multiply).allowsHitTesting(false)
+    }
 }
 
 struct ShelfView: View {
@@ -19,7 +45,7 @@ struct ShelfView: View {
     @FocusState private var searchFocused: Bool
     @State private var scrollFraction: CGFloat = 0
     @State private var scrollVisible: CGFloat = 1
-    @State private var scrollRange: CGFloat = 0      // content width minus container width
+    @State private var scrollRange: CGFloat = 0
     @State private var scrollPos = ScrollPosition(edge: .leading)
 
     var body: some View {
@@ -34,77 +60,48 @@ struct ShelfView: View {
                     if items.isEmpty { empty } else { cards(items) }
                     footer
                 }
-                .padding(.horizontal, 24)
+                .padding(.horizontal, 20)
             }
         }
-        .background(ZStack { Color.shelfBG; GridPattern() })
-        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 22, topTrailingRadius: 22))
-        .overlay(alignment: .top) {
-            UnevenRoundedRectangle(topLeadingRadius: 22, topTrailingRadius: 22).stroke(Color.white.opacity(0.08), lineWidth: 1)
-        }
+        .background(ZStack { Color.brown; Grain(opacity: 0.10) })
+        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 14, topTrailingRadius: 14))
         .onChange(of: model.focusSearch) { _, _ in searchFocused = true }
     }
 
-    // MARK: Sidebar — brand row, nav (剪贴板 / 设置), mascot + pin note
+    // MARK: Sidebar
 
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 12) {
-                if let logo = Theme.logo { Image(nsImage: logo).resizable().scaledToFit().frame(width: 56, height: 56) }
-                Text("Pastory").font(Font(Theme.brandFont(size: 24))).foregroundStyle(Color.shelfInk)
-            }
-            .padding(.horizontal, 22)
-            .padding(.top, 22)
-            .padding(.bottom, 26)
+            Text("Pastory").font(.script(34)).foregroundStyle(Color.onBrown)
+                .padding(.leading, 22).padding(.top, 14).padding(.bottom, 26)
             navRow(icon: "clipboard", "剪贴板", active: !model.showSettings) { model.showSettings = false }
             navRow(icon: "gearshape", "设置", active: model.showSettings) { model.showSettings = true }
             Spacer()
-            // 今日暂存: a slightly crooked paper note; the mascot sits on the top-left corner like a piece of tape.
-            ZStack(alignment: .topLeading) {
-                VStack(spacing: 5) {
-                    Text("今日暂存").font(.system(size: 15, weight: .bold)).foregroundStyle(Color(nsColor: Theme.purpleLight))
-                        .padding(.top, 22)
-                    Text("Pin 一下长期保存").font(.system(size: 12.5)).foregroundStyle(Color.shelfMuted)
-                    Text("未 Pin 内容定时清空").font(.system(size: 12.5)).foregroundStyle(Color.shelfMuted)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.bottom, 16)
-                .background(NoteShape().fill(Color.shelfCard))
-                .rotationEffect(.degrees(-1.5))
-                if let m = Theme.mascot {
-                    Image(nsImage: m).resizable().scaledToFit().frame(width: 48, height: 48)
-                        .rotationEffect(.degrees(-12))
-                        .offset(x: -10, y: -22)
-                }
-            }
-            .padding(.horizontal, 18)
-            .padding(.bottom, 20)
+            Rectangle().fill(Color.onBrown.opacity(0.25)).frame(height: 1).padding(.horizontal, 22)
+            Text("今日暂存").font(.serif(15)).foregroundStyle(Color.onBrown).padding(.leading, 22).padding(.top, 14)
+            Text("Pin 后长期保存").font(.serif(12)).foregroundStyle(Color.onBrownMuted).padding(.leading, 22).padding(.top, 4).padding(.bottom, 18)
         }
-        .frame(width: 214, alignment: .leading)
-        .background(ZStack { Color.shelfSide; GridPattern() })
-        .overlay(alignment: .trailing) { Rectangle().fill(Color.white.opacity(0.06)).frame(width: 1) }
+        .frame(width: 162, alignment: .leading)
+        .background(Color.brownDeep.opacity(0.6))
     }
 
-    /// Active: purple bar on the left edge + tinted pill that is flush left and rounded on the right.
+    /// Active row: a light-blue paper tab running off the left edge.
     private func navRow(icon: String, _ title: String, active: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                Image(systemName: icon).font(.system(size: 17, weight: .medium))
-                Text(title).font(.system(size: 16, weight: active ? .semibold : .medium))
+                Image(systemName: icon).font(.system(size: 17, weight: .regular))
+                Text(title).font(.serif(17))
                 Spacer(minLength: 0)
             }
-            .foregroundStyle(Color.shelfInk)
+            .foregroundStyle(active ? Color.ink : Color.onBrown)
             .padding(.leading, 22)
-            .frame(height: 54)
+            .frame(height: 56)
             .frame(maxWidth: .infinity)
             .background(alignment: .leading) {
                 if active {
-                    HStack(spacing: 0) {
-                        Rectangle().fill(Color.purple).frame(width: 3)
-                        UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: 0, bottomTrailingRadius: 27, topTrailingRadius: 27)
-                            .fill(Color.purple.opacity(0.22))
-                    }
-                    .padding(.trailing, 16)
+                    ZStack { Color.paperBlue; Grain(opacity: 0.08) }
+                        .padding(.trailing, 8)
+                        .shadow(color: .black.opacity(0.35), radius: 6, x: 2, y: 3)
                 }
             }
             .contentShape(Rectangle())
@@ -112,70 +109,58 @@ struct ShelfView: View {
         .buttonStyle(.plain)
     }
 
-    private var retentionShort: String {
-        let d = Preferences.shared.retentionDays
-        return d <= 1 ? "未 Pin 次日 %02d:00 清理".replacingOccurrences(of: "%02d", with: String(format: "%02d", Preferences.shared.cleanupHour)) : "未 Pin \(d) 天后清理"
-    }
-
-    private func rule(icon: String, tint: Color, _ text: String) -> some View {
-        HStack(spacing: 9) {
-            Image(systemName: icon).font(.system(size: 11, weight: .semibold)).foregroundStyle(.white)
-                .frame(width: 22, height: 22)
-                .background(tint.opacity(0.28), in: RoundedRectangle(cornerRadius: 6))
-            Text(text).font(.system(size: 13)).foregroundStyle(Color.shelfInk).lineLimit(1).minimumScaleFactor(0.85)
-        }
-    }
-
-    // MARK: Header — filter pills, search, close on one row
+    // MARK: Header — paper tabs, search, close
 
     private var header: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 0) {
             ForEach(ShelfFilter.allCases) { f in
                 let on = model.filter == f
                 Button { model.filter = f } label: {
-                    HStack(spacing: 6) {
-                        Text(f.rawValue).font(.system(size: 14.5, weight: on ? .semibold : .medium))
-                        Text("\(model.count(for: f))")
-                            .font(.system(size: 12, weight: .semibold).monospacedDigit())
-                            .foregroundStyle(on ? Color.onPurple.opacity(0.7) : Color.shelfMuted)
-                            .padding(.horizontal, 6).padding(.vertical, 1)
-                            .background((on ? Color.black.opacity(0.12) : Color.white.opacity(0.07)), in: Capsule())
+                    HStack(spacing: 14) {
+                        Text(f.rawValue).font(.serif(16))
+                        Text("\(model.count(for: f))").font(.serif(15))
                     }
-                    .foregroundStyle(on ? Color.onPurple : Color.shelfInk)
-                    .padding(.leading, 18).padding(.trailing, 12).padding(.vertical, 8)
-                    .background(on ? Color.purple : Color.shelfCard, in: Capsule())
-                    .overlay(Capsule().stroke(on ? Color.clear : Color.shelfBorder, lineWidth: 1))
+                    .foregroundStyle(on ? Color.ink : Color.onBrown)
+                    .padding(.horizontal, 18).frame(height: 40)
+                    .background {
+                        if on {
+                            ZStack { Color.paperBlue; Grain(opacity: 0.08) }
+                                .shadow(color: .black.opacity(0.35), radius: 5, x: 1, y: 3)
+                        }
+                    }
+                    .overlay {
+                        if !on { Rectangle().stroke(Color.onBrown.opacity(0.35), lineWidth: 1) }
+                    }
                 }
                 .buttonStyle(.plain)
+                .padding(.trailing, 10)
             }
             Spacer()
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass").font(.system(size: 14)).foregroundStyle(Color.shelfMuted)
+            HStack(spacing: 10) {
+                Image(systemName: "magnifyingglass").font(.system(size: 14)).foregroundStyle(Color.onBrownMuted)
                 ZStack(alignment: .leading) {
                     if model.query.isEmpty && !searchFocused {
-                        Text("搜索剪贴板").font(.system(size: 14)).foregroundColor(Color.shelfMuted).allowsHitTesting(false)
+                        Text("搜索剪贴板").font(.serif(15)).foregroundColor(Color.onBrownMuted).allowsHitTesting(false)
                     }
                     TextField("", text: $model.query)
-                        .textFieldStyle(.plain).font(.system(size: 14))
-                        .foregroundColor(Color.shelfInk).tint(Color.purple)
+                        .textFieldStyle(.plain).font(.serif(15))
+                        .foregroundColor(Color.onBrown).tint(Color.paperBlue)
                         .focused($searchFocused)
                 }
                 if !model.query.isEmpty {
-                    Button { model.query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Color.shelfMuted) }
+                    Button { model.query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Color.onBrownMuted) }
                         .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 14).padding(.vertical, 8)
-            .background(Color.shelfCard, in: Capsule())
-            .overlay(Capsule().stroke(Color.shelfBorder, lineWidth: 1))
-            .frame(width: 300)
+            .padding(.horizontal, 14).frame(width: 400, height: 40)
+            .overlay(Rectangle().stroke(Color.onBrown.opacity(0.35), lineWidth: 1))
             Button { ShelfPanelController.shared.hide() } label: {
-                Image(systemName: "xmark").font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.shelfInk).frame(width: 36, height: 36)
+                Image(systemName: "xmark").font(.system(size: 15, weight: .regular)).foregroundStyle(Color.onBrown).frame(width: 40, height: 40)
             }
             .buttonStyle(.plain).help("关闭 ⎋")
         }
-        .padding(.top, 18)
-        .padding(.bottom, 14)
+        .padding(.top, 14)
+        .padding(.bottom, 16)
     }
 
     // MARK: Cards
@@ -183,7 +168,7 @@ struct ShelfView: View {
     private func cards(_ items: [ClipItem]) -> some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(alignment: .top, spacing: 14) {
+                LazyHStack(alignment: .top, spacing: 16) {
                     ForEach(items) { item in
                         ClipCardView(item: item, selected: item.id == model.selectedID, onClipboard: item.id == ClipStore.shared.items.first?.id,
                                      renaming: Binding(get: { model.renamingID == item.id },
@@ -196,7 +181,7 @@ struct ShelfView: View {
                             .contextMenu { menu(for: item) }
                     }
                 }
-                .padding(.vertical, 4)
+                .padding(.vertical, 6)
                 .padding(.horizontal, 4)
             }
             .scrollPosition($scrollPos)
@@ -214,45 +199,44 @@ struct ShelfView: View {
         VStack(spacing: 10) {
             Spacer()
             Image(systemName: model.query.isEmpty ? "clipboard" : "magnifyingglass")
-                .font(.system(size: 34, weight: .light)).foregroundStyle(Color.shelfMuted.opacity(0.6))
+                .font(.system(size: 34, weight: .light)).foregroundStyle(Color.onBrownMuted.opacity(0.7))
             Text(model.query.isEmpty
                  ? "还没有内容。复制点什么，或者按 \(Preferences.shared.shortcut(Preferences.Key.hotkeyCapture).display) 截个图。"
                  : "没有匹配的内容")
-                .font(.system(size: 14)).foregroundStyle(Color.shelfMuted)
+                .font(.serif(15)).foregroundStyle(Color.onBrownMuted)
             Spacer()
         }
         .frame(maxWidth: .infinity)
     }
 
-    // MARK: Footer
+    // MARK: Footer — thin paper-coloured scrollbar
 
     private var footer: some View {
         HStack(spacing: 14) {
-            Button { model.move(-3) } label: { Image(systemName: "chevron.left").font(.system(size: 13, weight: .semibold)) }
-                .buttonStyle(.plain).foregroundStyle(Color.shelfMuted)
+            Button { model.move(-3) } label: { Image(systemName: "chevron.left").font(.system(size: 13, weight: .regular)) }
+                .buttonStyle(.plain).foregroundStyle(Color.onBrownMuted)
             GeometryReader { geo in
                 let thumb = max(40, geo.size.width * scrollVisible)
                 let travel = geo.size.width - thumb
                 ZStack(alignment: .leading) {
-                    Capsule().fill(Color.white.opacity(0.07))
-                    Capsule().fill(Color.white.opacity(0.28))
+                    Capsule().fill(Color.onBrown.opacity(0.12))
+                    Capsule().fill(Color.onBrown.opacity(0.55))
                         .frame(width: thumb)
                         .offset(x: travel * scrollFraction)
                 }
-                .frame(height: 14)               // fatter hit area than the 6 pt line
+                .frame(height: 14)
                 .contentShape(Rectangle())
                 .gesture(DragGesture(minimumDistance: 0).onChanged { v in
-                    // Drag anywhere on the track: put the thumb's centre under the pointer.
                     let f = travel > 0 ? min(1, max(0, (v.location.x - thumb / 2) / travel)) : 0
                     scrollPos.scrollTo(x: f * scrollRange)
                 })
             }
             .frame(height: 14)
-            Button { model.move(3) } label: { Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)) }
-                .buttonStyle(.plain).foregroundStyle(Color.shelfMuted)
+            Button { model.move(3) } label: { Image(systemName: "chevron.right").font(.system(size: 13, weight: .regular)) }
+                .buttonStyle(.plain).foregroundStyle(Color.onBrownMuted)
         }
-        .padding(.top, 14)
-        .padding(.bottom, 18)
+        .padding(.top, 12)
+        .padding(.bottom, 16)
     }
 
     @ViewBuilder
@@ -282,40 +266,5 @@ struct ShelfView: View {
         }
         Divider()
         Button("删除", role: .destructive) { ClipStore.shared.remove(item.id) }
-    }
-}
-
-/// Faint square grid over the dark ground, like graph paper.
-struct GridPattern: View {
-    var step: CGFloat = 28
-    var body: some View {
-        Canvas { ctx, size in
-            var path = Path()
-            var x: CGFloat = 0
-            while x <= size.width { path.move(to: CGPoint(x: x, y: 0)); path.addLine(to: CGPoint(x: x, y: size.height)); x += step }
-            var y: CGFloat = 0
-            while y <= size.height { path.move(to: CGPoint(x: 0, y: y)); path.addLine(to: CGPoint(x: size.width, y: y)); y += step }
-            ctx.stroke(path, with: .color(Color(nsColor: Theme.shelfGrid)), lineWidth: 1)
-        }
-        .allowsHitTesting(false)
-    }
-}
-
-/// Hand-cut paper: four corners nudged a few points so no edge is quite straight, soft corners.
-struct NoteShape: Shape {
-    func path(in r: CGRect) -> Path {
-        let tl = CGPoint(x: r.minX + 2, y: r.minY + 4)
-        let tr = CGPoint(x: r.maxX - 1, y: r.minY)
-        let br = CGPoint(x: r.maxX - 3, y: r.maxY - 2)
-        let bl = CGPoint(x: r.minX, y: r.maxY - 5)
-        let k: CGFloat = 10
-        var p = Path()
-        p.move(to: CGPoint(x: tl.x + k, y: tl.y))
-        p.addLine(to: CGPoint(x: tr.x - k, y: tr.y)); p.addQuadCurve(to: CGPoint(x: tr.x, y: tr.y + k), control: tr)
-        p.addLine(to: CGPoint(x: br.x, y: br.y - k)); p.addQuadCurve(to: CGPoint(x: br.x - k, y: br.y), control: br)
-        p.addLine(to: CGPoint(x: bl.x + k, y: bl.y)); p.addQuadCurve(to: CGPoint(x: bl.x, y: bl.y - k), control: bl)
-        p.addLine(to: CGPoint(x: tl.x, y: tl.y + k)); p.addQuadCurve(to: CGPoint(x: tl.x + k, y: tl.y), control: tl)
-        p.closeSubpath()
-        return p
     }
 }
