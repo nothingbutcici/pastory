@@ -108,9 +108,13 @@ enum Importer {
     // MARK: Paste (wiheads) — Core Data: ZITEMENTITY → ZITEMDATAENTITY.ZRAWPASTEBOARDITEMS (inline or external file)
 
     private static func paste(_ db: OpaquePointer, externalDir: URL) throws -> [ClipStore.ImportEntry] {
-        // Pinboards: every list that is not the biggest one (the history) counts as pinned.
-        let listCounts = (try? query(db, "SELECT ZLIST AS l, COUNT(*) AS n FROM ZITEMENTITY GROUP BY ZLIST")) ?? []
-        let historyList = listCounts.max { ($0["n"] as? Int64 ?? 0) < ($1["n"] as? Int64 ?? 0) }?["l"] as? Int64
+        // Lists: ZRAWTYPE 1 = Clipboard History, 2 = a pinboard (seen on a real Setapp install). Items on a pinboard are pinned.
+        // Without that column, fall back to "the biggest list is the history".
+        var historyLists = Set(((try? query(db, "SELECT Z_PK AS pk FROM ZLISTENTITY WHERE ZRAWTYPE = 1")) ?? []).compactMap { $0["pk"] as? Int64 })
+        if historyLists.isEmpty {
+            let listCounts = (try? query(db, "SELECT ZLIST AS l, COUNT(*) AS n FROM ZITEMENTITY GROUP BY ZLIST")) ?? []
+            if let big = listCounts.max(by: { ($0["n"] as? Int64 ?? 0) < ($1["n"] as? Int64 ?? 0) })?["l"] as? Int64 { historyLists.insert(big) }
+        }
         let external = ExternalStore(dir: externalDir)
         let rows = try query(db, """
             SELECT i.Z_PK AS pk, i.ZCREATEDAT AS created, i.ZTIMESTAMP AS ts, i.ZLIST AS list, i.ZTITLE AS title,
@@ -124,9 +128,10 @@ enum Importer {
             guard let pk = row["pk"] as? Int64, seenPK.insert(pk).inserted else { continue }
             guard var blob = row["blob"] as? Data else { continue }
             if let resolved = external.resolve(blob) { blob = resolved }
+            blob = PasteboardArchive.unwrap(blob)
             guard let payload = PasteboardArchive.payload(in: blob) else { continue }
             let date = (row["ts"] ?? row["created"]).flatMap(asDate) ?? Date()
-            let pinned = (row["list"] as? Int64) != historyList
+            let pinned = !((row["list"] as? Int64).map { historyLists.contains($0) } ?? true)
             let title = (row["title"] as? String).flatMap { t in t.isEmpty || looksLikeIdentifier(t) ? nil : t }
             out.append(.init(payload: payload, createdAt: date, pinned: pinned, title: nil))
             _ = title      // Paste's title is usually an auto preview, not a name; kept out on purpose
@@ -347,6 +352,20 @@ enum Importer {
 /// Serialized pasteboard items (Paste stores an archive of [UTI: bytes]). Walk whatever the archive turns out to be
 /// — keyed archive, plain plist, or raw bytes — and pull out one picture or one piece of text.
 enum PasteboardArchive {
+    /// Paste wraps the archive: first byte 0x01, then the plist compressed (LZFSE-framed "bvx…" for some rows,
+    /// raw deflate for others); 0x02 rows are external-file references and are resolved before we get here.
+    static func unwrap(_ blob: Data) -> Data {
+        guard blob.count > 2 else { return blob }
+        let body = blob.first == 0x01 ? blob.dropFirst() : blob[...]
+        if body.starts(with: Array("bplist".utf8)) { return Data(body) }
+        let nsd = Data(body) as NSData
+        let order: [NSData.CompressionAlgorithm] = body.starts(with: Array("bvx".utf8)) ? [.lzfse] : [.zlib, .lzfse, .lz4, .lzma]
+        for algo in order {
+            if let out = try? nsd.decompressed(using: algo) as Data, out.starts(with: Array("bplist".utf8)) || out.first == UInt8(ascii: "<") { return out }
+        }
+        return blob
+    }
+
     static func payload(in blob: Data) -> ClipStore.ImportEntry.Payload? {
         var found: [(uti: String, data: Data)] = []
         if let obj = decode(blob) { collect(obj, into: &found, key: "") }
@@ -388,6 +407,17 @@ enum PasteboardArchive {
             // {"public.utf8-plain-text": <data>, "public.png": <data>} or {"type": "public.png", "data": <data>}
             if let t = (dict["type"] ?? dict["uti"] ?? dict["typeIdentifier"]) as? String, let v = dict["data"] ?? dict["value"] ?? dict["bytes"] {
                 collect(v, into: &out, key: t.lowercased())
+            } else if let types = dict["types"] as? [String],
+                      let dataKey = dict.keys.first(where: { $0.lowercased().hasPrefix("data") }) {
+                // Real Paste rows: "types" next to a 10-letter "data…" key (exact name unknown); values parallel the types,
+                // or keyed by type.
+                if let datas = dict[dataKey] as? [Any], datas.count == types.count {
+                    for (t, v) in zip(types, datas) { collect(v, into: &out, key: t.lowercased()) }
+                } else if let byType = dict[dataKey] as? [String: Any] {
+                    for t in types { if let v = byType[t] { collect(v, into: &out, key: t.lowercased()) } }
+                } else if let v = dict[dataKey] {
+                    collect(v, into: &out, key: types.first?.lowercased() ?? "")
+                }
             } else {
                 for (k, v) in dict where !k.hasPrefix("$") { collect(v, into: &out, key: k.contains(".") ? k.lowercased() : key) }
                 if let objects = dict["$objects"] as? [Any] { for o in objects { collect(o, into: &out, key: "") } }
