@@ -70,6 +70,7 @@ struct ShelfView: View {
         })
         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 14, topTrailingRadius: 14))
         .onChange(of: model.focusSearch) { _, _ in searchFocused = true }
+        .onChange(of: model.openTick) { _, _ in searchFocused = false }
     }
 
     // MARK: Sidebar
@@ -125,24 +126,22 @@ struct ShelfView: View {
             ForEach(Array(ShelfFilter.allCases.enumerated()), id: \.element.id) { i, f in
                 let on = model.filter == f
                 Button { model.filter = f } label: {
-                    HStack(spacing: 22) {
-                        Text(f.rawValue).font(.serif(18))
-                        Text("\(model.count(for: f))").font(.serif(17))
+                    HStack(spacing: 18) {
+                        Text(f.rawValue).font(.serif(17))
+                        Text("\(model.count(for: f))").font(.serif(16))
                     }
                     .foregroundStyle(on ? Color.ink : Color.onBrown)
-                    .padding(.horizontal, 22).frame(height: 52)
+                    .padding(.horizontal, 20).frame(height: 40)
                     .background {
-                        if on { PaperPatch(color: .paperBlue, top: true, right: true, bottom: true, left: true, seed: 23 + UInt64(i), amplitude: 2).padding(.vertical, 2) }
+                        if on { PaperPatch(color: .paperBlue, top: true, right: true, bottom: true, left: true, seed: 23 + UInt64(i), amplitude: 2).padding(.vertical, 1) }
                     }
-                    .overlay(alignment: .bottom) {
-                        if !on { Rectangle().fill(Color.onBrown.opacity(0.4)).frame(height: 1).padding(.horizontal, 6) }
+                    .overlay {
+                        // Hand-ruled: left, bottom, right — no top edge.
+                        if !on { RuledBox(seed: 40 + UInt64(i)).stroke(Color.onBrown.opacity(0.5), lineWidth: 1) }
                     }
                 }
                 .buttonStyle(.plain)
-                .padding(.trailing, 14)
-                .overlay(alignment: .trailing) {
-                    if i < ShelfFilter.allCases.count - 1 { Rectangle().fill(Color.onBrown.opacity(0.4)).frame(width: 1, height: 52).padding(.trailing, 7) }
-                }
+                .padding(.trailing, 12)
             }
             Spacer()
             HStack(spacing: 10) {
@@ -229,8 +228,8 @@ struct ShelfView: View {
                 let thumb = max(40, geo.size.width * scrollVisible)
                 let travel = geo.size.width - thumb
                 ZStack(alignment: .leading) {
-                    Capsule().fill(Color.onBrown.opacity(0.12))
-                    Capsule().fill(Color.onBrown.opacity(0.55))
+                    Capsule().fill(Color.onBrown.opacity(0.10)).frame(height: 3)
+                    Capsule().fill(Color.onBrown.opacity(0.5)).frame(height: 3)
                         .frame(width: thumb)
                         .offset(x: travel * scrollFraction)
                 }
@@ -327,5 +326,27 @@ struct PaperPatch: View {
         ZStack { color; Grain(opacity: 0.12) }
             .clipShape(shape)
             .shadow(color: .black.opacity(0.4), radius: 5, x: 1, y: 3)
+    }
+}
+
+/// Three sides of a box drawn by hand: down the left, along the bottom, up the right. No top.
+struct RuledBox: Shape {
+    var seed: UInt64 = 1
+    var amplitude: CGFloat = 0.9
+    func path(in r: CGRect) -> Path {
+        var g = Seeded(seed)
+        func j() -> CGFloat { CGFloat(Double(g.next() % 1000) / 1000.0 - 0.5) * 2 * amplitude }
+        var p = Path()
+        p.move(to: CGPoint(x: r.minX, y: r.minY))
+        var y = r.minY + 6
+        while y < r.maxY { p.addLine(to: CGPoint(x: r.minX + j(), y: y)); y += 6 }
+        p.addLine(to: CGPoint(x: r.minX, y: r.maxY))
+        var x = r.minX + 6
+        while x < r.maxX { p.addLine(to: CGPoint(x: x, y: r.maxY + j())); x += 6 }
+        p.addLine(to: CGPoint(x: r.maxX, y: r.maxY))
+        y = r.maxY - 6
+        while y > r.minY { p.addLine(to: CGPoint(x: r.maxX + j(), y: y)); y -= 6 }
+        p.addLine(to: CGPoint(x: r.maxX, y: r.minY))
+        return p
     }
 }

@@ -203,7 +203,7 @@ struct ClipCardView: View {
                 action("eye", "预览", onPreview)
             }
             divider
-            action(item.pinned ? "pin.fill" : "pin", "Pin 住，不会被自动清理", active: item.pinned) { ClipStore.shared.togglePin(item.id) }
+            pinAction
             if item.kind == .image || item.kind == .video {
                 divider
                 action("arrow.down.to.line", "保存到本地…") { Exporter.export(item) }
@@ -216,6 +216,28 @@ struct ClipCardView: View {
     }
 
     private var divider: some View { Rectangle().fill(Color.ink.opacity(0.35)).frame(width: 1, height: 22) }
+
+    /// Pinned: the pin turns blue. On the blue (copied) card it sits on a small cream paper so the blue still reads.
+    private var pinAction: some View {
+        Button { ClipStore.shared.togglePin(item.id) } label: {
+            Image(systemName: item.pinned ? "pin.fill" : "pin")
+                .font(.system(size: 17, weight: .regular))
+                .foregroundStyle(item.pinned ? Color.paperBlueDeep : Color.ink)
+                .frame(width: 34, height: 30)
+                .background {
+                    if item.pinned && onClipboard {
+                        ZStack { Color.paper; Grain(opacity: 0.1) }
+                            .clipShape(TornPaper(top: true, right: true, bottom: true, left: true, seed: 77, amplitude: 1.5, step: 5))
+                            .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 36)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(item.pinned ? "取消 Pin" : "Pin 住，不会被自动清理")
+    }
 
     private func action(_ symbol: String, _ tip: String, active: Bool = false, _ act: @escaping () -> Void) -> some View {
         Button(action: act) {
@@ -235,22 +257,21 @@ struct ClipCardView: View {
 
     private var stableSeed: UInt64 { UInt64(truncatingIfNeeded: stableHash(Data(item.id.utf8))) }
 
+    /// Sheets behind never reach past the card's left or right edge; they show as ragged slivers above and below.
     private var backSheets: some View {
         let seed = stableSeed
-        let right = seed % 2 == 0
-        let tilt = (2.5 + Double(seed % 3) * 0.8) * (right ? 1 : -1)
-        let first: Color = onClipboard ? .paper : ((seed / 2) % 2 == 0 ? .paperBlue : Color.white.opacity(0.9))
-        let second: Color = first == .paperBlue ? .paper : .paperBlue
+        let first: Color = onClipboard ? .paper : ((index / 2) % 2 == 0 ? .paperBlue : Color.white.opacity(0.92))
+        let second: Color = first == .paperBlue ? Color.white.opacity(0.9) : .paperBlue
         return ZStack {
-            if seed % 3 == 0 {
+            if seed % 3 != 1 {
                 ZStack { second; Grain(opacity: 0.1) }
-                    .rotationEffect(.degrees(-tilt * 0.6), anchor: .top)
-                    .offset(y: 4)
+                    .clipShape(TornPaper(bottom: true, seed: seed &+ 5, amplitude: 4, step: 9))
+                    .padding(.horizontal, 6).padding(.bottom, -7)
                     .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
             }
             ZStack { first; Grain(opacity: 0.1) }
-                .rotationEffect(.degrees(tilt), anchor: .bottom)
-                .offset(x: right ? 3 : -3, y: -3)
+                .clipShape(TornPaper(top: true, seed: seed, amplitude: 4, step: 9))
+                .padding(.horizontal, 3).padding(.top, -9)
                 .shadow(color: .black.opacity(0.3), radius: 5, y: 3)
         }
     }
@@ -260,9 +281,9 @@ struct ClipCardView: View {
     private var decoration: some View {
         if index % 2 == 0 {
             PaperClip(silver: (index / 2) % 2 == 0)
-                .frame(width: 16, height: 50)
-                .rotationEffect(.degrees(14))
-                .offset(x: 6, y: 62)
+                .frame(width: 20, height: 62)
+                .rotationEffect(.degrees(12))
+                .offset(x: -92, y: -16)
         }
     }
 
@@ -328,7 +349,8 @@ struct Line: Shape {
     func path(in r: CGRect) -> Path { var p = Path(); p.move(to: CGPoint(x: r.minX, y: r.midY)); p.addLine(to: CGPoint(x: r.maxX, y: r.midY)); return p }
 }
 
-/// A proper paper clip: a long outer loop and a shorter inner loop, round ends, with a light along the wire.
+/// Paper clip with some metal to it: dark core, mid tone, and a thin light running along the wire,
+/// plus a soft cast shadow. Long outer loop, shorter inner loop, round ends.
 struct PaperClip: View {
     var silver = true
     var body: some View {
@@ -336,30 +358,33 @@ struct PaperClip: View {
             let w = size.width, h = size.height
             let r = w * 0.5
             let outer = Path { p in
-                p.move(to: CGPoint(x: w, y: h - r - 2))
+                p.move(to: CGPoint(x: w, y: h * 0.62))
                 p.addLine(to: CGPoint(x: w, y: r))
-                p.addArc(center: CGPoint(x: w * 0.5, y: r), radius: r, startAngle: .degrees(0), endAngle: .degrees(180), clockwise: true)
+                p.addArc(center: CGPoint(x: r, y: r), radius: r, startAngle: .degrees(0), endAngle: .degrees(180), clockwise: true)
                 p.addLine(to: CGPoint(x: 0, y: h - r))
-                p.addArc(center: CGPoint(x: w * 0.5, y: h - r), radius: r, startAngle: .degrees(180), endAngle: .degrees(0), clockwise: true)
-                p.addLine(to: CGPoint(x: w, y: h * 0.42))
+                p.addArc(center: CGPoint(x: r, y: h - r), radius: r, startAngle: .degrees(180), endAngle: .degrees(0), clockwise: true)
+                p.addLine(to: CGPoint(x: w, y: h * 0.30))
             }
+            let ri = r * 0.5
             let inner = Path { p in
-                let ri = r * 0.55
-                p.move(to: CGPoint(x: w - ri * 0.9, y: h * 0.42))
-                p.addLine(to: CGPoint(x: w - ri * 0.9, y: h * 0.32))
-                p.addArc(center: CGPoint(x: w * 0.5, y: h * 0.32), radius: w * 0.5 - ri * 0.9, startAngle: .degrees(0), endAngle: .degrees(180), clockwise: true)
-                p.addLine(to: CGPoint(x: ri * 0.9, y: h - r - 6))
+                p.move(to: CGPoint(x: w - (r - ri), y: h * 0.30))
+                p.addLine(to: CGPoint(x: w - (r - ri), y: h * 0.22 + ri))
+                p.addArc(center: CGPoint(x: r, y: h * 0.22 + ri), radius: ri, startAngle: .degrees(0), endAngle: .degrees(180), clockwise: true)
+                p.addLine(to: CGPoint(x: r - ri, y: h * 0.78))
             }
-            let base: Color = silver ? Color(red: 0.66, green: 0.67, blue: 0.70) : Color(red: 0.45, green: 0.60, blue: 0.72)
-            let dark: Color = silver ? Color(red: 0.42, green: 0.43, blue: 0.46) : Color(red: 0.30, green: 0.42, blue: 0.53)
-            var shadow = ctx; shadow.translateBy(x: 1.2, y: 2)
+            let core: Color = silver ? Color(red: 0.36, green: 0.37, blue: 0.40) : Color(red: 0.22, green: 0.36, blue: 0.48)
+            let mid: Color = silver ? Color(red: 0.70, green: 0.71, blue: 0.74) : Color(red: 0.47, green: 0.63, blue: 0.76)
+            let light: Color = silver ? Color(red: 0.96, green: 0.96, blue: 0.97) : Color(red: 0.80, green: 0.89, blue: 0.95)
+            var shadow = ctx
+            shadow.translateBy(x: 1.5, y: 2.5)
             for path in [outer, inner] {
-                shadow.stroke(path, with: .color(.black.opacity(0.28)), style: StrokeStyle(lineWidth: 2.4, lineCap: .round))
+                shadow.stroke(path, with: .color(.black.opacity(0.32)), style: StrokeStyle(lineWidth: 3, lineCap: .round))
             }
             for path in [outer, inner] {
-                ctx.stroke(path, with: .color(dark), style: StrokeStyle(lineWidth: 2.6, lineCap: .round))
-                ctx.stroke(path, with: .color(base), style: StrokeStyle(lineWidth: 1.8, lineCap: .round))
-                ctx.stroke(path, with: .color(.white.opacity(0.7)), style: StrokeStyle(lineWidth: 0.6, lineCap: .round))
+                ctx.stroke(path, with: .color(core), style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                ctx.stroke(path, with: .color(mid), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                var hl = ctx; hl.translateBy(x: -0.5, y: -0.5)
+                hl.stroke(path, with: .color(light.opacity(0.9)), style: StrokeStyle(lineWidth: 0.7, lineCap: .round))
             }
         }
         .allowsHitTesting(false)

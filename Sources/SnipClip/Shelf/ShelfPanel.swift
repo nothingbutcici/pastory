@@ -54,6 +54,7 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
         p.alphaValue = 1
         p.orderFrontRegardless()
         p.makeKey()
+        p.makeFirstResponder(nil)          // keyboard goes to the shelf itself, not into the search box
         NSAnimationContext.runAnimationGroup { ctx in
             ctx.duration = 0.22
             ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
@@ -196,6 +197,8 @@ final class ShelfModel {
         }
     }
     var focusSearch = 0
+    /// Bumped on every show(); the view uses it to drop keyboard focus so the caret does not sit in the search box.
+    var openTick = 0
     /// Card order is frozen while the shelf is open, so copying (which bumps the item in the store)
     /// does not make cards jump around. Rebuilt on every show.
     private var orderSnapshot: [String: Int] = [:]
@@ -233,6 +236,7 @@ final class ShelfModel {
         query = ""
         showSettings = false
         renamingID = nil
+        openTick += 1
         filter = .all
         orderSnapshot = Dictionary(uniqueKeysWithValues: ClipStore.shared.items.enumerated().map { ($1.id, $0) })
         selectedID = ClipStore.shared.items.first?.id
