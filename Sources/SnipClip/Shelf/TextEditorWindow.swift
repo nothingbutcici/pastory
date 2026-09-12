@@ -1,6 +1,6 @@
 import AppKit
 
-/// Plain, dark, ours: read the whole text, change it, 保存 writes it back to the same card and copies it.
+/// A sheet of paper on the desk: read the whole text, change it, 保存 writes it back to the same card and copies it.
 @MainActor
 final class TextEditorWindow: NSObject, NSWindowDelegate {
     private static var open: [String: TextEditorWindow] = [:]
@@ -34,7 +34,7 @@ final class TextEditorWindow: NSObject, NSWindowDelegate {
         window.title = "编辑文字"
         window.titlebarAppearsTransparent = true
         window.appearance = NSAppearance(named: .darkAqua)
-        window.backgroundColor = Theme.shelfBG
+        window.backgroundColor = Theme.brown
         window.isReleasedWhenClosed = false
         window.minSize = CGSize(width: 420, height: 300)
         window.delegate = self
@@ -44,17 +44,16 @@ final class TextEditorWindow: NSObject, NSWindowDelegate {
         let scroll = NSScrollView()
         scroll.hasVerticalScroller = true
         scroll.drawsBackground = true
-        scroll.backgroundColor = Theme.shelfCard
+        scroll.backgroundColor = Theme.paper
         scroll.borderType = .noBorder
-        scroll.wantsLayer = true
-        scroll.layer?.cornerRadius = 12
+        Theme.paperSheet(scroll, radius: 4)
         textView.string = ClipStore.shared.text(of: item) ?? ""
         textView.isRichText = false
-        textView.font = NSFont.systemFont(ofSize: 15)
-        textView.textColor = Theme.shelfInk
-        textView.insertionPointColor = Theme.purple
-        textView.backgroundColor = Theme.shelfCard
-        textView.textContainerInset = CGSize(width: 14, height: 14)
+        textView.font = Theme.serif(size: 16)
+        textView.textColor = Theme.ink
+        textView.insertionPointColor = Theme.ink
+        textView.backgroundColor = Theme.paper
+        textView.textContainerInset = CGSize(width: 18, height: 16)
         textView.isAutomaticQuoteSubstitutionEnabled = false
         textView.isAutomaticDashSubstitutionEnabled = false
         textView.autoresizingMask = [.width]
@@ -67,39 +66,31 @@ final class TextEditorWindow: NSObject, NSWindowDelegate {
 
         titleField.stringValue = item.title ?? ""
         titleField.placeholderAttributedString = NSAttributedString(string: "标题（可选，例如：翻译 prompt）", attributes: [
-            .foregroundColor: Theme.shelfMuted, .font: NSFont.systemFont(ofSize: 14, weight: .semibold)])
-        titleField.font = NSFont.systemFont(ofSize: 14, weight: .semibold)
-        titleField.textColor = Theme.shelfInk
+            .foregroundColor: Theme.inkMuted, .font: Theme.script(size: 22)])
+        titleField.font = Theme.script(size: 22)
+        titleField.textColor = Theme.ink
         titleField.isBordered = false
-        titleField.drawsBackground = true
-        titleField.backgroundColor = Theme.shelfCard
+        titleField.drawsBackground = false
         titleField.focusRingType = .none
-        titleField.wantsLayer = true
-        titleField.layer?.cornerRadius = 10
         titleField.cell?.usesSingleLineMode = true
         (titleField.cell as? NSTextFieldCell)?.lineBreakMode = .byTruncatingTail
-        count.font = NSFont.systemFont(ofSize: 12)
-        count.textColor = Theme.shelfMuted
-        let cancel = pill("取消", fill: Theme.shelfCard, ink: Theme.shelfInk, action: #selector(cancelTapped))
-        let save = pill("保存并复制", fill: Theme.purple, ink: Theme.onPurple, action: #selector(saveTapped))
+        count.font = Theme.serif(size: 13)
+        count.textColor = Theme.onBrownMuted
+        let cancel = Theme.paperButton("取消", onGround: true, target: self, action: #selector(cancelTapped))
+        let save = Theme.paperButton("保存并复制", primary: true, target: self, action: #selector(saveTapped))
         save.toolTip = "⌘⏎"
         save.keyEquivalent = "\r"
         save.keyEquivalentModifierMask = [.command]
         let buttons = NSStackView(views: [cancel, save])
         buttons.spacing = 8
-        let titleWrap = NSView()
-        titleWrap.wantsLayer = true
-        titleWrap.layer?.backgroundColor = Theme.shelfCard.cgColor
-        titleWrap.layer?.cornerRadius = 10
-        titleWrap.layer?.borderWidth = 1
-        titleWrap.layer?.borderColor = Theme.shelfBorder.cgColor
+        let titleWrap = PaperSheetView()
         titleField.translatesAutoresizingMaskIntoConstraints = false
         titleWrap.addSubview(titleField)
         NSLayoutConstraint.activate([
             titleField.leadingAnchor.constraint(equalTo: titleWrap.leadingAnchor, constant: 12),
             titleField.trailingAnchor.constraint(equalTo: titleWrap.trailingAnchor, constant: -12),
-            titleField.centerYAnchor.constraint(equalTo: titleWrap.centerYAnchor),
-            titleWrap.heightAnchor.constraint(equalToConstant: 38),
+            titleField.centerYAnchor.constraint(equalTo: titleWrap.centerYAnchor, constant: 3),
+            titleWrap.heightAnchor.constraint(equalToConstant: 44),
         ])
         for v in [titleWrap, scroll, count, buttons] { v.translatesAutoresizingMaskIntoConstraints = false; content.addSubview(v) }
         NSLayoutConstraint.activate([
@@ -117,21 +108,6 @@ final class TextEditorWindow: NSObject, NSWindowDelegate {
         ])
         window.contentView = content
         updateCount()
-    }
-
-    private func pill(_ title: String, fill: NSColor, ink: NSColor, action: Selector) -> NSButton {
-        let b = NSButton(title: title, target: self, action: action)
-        b.isBordered = false
-        b.attributedTitle = NSAttributedString(string: title, attributes: [.foregroundColor: ink, .font: NSFont.systemFont(ofSize: 13, weight: .semibold)])
-        b.wantsLayer = true
-        b.layer?.backgroundColor = fill.cgColor
-        b.layer?.cornerRadius = 9
-        b.layer?.borderWidth = fill == Theme.shelfCard ? 1 : 0
-        b.layer?.borderColor = Theme.shelfBorder.cgColor
-        b.translatesAutoresizingMaskIntoConstraints = false
-        b.heightAnchor.constraint(equalToConstant: 34).isActive = true
-        b.widthAnchor.constraint(greaterThanOrEqualToConstant: 84).isActive = true
-        return b
     }
 
     private func updateCount() { count.stringValue = "\(textView.string.count) 字" }
@@ -154,4 +130,11 @@ final class TextEditorWindow: NSObject, NSWindowDelegate {
 
 extension TextEditorWindow: NSTextViewDelegate {
     func textDidChange(_ notification: Notification) { updateCount() }
+}
+
+/// A small sheet of paper (grain + hairline edge + shadow) to lay controls on.
+final class PaperSheetView: NSView {
+    init() { super.init(frame: .zero); Theme.paperSheet(self, radius: 4) }
+    required init?(coder: NSCoder) { fatalError() }
+    override func draw(_ dirtyRect: NSRect) { Theme.drawPaper(NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 4, yRadius: 4)) }
 }

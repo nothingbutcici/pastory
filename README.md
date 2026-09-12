@@ -101,11 +101,12 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
   ⏎ 或双击 = 复制到剪贴板并进货架；⌘Z 撤销一笔。
 - 视觉：货架是纸感（2026-09-12 改）：深棕纹理底，米色纸片卡带票根缺口和虚线，当前剪贴板那张是浅蓝纸；
   正文宋体（Songti SC），标题和「Pastory」手写体（Caveat，CJK 回退翩翩体），设置页同样是纸片分区。
-  截图 / 录屏那套仍是深色浮岛（都带淡格纹，`Theme.drawIsland`）+ 淡紫强调，
+  截图 / 录屏那套（顶栏、标注工具条、子条、尺寸角标、录屏控制条）、录屏预览窗、文本 / 图片编辑窗、
+  识别文字面板也全部是纸感（2026-09-12 晚统一）：米色纸条 `Theme.drawPaper` + 深棕桌面 `Theme.drawGround`，
+  选中态是浅蓝纸，选区框 / 手柄 / 元素选中框用浅蓝和米纸；按钮统一 `Theme.paperButton`。`Theme.drawIsland` 只剩旧代码。
   logo 在 `Resources/Logo.png`（P 字紫版，透明底），面包人在 `Resources/Mascot.png`（黄色，夹子染成品牌紫；
   原图棋盘格是画进去的，用局部纹理 + 边缘泛洪抠的），菜单栏图标 `Resources/MenuIcon(@2x).png` 来自设计稿
   `Project/codex相关/cc tools visual identity/.../pastory-menubar*.png`，作为 template 使用。
-  录屏控制条、录屏预览窗（自绘播放条）、文本 / 图片编辑窗都是同一套。
   品牌字体 Ysabeau Office（OFL，`Resources/Fonts/`，启动时按进程注册）只用在「Pastory」字样。
   截图 / 录屏只排除取景遮罩自己的窗口，货架开着时也能被截进去。
 - 框选完成后屏幕顶部出品牌条：logo · Snip Clip · [截屏 │ 录屏] · ✕，默认截屏；点录屏进录制流程。

@@ -153,31 +153,15 @@ final class RecordingSession {
         dot = d
         let label = NSTextField(labelWithString: "00:00")
         label.font = NSFont.monospacedDigitSystemFont(ofSize: 15, weight: .semibold)
-        label.textColor = Theme.text
+        label.textColor = Theme.ink
         timeLabel = label
-        let stopBtn = pill("■ 停止", fill: Theme.purple, ink: Theme.onPurple, action: #selector(stopTapped))
-        let cancelBtn = pill("丢弃", fill: Theme.shelfCard, ink: Theme.text, action: #selector(cancelTapped))
+        let stopBtn = Theme.paperButton("■ 停止", primary: true, target: self, action: #selector(stopTapped))
+        let cancelBtn = Theme.paperButton("丢弃", target: self, action: #selector(cancelTapped))
         for x in [d, label, NSView(), stopBtn, cancelBtn] { stack.addArrangedSubview(x) }
         p.contentView = v
         place(p, size: CGSize(width: 290, height: 52))
         p.orderFrontRegardless()
         bar = p
-    }
-
-    private func pill(_ title: String, fill: NSColor, ink: NSColor, action: Selector) -> NSButton {
-        let b = NSButton(title: title, target: self, action: action)
-        b.isBordered = false
-        b.attributedTitle = NSAttributedString(string: title, attributes: [
-            .foregroundColor: ink, .font: NSFont.systemFont(ofSize: 13, weight: .semibold)])
-        b.wantsLayer = true
-        b.layer?.cornerRadius = 9
-        b.layer?.backgroundColor = fill.cgColor
-        b.layer?.borderWidth = fill == Theme.shelfCard ? 1 : 0
-        b.layer?.borderColor = Theme.shelfBorder.cgColor
-        b.translatesAutoresizingMaskIntoConstraints = false
-        b.widthAnchor.constraint(greaterThanOrEqualToConstant: 64).isActive = true
-        b.heightAnchor.constraint(equalToConstant: 34).isActive = true
-        return b
     }
 
     private func place(_ p: NSWindow, size: CGSize) {
@@ -233,17 +217,17 @@ final class RecordingSession {
     }
 }
 
-/// Dark rounded island with the grid, used as a bare container.
+/// Paper strip, used as a bare container.
 final class IslandView: NSView {
     init() {
         super.init(frame: .zero)
-        Theme.island(self)
+        Theme.paperSheet(self)
     }
     required init?(coder: NSCoder) { fatalError() }
-    override func draw(_ dirtyRect: NSRect) { Theme.drawIsland(NSBezierPath(roundedRect: bounds, xRadius: Theme.cornerRadius, yRadius: Theme.cornerRadius)) }
+    override func draw(_ dirtyRect: NSRect) { Theme.drawPaper(NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: Theme.paperRadius, yRadius: Theme.paperRadius)) }
 }
 
-/// Purple frame just outside the recorded region.
+/// Blue frame just outside the recorded region.
 private final class FrameView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         let path = NSBezierPath(roundedRect: bounds.insetBy(dx: 1.5, dy: 1.5), xRadius: 4, yRadius: 4)

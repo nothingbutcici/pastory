@@ -40,6 +40,14 @@ final class OCRPanelController: NSObject, NSWindowDelegate {
         if !result.isEmpty { panel?.makeFirstResponder(textView) }
     }
 
+    /// Self-test only: the laid-out panel content with a sample result.
+    func debugView(sample: String) -> NSView? {
+        let p = panel ?? makePanel()
+        panel = p
+        showResult(sample)
+        return p.contentView
+    }
+
     func close() {
         task?.cancel()
         task = nil
@@ -48,24 +56,37 @@ final class OCRPanelController: NSObject, NSWindowDelegate {
     }
 
     private func makePanel() -> NSPanel {
-        let p = NSPanel(contentRect: CGRect(x: 0, y: 0, width: 380, height: 300),
-                        styleMask: [.titled, .closable, .utilityWindow, .nonactivatingPanel, .resizable],
+        let p = NSPanel(contentRect: CGRect(x: 0, y: 0, width: 400, height: 320),
+                        styleMask: [.titled, .closable, .utilityWindow, .nonactivatingPanel, .resizable, .fullSizeContentView],
                         backing: .buffered, defer: false)
         p.title = "识别文字"
+        p.titleVisibility = .hidden
+        p.titlebarAppearsTransparent = true
+        p.appearance = NSAppearance(named: .darkAqua)
+        p.backgroundColor = Theme.brown
         p.level = NSWindow.Level(rawValue: NSWindow.Level.screenSaver.rawValue + 1)
         p.isReleasedWhenClosed = false
         p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         p.delegate = self
         p.minSize = CGSize(width: 280, height: 180)
 
-        let content = NSView()
+        let content = GridBackdropView()
+        let heading = NSTextField(labelWithString: "识别文字")
+        heading.font = Theme.script(size: 24)
+        heading.textColor = Theme.onBrown
         let scroll = NSScrollView()
         scroll.hasVerticalScroller = true
         scroll.borderType = .noBorder
+        scroll.drawsBackground = true
+        scroll.backgroundColor = Theme.paper
+        Theme.paperSheet(scroll, radius: 4)
         let tv = NSTextView()
         tv.isRichText = false
-        tv.font = NSFont.systemFont(ofSize: 13)
-        tv.textContainerInset = CGSize(width: 8, height: 8)
+        tv.font = Theme.serif(size: 15)
+        tv.textColor = Theme.ink
+        tv.insertionPointColor = Theme.ink
+        tv.backgroundColor = Theme.paper
+        tv.textContainerInset = CGSize(width: 14, height: 12)
         tv.isAutomaticQuoteSubstitutionEnabled = false
         tv.autoresizingMask = [.width]
         tv.minSize = .zero
@@ -76,25 +97,25 @@ final class OCRPanelController: NSObject, NSWindowDelegate {
         textView = tv
 
         let st = NSTextField(labelWithString: "")
-        st.font = NSFont.systemFont(ofSize: 11)
-        st.textColor = .secondaryLabelColor
+        st.font = Theme.serif(size: 13)
+        st.textColor = Theme.onBrownMuted
         status = st
-        let copy = NSButton(title: "复制文字", target: self, action: #selector(copyTapped))
+        let copy = Theme.paperButton("复制文字", primary: true, target: self, action: #selector(copyTapped))
         copy.keyEquivalent = "\r"
-        copy.bezelStyle = .rounded
-        let cancel = NSButton(title: "关闭", target: self, action: #selector(closeTapped))
-        cancel.bezelStyle = .rounded
+        let cancel = Theme.paperButton("关闭", onGround: true, target: self, action: #selector(closeTapped))
 
-        for v in [scroll, st, copy, cancel] { v.translatesAutoresizingMaskIntoConstraints = false; content.addSubview(v) }
+        for v in [heading, scroll, st, copy, cancel] { v.translatesAutoresizingMaskIntoConstraints = false; content.addSubview(v) }
         NSLayoutConstraint.activate([
-            scroll.topAnchor.constraint(equalTo: content.topAnchor),
-            scroll.leadingAnchor.constraint(equalTo: content.leadingAnchor),
-            scroll.trailingAnchor.constraint(equalTo: content.trailingAnchor),
-            scroll.bottomAnchor.constraint(equalTo: copy.topAnchor, constant: -10),
-            st.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 12),
+            heading.topAnchor.constraint(equalTo: content.topAnchor, constant: 8),
+            heading.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 34),
+            scroll.topAnchor.constraint(equalTo: heading.bottomAnchor, constant: 8),
+            scroll.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 14),
+            scroll.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -14),
+            scroll.bottomAnchor.constraint(equalTo: copy.topAnchor, constant: -12),
+            st.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 18),
             st.centerYAnchor.constraint(equalTo: copy.centerYAnchor),
-            copy.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -12),
-            copy.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -10),
+            copy.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -14),
+            copy.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -12),
             cancel.trailingAnchor.constraint(equalTo: copy.leadingAnchor, constant: -8),
             cancel.centerYAnchor.constraint(equalTo: copy.centerYAnchor),
         ])

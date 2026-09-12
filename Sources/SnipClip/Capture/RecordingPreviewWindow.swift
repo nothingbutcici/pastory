@@ -3,7 +3,7 @@ import AVFoundation
 import AVKit
 
 /// Plays the fresh recording on loop so you can judge it before it goes anywhere.
-/// Dark island look: our own transport bar (play, time, purple progress, duration),
+/// Paper look: our own transport bar (play, time, blue progress, duration),
 /// then 丢弃 · 复制为 GIF · 复制为 MP4.
 @MainActor
 final class RecordingPreviewWindow: NSObject, NSWindowDelegate {
@@ -38,7 +38,7 @@ final class RecordingPreviewWindow: NSObject, NSWindowDelegate {
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.appearance = NSAppearance(named: .darkAqua)
-        window.backgroundColor = Theme.shelfBG
+        window.backgroundColor = Theme.brown
         window.isReleasedWhenClosed = false
         window.level = .floating
         window.delegate = self
@@ -49,7 +49,7 @@ final class RecordingPreviewWindow: NSObject, NSWindowDelegate {
         pv.controlsStyle = .none
         pv.videoGravity = .resizeAspect
         pv.wantsLayer = true
-        pv.layer?.cornerRadius = 12
+        pv.layer?.cornerRadius = 4
         pv.layer?.masksToBounds = true
         pv.frame = CGRect(x: pad, y: transportH + buttonsH, width: videoSize.width, height: videoSize.height)
         content.addSubview(pv)
@@ -62,12 +62,12 @@ final class RecordingPreviewWindow: NSObject, NSWindowDelegate {
         }
         content.addSubview(transport)
 
-        info.font = NSFont.systemFont(ofSize: 12)
-        info.textColor = Theme.shelfMuted
+        info.font = Theme.serif(size: 13)
+        info.textColor = Theme.onBrownMuted
         info.lineBreakMode = .byTruncatingTail
-        let discard = pill("丢弃", fill: Theme.shelfCard, ink: Theme.text, action: #selector(discardTapped))
-        let gif = pill(duration > 30 ? "复制为 GIF（会很大）" : "复制为 GIF", fill: Theme.shelfCard, ink: Theme.text, action: #selector(gifTapped))
-        let mp4 = pill("复制为 MP4", fill: Theme.purple, ink: Theme.onPurple, action: #selector(mp4Tapped))
+        let discard = Theme.paperButton("丢弃", onGround: true, target: self, action: #selector(discardTapped))
+        let gif = Theme.paperButton(duration > 30 ? "复制为 GIF（会很大）" : "复制为 GIF", onGround: true, target: self, action: #selector(gifTapped))
+        let mp4 = Theme.paperButton("复制为 MP4", primary: true, target: self, action: #selector(mp4Tapped))
         mp4.keyEquivalent = "\r"
         buttons = [discard, gif, mp4]
         let stack = NSStackView(views: buttons)
@@ -133,21 +133,6 @@ final class RecordingPreviewWindow: NSObject, NSWindowDelegate {
         window.close()
     }
 
-    private func pill(_ title: String, fill: NSColor, ink: NSColor, action: Selector) -> NSButton {
-        let b = NSButton(title: title, target: self, action: action)
-        b.isBordered = false
-        b.attributedTitle = NSAttributedString(string: title, attributes: [.foregroundColor: ink, .font: NSFont.systemFont(ofSize: 13, weight: .semibold)])
-        b.wantsLayer = true
-        b.layer?.cornerRadius = 9
-        b.layer?.backgroundColor = fill.cgColor
-        b.layer?.borderWidth = fill == Theme.shelfCard ? 1 : 0
-        b.layer?.borderColor = Theme.shelfBorder.cgColor
-        b.translatesAutoresizingMaskIntoConstraints = false
-        b.heightAnchor.constraint(equalToConstant: 34).isActive = true
-        b.widthAnchor.constraint(greaterThanOrEqualToConstant: 88).isActive = true
-        return b
-    }
-
     @objc private func discardTapped() { decided = true; onDiscard?() }
     @objc private func gifTapped() { decided = true; onChoose?(true) }
     @objc private func mp4Tapped() { decided = true; onChoose?(false) }
@@ -158,13 +143,9 @@ final class RecordingPreviewWindow: NSObject, NSWindowDelegate {
     }
 }
 
-/// Window ground: dark + grid.
+/// Window ground: the brown desk with grain.
 final class GridBackdropView: NSView {
-    override func draw(_ dirtyRect: NSRect) {
-        Theme.shelfBG.setFill()
-        bounds.fill()
-        Theme.drawGrid(in: bounds)
-    }
+    override func draw(_ dirtyRect: NSRect) { Theme.drawGround(in: bounds) }
 }
 
 /// ▶ 00:01 ────●──── 00:11   — click or drag the track to seek.
@@ -190,30 +171,34 @@ final class TransportBar: NSView {
     override func draw(_ dirtyRect: NSRect) {
         // Play / pause disc
         let disc = CGRect(x: 0, y: bounds.midY - buttonSize / 2, width: buttonSize, height: buttonSize)
-        Theme.shelfCard.setFill()
+        Theme.paper.setFill()
         NSBezierPath(ovalIn: disc).fill()
+        Theme.ink.withAlphaComponent(0.5).setStroke()
+        NSBezierPath(ovalIn: disc.insetBy(dx: 0.5, dy: 0.5)).stroke()
         let icon = NSImage(systemSymbolName: playing ? "pause.fill" : "play.fill", accessibilityDescription: nil)?
             .withSymbolConfiguration(.init(pointSize: 14, weight: .bold))
         if let icon {
-            let tinted = icon.tinted(Theme.text)
+            let tinted = icon.tinted(Theme.ink)
             let s = tinted.size
             tinted.draw(in: CGRect(x: disc.midX - s.width / 2 + (playing ? 0 : 1), y: disc.midY - s.height / 2, width: s.width, height: s.height))
         }
-        let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .medium), .foregroundColor: Theme.text]
+        let attrs: [NSAttributedString.Key: Any] = [.font: Theme.serif(size: 14), .foregroundColor: Theme.onBrown]
         (clock(current) as NSString).draw(at: CGPoint(x: buttonSize + 14, y: bounds.midY - 8), withAttributes: attrs)
         let total = clock(duration) as NSString
         let ts = total.size(withAttributes: attrs)
         total.draw(at: CGPoint(x: bounds.maxX - ts.width, y: bounds.midY - 8), withAttributes: attrs)
         // Track
         let tr = trackRect
-        NSColor(calibratedWhite: 1, alpha: 0.12).setFill()
+        Theme.onBrown.withAlphaComponent(0.18).setFill()
         NSBezierPath(roundedRect: tr, xRadius: 3, yRadius: 3).fill()
         let f = min(1, max(0, current / duration))
-        Theme.purple.setFill()
+        Theme.paperBlue.setFill()
         NSBezierPath(roundedRect: CGRect(x: tr.minX, y: tr.minY, width: tr.width * f, height: tr.height), xRadius: 3, yRadius: 3).fill()
         let knob = CGRect(x: tr.minX + tr.width * f - 7, y: tr.midY - 7, width: 14, height: 14)
-        NSColor.white.setFill()
+        Theme.paper.setFill()
         NSBezierPath(ovalIn: knob).fill()
+        Theme.ink.withAlphaComponent(0.6).setStroke()
+        NSBezierPath(ovalIn: knob.insetBy(dx: 0.5, dy: 0.5)).stroke()
     }
 
     override func mouseDown(with event: NSEvent) {

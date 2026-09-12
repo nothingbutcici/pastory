@@ -10,11 +10,9 @@ final class AnnotateToolbar: NSView {
     private let stack = NSStackView()
     let subBar: SubBar
 
-    static let ink = Theme.text
-    static let selectedBG = Theme.purple
-    static let selectedInk = Theme.onPurple
-    static let red = Theme.red
-    static let green = Theme.purple
+    static let ink = Theme.ink
+    static let selectedBG = Theme.paperBlue
+    static let selectedInk = Theme.ink
 
     private let doneTitle: String
 
@@ -23,7 +21,7 @@ final class AnnotateToolbar: NSView {
         self.doneTitle = doneTitle
         subBar = SubBar(canvas: canvas)
         super.init(frame: .zero)
-        Theme.island(self)
+        Theme.paperSheet(self)
         build()
         canvas.onStateChange = { [weak self] in self?.refresh() }
         refresh()
@@ -33,7 +31,7 @@ final class AnnotateToolbar: NSView {
     static func shadow() -> NSShadow { Theme.shadow() }
 
     override var fittingSize: CGSize { CGSize(width: stack.fittingSize.width + 16, height: 56) }
-    override func draw(_ dirtyRect: NSRect) { Theme.drawIsland(NSBezierPath(roundedRect: bounds, xRadius: Theme.cornerRadius, yRadius: Theme.cornerRadius)) }
+    override func draw(_ dirtyRect: NSRect) { Theme.drawPaper(NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: Theme.paperRadius, yRadius: Theme.paperRadius)) }
 
     private func build() {
         stack.orientation = .horizontal
@@ -61,7 +59,7 @@ final class AnnotateToolbar: NSView {
         ocrBtn.imageHugsTitle = true
         ocrBtn.contentTintColor = Self.ink
         ocrBtn.attributedTitle = NSAttributedString(string: " 识别文字", attributes: [
-            .foregroundColor: Self.ink, .font: NSFont.systemFont(ofSize: 14, weight: .medium)])
+            .foregroundColor: Self.ink, .font: Theme.serif(size: 15)])
         ocrBtn.wantsLayer = true
         ocrBtn.layer?.cornerRadius = 9
         ocrBtn.translatesAutoresizingMaskIntoConstraints = false
@@ -69,19 +67,19 @@ final class AnnotateToolbar: NSView {
         ocrBtn.widthAnchor.constraint(equalToConstant: 112).isActive = true
         stack.addArrangedSubview(ocrBtn)
         stack.addArrangedSubview(Self.divider())
-        // Function group: 撤销 · 取消 · 完成 — plain glyphs, all purple, no boxes.
+        // Function group: 撤销 · 取消 · 完成 — plain ink glyphs; 完成 in the deep blue.
         undoButton = Self.iconButton(NSImage(systemSymbolName: "arrow.uturn.backward", accessibilityDescription: nil)!
             .withSymbolConfiguration(.init(pointSize: 16, weight: .medium))!, tip: "撤销 ⌘Z", target: self, action: #selector(undo))
-        undoButton.contentTintColor = Theme.purple
+        undoButton.contentTintColor = Theme.ink
         stack.addArrangedSubview(undoButton)
         let cancel = Self.iconButton(NSImage(systemSymbolName: "xmark", accessibilityDescription: nil)!
             .withSymbolConfiguration(.init(pointSize: 17, weight: .semibold))!, tip: "取消 ⎋", target: self, action: #selector(cancel))
-        cancel.contentTintColor = Theme.purple
+        cancel.contentTintColor = Theme.ink
         stack.addArrangedSubview(cancel)
         let done = Self.iconButton(NSImage(systemSymbolName: "checkmark", accessibilityDescription: nil)!
             .withSymbolConfiguration(.init(pointSize: 17, weight: .bold))!,
             tip: doneTitle == "复制" ? "完成 ⏎ · 复制到剪贴板" : "\(doneTitle) ⏎", target: self, action: #selector(done))
-        done.contentTintColor = Theme.purple
+        done.contentTintColor = Theme.paperBlueDeep
         stack.addArrangedSubview(done)
     }
 
@@ -100,7 +98,7 @@ final class AnnotateToolbar: NSView {
         return b
     }
 
-    static func divider() -> NSView { Theme.divider(height: 26) }
+    static func divider() -> NSView { Theme.paperDivider(height: 26) }
 
     /// Called once the overlay has placed the main bar; the sub bar hangs off it.
     func didLayout() { refresh() }
@@ -176,8 +174,7 @@ final class SubBar: NSView {
     init(canvas: AnnotateView) {
         self.canvas = canvas
         super.init(frame: .zero)
-        wantsLayer = true
-        shadow = Theme.shadow()
+        Theme.paperSheet(self)
         stack.orientation = .horizontal
         stack.spacing = 6
         stack.translatesAutoresizingMaskIntoConstraints = false
@@ -229,12 +226,12 @@ final class SubBar: NSView {
         let sel = canvas.effectiveSize
         for (s, b) in sizeButtons {
             let on = s == sel
-            b.layer?.backgroundColor = on ? NSColor(calibratedWhite: 1, alpha: 0.14).cgColor : nil
-            let tint = Theme.text
+            b.layer?.backgroundColor = on ? Theme.paperBlue.cgColor : nil
+            let tint = Theme.ink
             if kind == .text {
                 b.image = nil
                 b.attributedTitle = NSAttributedString(string: ["小", "中", "大"][s.rawValue - 1], attributes: [
-                    .foregroundColor: tint, .font: NSFont.systemFont(ofSize: 12.5, weight: .medium)])
+                    .foregroundColor: tint, .font: Theme.serif(size: 13, bold: on)])
             } else {
                 b.attributedTitle = NSAttributedString(string: "")
                 let d = s.dotDiameter
@@ -252,7 +249,7 @@ final class SubBar: NSView {
             let on = c == color
             b.image = on ? Self.check(on: c) : nil
             b.imagePosition = .imageOnly
-            b.layer?.borderColor = (on ? NSColor.white : (c == AnnotatePalette.colors[0] ? NSColor(calibratedWhite: 1, alpha: 0.25) : NSColor.clear)).cgColor
+            b.layer?.borderColor = (on ? Theme.ink : (c == .white ? Theme.ink.withAlphaComponent(0.3) : NSColor.clear)).cgColor
             b.layer?.borderWidth = on ? 2 : 1
         }
     }
@@ -269,7 +266,7 @@ final class SubBar: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        // White pill with a little pointer toward the main bar.
+        // Paper slip with a little pointer toward the main bar.
         let ph = Self.pointerH
         let body = pointsUp ? CGRect(x: 0, y: 0, width: bounds.width, height: bounds.height - ph)
                             : CGRect(x: 0, y: ph, width: bounds.width, height: bounds.height - ph)
@@ -281,10 +278,7 @@ final class SubBar: NSView {
             path.move(to: CGPoint(x: px - 7, y: body.minY)); path.line(to: CGPoint(x: px, y: body.minY - ph)); path.line(to: CGPoint(x: px + 7, y: body.minY))
         }
         path.close()
-        Theme.drawIsland(path)
-        NSColor(calibratedWhite: 1, alpha: 0.08).setStroke()
-        path.lineWidth = 0.5
-        path.stroke()
+        Theme.drawPaper(path)
     }
 
     override func layout() {

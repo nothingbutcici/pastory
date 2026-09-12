@@ -10,7 +10,7 @@ final class TopBar: NSView {
 
     init() {
         super.init(frame: .zero)
-        Theme.island(self)
+        Theme.paperSheet(self)
         stack.orientation = .horizontal
         stack.spacing = 14
         stack.edgeInsets = NSEdgeInsets(top: 0, left: 18, bottom: 0, right: 12)
@@ -28,7 +28,7 @@ final class TopBar: NSView {
         logo.heightAnchor.constraint(equalToConstant: 32).isActive = true
         let name = NSTextField(labelWithString: "Pastory")
         name.font = Theme.brandFont(size: 19)
-        name.textColor = Theme.text
+        name.textColor = Theme.ink
         let brand = NSStackView(views: [logo, name])
         brand.spacing = 9
         stack.addArrangedSubview(brand)
@@ -36,7 +36,8 @@ final class TopBar: NSView {
 
         let seg = NSView()
         seg.wantsLayer = true
-        seg.layer?.backgroundColor = Theme.bgElevated.cgColor
+        seg.layer?.borderWidth = 1
+        seg.layer?.borderColor = Theme.ink.withAlphaComponent(0.35).cgColor
         seg.layer?.cornerRadius = 9
         seg.translatesAutoresizingMaskIntoConstraints = false
         let segStack = NSStackView(views: [shot, rec])
@@ -63,11 +64,11 @@ final class TopBar: NSView {
         shot.action = #selector(pickShot)
         rec.action = #selector(pickRec)
         stack.addArrangedSubview(seg)
-        stack.addArrangedSubview(Theme.divider(height: 28))
+        stack.addArrangedSubview(Theme.paperDivider(height: 28))
         let close = NSButton(image: NSImage(systemSymbolName: "xmark", accessibilityDescription: "取消")!
             .withSymbolConfiguration(.init(pointSize: 15, weight: .semibold))!, target: self, action: #selector(closeTapped))
         close.isBordered = false
-        close.contentTintColor = Theme.text
+        close.contentTintColor = Theme.ink
         close.toolTip = "取消 ⎋"
         close.translatesAutoresizingMaskIntoConstraints = false
         close.widthAnchor.constraint(equalToConstant: 40).isActive = true
@@ -78,16 +79,16 @@ final class TopBar: NSView {
     required init?(coder: NSCoder) { fatalError() }
 
     override var fittingSize: CGSize { CGSize(width: stack.fittingSize.width, height: 52) }
-    override func draw(_ dirtyRect: NSRect) { Theme.drawIsland(NSBezierPath(roundedRect: bounds, xRadius: Theme.cornerRadius, yRadius: Theme.cornerRadius)) }
+    override func draw(_ dirtyRect: NSRect) { Theme.drawPaper(NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: Theme.paperRadius, yRadius: Theme.paperRadius)) }
 
     private func style(active: NSButton) {
         for b in [shot, rec] {
             let on = b === active
-            b.layer?.backgroundColor = on ? Theme.purple.cgColor : nil
-            b.contentTintColor = on ? Theme.onPurple : Theme.text
+            b.layer?.backgroundColor = on ? Theme.paperBlue.cgColor : nil
+            b.contentTintColor = Theme.ink
             b.attributedTitle = NSAttributedString(string: " " + b.title.trimmingCharacters(in: .whitespaces), attributes: [
-                .foregroundColor: on ? Theme.onPurple : Theme.text,
-                .font: NSFont.systemFont(ofSize: 13, weight: .semibold),
+                .foregroundColor: Theme.ink,
+                .font: Theme.serif(size: 14, bold: on),
             ])
         }
     }

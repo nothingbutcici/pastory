@@ -45,15 +45,15 @@ final class ImageEditorWindow: NSObject, NSWindowDelegate, AnnotateDelegate {
         window.title = "编辑图片"
         window.titlebarAppearsTransparent = true
         window.appearance = NSAppearance(named: .darkAqua)
-        window.backgroundColor = Theme.shelfBG
+        window.backgroundColor = Theme.brown
         window.isReleasedWhenClosed = false
         window.delegate = self
         window.center()
 
         let content = GridBackdropView(frame: rect)
         let canvasFrame = CGRect(x: ((rect.width - canvasSize.width) / 2).rounded(), y: barH + 20, width: canvasSize.width, height: canvasSize.height)
-        // A light frame + shadow behind the picture, so a dark image still reads against the dark ground.
-        let border = CanvasFrameView(frame: canvasFrame.insetBy(dx: -2, dy: -2))
+        // A paper mat + shadow behind the picture, so a dark image still reads against the desk.
+        let border = CanvasFrameView(frame: canvasFrame.insetBy(dx: -6, dy: -6))
         content.addSubview(border)
         canvas = AnnotateView(frame: canvasFrame, image: image)
         canvas.delegate = self
@@ -94,19 +94,18 @@ final class ImageEditorWindow: NSObject, NSWindowDelegate, AnnotateDelegate {
     }
 }
 
-/// Thin light outline with a soft shadow; marks where the canvas ends.
+/// Paper mat with a soft shadow; marks where the canvas ends.
 final class CanvasFrameView: NSView {
     override init(frame: CGRect) {
         super.init(frame: frame)
         wantsLayer = true
-        layer?.borderWidth = 1.5
-        layer?.borderColor = NSColor(calibratedWhite: 1, alpha: 0.35).cgColor
-        layer?.cornerRadius = 3
+        layer?.borderWidth = 0
+        layer?.cornerRadius = 2
         shadow = NSShadow()
         shadow?.shadowColor = NSColor(calibratedWhite: 0, alpha: 0.6)
         shadow?.shadowBlurRadius = 18
         shadow?.shadowOffset = CGSize(width: 0, height: -4)
-        layer?.backgroundColor = NSColor(calibratedWhite: 1, alpha: 0.06).cgColor
+        layer?.backgroundColor = Theme.paper.cgColor
     }
     required init?(coder: NSCoder) { fatalError() }
 }

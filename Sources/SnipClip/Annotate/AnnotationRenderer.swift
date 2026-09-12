@@ -179,29 +179,32 @@ enum AnnotationRenderer {
     /// Selection chrome (live view only): dashed box for boxes/text/pen, handles, and a delete bubble.
     static func drawSelection(_ a: Annotation, in ctx: CGContext) {
         ctx.saveGState()
-        ctx.setStrokeColor(Theme.purple.cgColor)
+        ctx.setStrokeColor(Theme.paperBlueDeep.cgColor)
         ctx.setLineWidth(1)
         if a.tool != .arrow && a.tool != .line {
             ctx.setLineDash(phase: 0, lengths: [4, 3])
             ctx.stroke(a.bounds.insetBy(dx: -8, dy: -8))
             ctx.setLineDash(phase: 0, lengths: [])
         }
-        ctx.setFillColor(NSColor.white.cgColor)
-        ctx.setLineWidth(1.5)
+        ctx.setFillColor(Theme.paper.cgColor)
+        ctx.setStrokeColor(Theme.ink.cgColor)
+        ctx.setLineWidth(1.2)
         for p in a.handles {
             let d = CGRect(x: p.x - handleRadius, y: p.y - handleRadius, width: 2 * handleRadius, height: 2 * handleRadius)
             ctx.fillEllipse(in: d)
             ctx.strokeEllipse(in: d)
         }
-        // Delete button: dark disc, white ×, soft shadow.
+        // Delete button: paper disc, ink ×, soft shadow.
         let c = deleteCenter(a)
         let d = deleteRect(a)
         ctx.saveGState()
         ctx.setShadow(offset: CGSize(width: 0, height: 1), blur: 3, color: NSColor(calibratedWhite: 0, alpha: 0.3).cgColor)
-        ctx.setFillColor(NSColor(calibratedWhite: 0.16, alpha: 1).cgColor)
+        ctx.setFillColor(Theme.paper.cgColor)
         ctx.fillEllipse(in: d)
         ctx.restoreGState()
-        ctx.setStrokeColor(NSColor.white.cgColor)
+        ctx.setStrokeColor(Theme.ink.cgColor)
+        ctx.setLineWidth(1)
+        ctx.strokeEllipse(in: d.insetBy(dx: 0.5, dy: 0.5))
         ctx.setLineWidth(1.8)
         ctx.setLineCap(.round)
         let k: CGFloat = 3.4

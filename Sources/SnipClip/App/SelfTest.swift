@@ -57,6 +57,8 @@ enum SelfTest {
                     okAll = snapshot(v, to: URL(fileURLWithPath: out).deletingPathExtension().appendingPathExtension("image.png").path) && okAll
                 }
                 ok = okAll
+            case "ocrpanel":
+                ok = OCRPanelController.shared.debugView(sample: "Snip Clip 是一个截图工具\n所有复制过的内容都留在货架里\nMade in 2026 · 中英混排 OK").map { snapshot($0, to: rest.first ?? "snipclip-ocrpanel.png") } ?? false
             case "retention": ok = retention()
             case "gif": ok = await gif()
             case "pbfiles":

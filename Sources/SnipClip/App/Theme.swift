@@ -125,6 +125,80 @@ enum Theme {
         return NSImage(contentsOf: dev)
     }
 
+    // MARK: Paper (AppKit side). The SwiftUI shelf paints the same tokens; these are for the capture bars and windows.
+
+    static let paperRadius: CGFloat = 6
+    static let paperLine = NSColor(srgbRed: 0.16, green: 0.14, blue: 0.13, alpha: 0.28)   // faint ink outline on paper
+
+    /// Grain: multiply the noise tile over whatever was just painted.
+    static func drawGrain(in r: CGRect, opacity: CGFloat) {
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current?.compositingOperation = .multiply
+        NSGraphicsContext.current?.cgContext.setAlpha(opacity)
+        NSColor(patternImage: noiseTile).setFill()
+        NSBezierPath(rect: r).fill()
+        NSGraphicsContext.restoreGraphicsState()
+    }
+
+    /// A sheet of paper: fill, grain, hairline ink edge — clipped to `path`.
+    static func drawPaper(_ path: NSBezierPath, fill: NSColor = paper) {
+        NSGraphicsContext.saveGraphicsState()
+        path.addClip()
+        fill.setFill()
+        path.bounds.fill()
+        drawGrain(in: path.bounds, opacity: 0.045)
+        NSGraphicsContext.restoreGraphicsState()
+        paperLine.setStroke()
+        path.lineWidth = 1
+        path.stroke()
+    }
+
+    /// The brown desk the paper sits on (window grounds).
+    static func drawGround(in r: CGRect) {
+        brown.setFill()
+        r.fill()
+        drawGrain(in: r, opacity: 0.16)
+    }
+
+    /// Paper card with a soft shadow on its layer; `drawPaper` paints the face.
+    static func paperSheet(_ v: NSView, radius: CGFloat = paperRadius) {
+        v.wantsLayer = true
+        v.layer?.cornerRadius = radius
+        let s = NSShadow()
+        s.shadowColor = NSColor(calibratedWhite: 0, alpha: 0.4)
+        s.shadowBlurRadius = 8
+        s.shadowOffset = CGSize(width: 1, height: -4)
+        v.shadow = s
+    }
+
+    /// Buttons in the paper look. `primary`: blue paper chip with ink text. Otherwise an outlined pill;
+    /// `onGround` decides whether the outline is ink (on paper) or cream (on the brown desk).
+    static func paperButton(_ title: String, primary: Bool = false, onGround: Bool = false, target: AnyObject?, action: Selector) -> NSButton {
+        let b = NSButton(title: title, target: target, action: action)
+        b.isBordered = false
+        let ink = primary ? Theme.ink : (onGround ? onBrown : Theme.ink)
+        b.attributedTitle = NSAttributedString(string: title, attributes: [.foregroundColor: ink, .font: serif(size: 14, bold: true)])
+        b.wantsLayer = true
+        b.layer?.cornerRadius = 17
+        b.layer?.backgroundColor = primary ? paperBlue.cgColor : nil
+        b.layer?.borderWidth = primary ? 0 : 1
+        b.layer?.borderColor = (onGround ? onBrown.withAlphaComponent(0.45) : Theme.ink.withAlphaComponent(0.55)).cgColor
+        b.translatesAutoresizingMaskIntoConstraints = false
+        b.heightAnchor.constraint(equalToConstant: 34).isActive = true
+        b.widthAnchor.constraint(greaterThanOrEqualToConstant: 84).isActive = true
+        return b
+    }
+
+    static func paperDivider(height: CGFloat = 24) -> NSView {
+        let v = NSView()
+        v.wantsLayer = true
+        v.layer?.backgroundColor = Theme.ink.withAlphaComponent(0.22).cgColor
+        v.translatesAutoresizingMaskIntoConstraints = false
+        v.widthAnchor.constraint(equalToConstant: 1).isActive = true
+        v.heightAnchor.constraint(equalToConstant: height).isActive = true
+        return v
+    }
+
     static let gridStep: CGFloat = 28
     static let gridLine = NSColor(calibratedWhite: 1, alpha: 0.05)
 

@@ -307,7 +307,7 @@ final class OverlayView: NSView {
         NSColor(calibratedWhite: 0, alpha: 0.6).setFill()
         NSBezierPath(rect: hole.insetBy(dx: -1, dy: -1)).fill()
         NSGraphicsContext.restoreGraphicsState()
-        Theme.purple.setStroke()
+        Theme.paperBlue.setStroke()
         let path = NSBezierPath(rect: hole.insetBy(dx: -1, dy: -1))
         path.lineWidth = 2
         path.stroke()
@@ -315,9 +315,9 @@ final class OverlayView: NSView {
             for h in handles(hole) {
                 let s = Self.handleSize
                 let sq = CGRect(x: h.x - s / 2, y: h.y - s / 2, width: s, height: s)
-                Theme.purple.setFill()
+                Theme.paper.setFill()
                 NSBezierPath(roundedRect: sq, xRadius: 1.5, yRadius: 1.5).fill()
-                NSColor(calibratedWhite: 0, alpha: 0.35).setStroke()
+                Theme.ink.withAlphaComponent(0.7).setStroke()
                 let o = NSBezierPath(roundedRect: sq.insetBy(dx: -0.5, dy: -0.5), xRadius: 2, yRadius: 2)
                 o.lineWidth = 1
                 o.stroke()
@@ -338,15 +338,14 @@ final class OverlayView: NSView {
             text = "\(Int((rect.width * s).rounded())) × \(Int((rect.height * s).rounded()))"
         }
         let attrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont.monospacedDigitSystemFont(ofSize: 12.5, weight: .medium), .foregroundColor: Theme.text
+            .font: Theme.serif(size: 13), .foregroundColor: Theme.ink
         ]
         let size = (text as NSString).size(withAttributes: attrs)
         let pad: CGFloat = 9
         var box = CGRect(x: rect.maxX - size.width - pad * 2, y: rect.maxY + 10, width: size.width + pad * 2, height: size.height + 8)
         if box.maxY > bounds.maxY - 4 { box.origin.y = rect.maxY - box.height - 10 }
         box.origin.x = max(4, min(box.origin.x, bounds.maxX - box.width - 4))
-        Theme.bg.withAlphaComponent(0.92).setFill()
-        NSBezierPath(roundedRect: box, xRadius: 7, yRadius: 7).fill()
+        Theme.drawPaper(NSBezierPath(roundedRect: box, xRadius: 4, yRadius: 4))
         (text as NSString).draw(at: CGPoint(x: box.minX + pad, y: box.minY + 4), withAttributes: attrs)
     }
 
