@@ -104,9 +104,11 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
   截图 / 录屏那套（顶栏、标注工具条、子条、尺寸角标、录屏控制条）、录屏预览窗、文本 / 图片编辑窗、
   识别文字面板也全部是纸感（2026-09-12 晚统一）：米色纸条 `Theme.drawPaper` + 深棕桌面 `Theme.drawGround`，
   选中态是浅蓝纸，选区框 / 手柄 / 元素选中框用浅蓝和米纸；按钮统一 `Theme.paperButton`。`Theme.drawIsland` 只剩旧代码。
-  logo 在 `Resources/Logo.png`（P 字紫版，透明底），面包人在 `Resources/Mascot.png`（黄色，夹子染成品牌紫；
-  原图棋盘格是画进去的，用局部纹理 + 边缘泛洪抠的），菜单栏图标 `Resources/MenuIcon(@2x).png` 来自设计稿
-  `Project/codex相关/cc tools visual identity/.../pastory-menubar*.png`，作为 template 使用。
+  截图浮层的条（顶栏 / 工具条 / 子条 / 尺寸角标 / 录屏控制条）2026-09-12 晚再改成和货架一样的深棕磨砂 `Theme.drawDesk`，
+  米字 + 浅蓝选中；标注调色盘 = 紫 + Maroon #7F0303 / Tan #D8BA98 / 橄榄 #839958 / Light blue #96C0CE / Midnight #0F414A / Alabaster #EFE8DF。
+  logo 用品牌稿 `Project/codex相关/pastory clipboard concepts/brand/signature-assets/Pastory Logo/`：
+  `Resources/Logo.png` 与 `AppIcon.icns` 由 `pastory-app-icon-hd.png` 圆角化生成（1024 画布放 824 圆角方，半径 22.37%），
+  `Resources/MenuIcon(@2x).png` 直接取自 `PastoryMenuBar.imageset`（template）。面包人 `Resources/Mascot.png` 目前没用上。
   品牌字体 Ysabeau Office（OFL，`Resources/Fonts/`，启动时按进程注册）只用在「Pastory」字样。
   截图 / 录屏只排除取景遮罩自己的窗口，货架开着时也能被截进去。
 - 框选完成后屏幕顶部出品牌条：logo · Snip Clip · [截屏 │ 录屏] · ✕，默认截屏；点录屏进录制流程。
@@ -123,7 +125,15 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
   文字用翩翩体（HanziPen SC，系统自带），没有就退回系统字体。
   「识别文字」弹出可编辑结果，「复制文字」把文字复制走（图片条目也保留）。
 - **⌥⌘F 搜索剪贴板**：打开面板并直接聚焦搜索框。三个全局快捷键都在设置里改；录制时当场试注册，
-  被其他应用占用、和自己的另一个快捷键重复、或只有 ⌘/⇧ 加单键（会抢走所有应用的同名快捷键）都会拒绝并提示。
+  被其他应用占用、和自己的另一个快捷键重复会拒绝并提示；单个键（没有 ⌘⌥⌃⇧）提示「至少两个键」；
+  只有 ⌘/⇧ 加单键（如 ⌘A）允许设置，但保存后提示「所有应用里的 ⌘A 都会变成这个功能」（2026-09-12 改，之前是直接拒绝）。
+- **取屏浮层不激活自己**：遮罩是 `.nonactivatingPanel`，前台应用的弹窗 / 菜单不会因为按下截图键而收起，
+  第一下按压就开始框选（`acceptsFirstMouse`）。
+- **导入**：设置 → 剪贴板 → 「从其他剪贴板工具导入（SQLite）」：选 .sqlite/.db 或另一台机器的 Pastory 文件夹，
+  `Clipboard/Importer.swift` 先复制一份再读（连同 -wal/-shm），Pastory 库按 schema 精确导，其他库按启发式：
+  文本列 / UTF-8 blob 当文本、PNG/JPEG/TIFF blob 当图片、名字像 date/time/copied 的列当时间（识别 1970 秒、2001 秒、毫秒、ISO），
+  像 pin/favorite 的列当 Pin；Core Data 子表通过整数列关联到有日期的父表，同一条的多种表示（plain+rtf、png+tiff）只留一份。
+  弹窗先报数量再导入，已存在的内容按 hash 跳过，保留原时间和 Pin。`--selftest import <db>` 可用假库验证。
 - **⇧⌘V 剪贴板**：底部滑出（屏高 55%）深色货架，淡紫强调：左侧侧栏（logo、今日暂存、清理规则、Pin 说明；吉祥物位待素材），
   侧栏底部「Pin 后一直保留」和「设置」两行，设置在面板右半区内展开（`Shelf/SettingsPane`），不弹窗；
   顶部胶囊筛选 全部 / Pin / 图片 / 录屏 / 文本 + 搜索 + ✕，深色卡片配米色内容纸面（app 图标、时间、内容、

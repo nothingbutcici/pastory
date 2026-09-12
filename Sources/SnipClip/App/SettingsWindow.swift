@@ -121,6 +121,7 @@ struct ShortcutRecorder: View {
             if event.keyCode == 53 { stop(nil) }
             else if event.keyCode == 51 { stop(Shortcut.none) }
             else if let s = Shortcut(event: event) { stop(s) }
+            else { stop(nil); notice = "至少两个键：⌘ ⌥ ⌃ ⇧ 中的一个加一个键" }
             return nil
         }
         // A combo another app already owns as a global hotkey is swallowed before it reaches us: we only ever
@@ -175,13 +176,6 @@ struct ShortcutRecorder: View {
         guard let newValue else { return }
         notice = nil
         if newValue.isSet {
-            let m = newValue.carbonModifiers
-            let onlyCmd = m == UInt32(cmdKey), onlyShift = m == UInt32(shiftKey), cmdShift = m == UInt32(cmdKey | shiftKey)
-            let isFKey = KeyCodeNames.name(for: newValue.keyCode).hasPrefix("F")
-            if (onlyCmd || onlyShift || cmdShift) && !isFKey {
-                notice = "会抢走所有应用的 \(newValue.display)，加上 ⌥ 或 ⌃"
-                return
-            }
             let mine: [(String, String)] = [("capture", Preferences.Key.hotkeyCapture), ("shelf", Preferences.Key.hotkeyShelf), ("search", Preferences.Key.hotkeySearch)]
             if let (owner, _) = mine.first(where: { $0.0 != bindingName && Preferences.shared.shortcut($0.1) == newValue }) {
                 notice = "已被 Pastory 的「\(Self.names[owner] ?? owner)」占用，换一个"
@@ -195,5 +189,12 @@ struct ShortcutRecorder: View {
         shortcut = newValue
         Preferences.shared.setShortcut(newValue, for: key)
         NotificationCenter.default.post(name: .shortcutsChanged, object: nil)
+        // Saved. A bare ⌘/⇧ combo is legal but global: say so once instead of refusing.
+        if newValue.isSet {
+            let m = newValue.carbonModifiers
+            if m == UInt32(cmdKey) || m == UInt32(shiftKey) || m == UInt32(cmdKey | shiftKey) {
+                notice = "已设置。注意：所有应用里的 \(newValue.display) 都会变成这个功能"
+            }
+        }
     }
 }

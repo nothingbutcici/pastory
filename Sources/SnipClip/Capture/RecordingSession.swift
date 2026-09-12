@@ -153,10 +153,10 @@ final class RecordingSession {
         dot = d
         let label = NSTextField(labelWithString: "00:00")
         label.font = NSFont.monospacedDigitSystemFont(ofSize: 15, weight: .semibold)
-        label.textColor = Theme.ink
+        label.textColor = Theme.onBrown
         timeLabel = label
         let stopBtn = Theme.paperButton("■ 停止", primary: true, target: self, action: #selector(stopTapped))
-        let cancelBtn = Theme.paperButton("丢弃", target: self, action: #selector(cancelTapped))
+        let cancelBtn = Theme.paperButton("丢弃", onGround: true, target: self, action: #selector(cancelTapped))
         for x in [d, label, NSView(), stopBtn, cancelBtn] { stack.addArrangedSubview(x) }
         p.contentView = v
         place(p, size: CGSize(width: 290, height: 52))
@@ -217,14 +217,14 @@ final class RecordingSession {
     }
 }
 
-/// Paper strip, used as a bare container.
+/// Desk-coloured strip, used as a bare container.
 final class IslandView: NSView {
     init() {
         super.init(frame: .zero)
         Theme.paperSheet(self)
     }
     required init?(coder: NSCoder) { fatalError() }
-    override func draw(_ dirtyRect: NSRect) { Theme.drawPaper(NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: Theme.paperRadius, yRadius: Theme.paperRadius)) }
+    override func draw(_ dirtyRect: NSRect) { Theme.drawDesk(NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: Theme.paperRadius, yRadius: Theme.paperRadius)) }
 }
 
 /// Blue frame just outside the recorded region.

@@ -153,6 +153,29 @@ enum Theme {
         path.stroke()
     }
 
+    /// Capture chrome: the same brown frosted ground as the shelf, cut into a strip, with a faint light edge.
+    static func drawDesk(_ path: NSBezierPath) {
+        NSGraphicsContext.saveGraphicsState()
+        path.addClip()
+        brown.setFill()
+        path.bounds.fill()
+        drawGrain(in: path.bounds, opacity: 0.16)
+        NSGraphicsContext.restoreGraphicsState()
+        onBrown.withAlphaComponent(0.22).setStroke()
+        path.lineWidth = 1
+        path.stroke()
+    }
+
+    static func deskDivider(height: CGFloat = 24) -> NSView {
+        let v = NSView()
+        v.wantsLayer = true
+        v.layer?.backgroundColor = onBrown.withAlphaComponent(0.25).cgColor
+        v.translatesAutoresizingMaskIntoConstraints = false
+        v.widthAnchor.constraint(equalToConstant: 1).isActive = true
+        v.heightAnchor.constraint(equalToConstant: height).isActive = true
+        return v
+    }
+
     /// The brown desk the paper sits on (window grounds).
     static func drawGround(in r: CGRect) {
         brown.setFill()

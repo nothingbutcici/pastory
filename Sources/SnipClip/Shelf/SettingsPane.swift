@@ -5,6 +5,7 @@ struct SettingsPane: View {
     @Bindable var model: ShelfModel
     @State private var prefs = PrefsMirror()
     @State private var cleared = false
+    @State private var importNote: String?
 
 
     var body: some View {
@@ -61,6 +62,12 @@ struct SettingsPane: View {
                             }
                             row("图片自动识别文字（可按文字搜图）") { PaperToggle(isOn: $prefs.ocrImages) }
                             row("暂停同步至剪贴板") { PaperToggle(isOn: $prefs.paused) }
+                            row("从其他剪贴板工具导入（SQLite）") {
+                                HStack(spacing: 8) {
+                                    if let importNote { Text(importNote).font(.system(size: 12)).foregroundStyle(Color.shelfMuted).lineLimit(1) }
+                                    pill("选择数据库…") { importDatabase() }
+                                }
+                            }
                             row("手动清空一次（不含已 Pin 内容）") {
                                 pill(cleared ? "已清空" : "现在清空", disabled: cleared) {
                                     ClipStore.shared.removeAll { !$0.pinned }
@@ -176,6 +183,39 @@ struct SettingsPane: View {
             }
         }
         prefs.retentionDays = days
+    }
+
+    /// Pick a .sqlite (or a Pastory folder), count what is inside, ask, import.
+    private func importDatabase() {
+        let picked: URL? = ShelfPanelController.shared.withDialog {
+            let panel = NSOpenPanel()
+            panel.canChooseDirectories = true; panel.canChooseFiles = true; panel.prompt = "扫描"
+            panel.message = "选另一个剪贴板工具的 SQLite 文件（.sqlite / .db），或另一台机器的 Pastory 文件夹"
+            return panel.runModal() == .OK ? panel.url : nil
+        }
+        guard let picked else { return }
+        importNote = "扫描中…"
+        Task.detached(priority: .userInitiated) {
+            let result = Result { try Importer.scan(picked) }
+            await MainActor.run {
+                switch result {
+                case .failure(let e):
+                    importNote = e.localizedDescription
+                case .success(let scan):
+                    let go = ShelfPanelController.shared.withDialog { () -> Bool in
+                        let a = NSAlert()
+                        a.messageText = "找到 \(scan.texts) 条文本、\(scan.images) 张图片"
+                        a.informativeText = "来自 \(picked.lastPathComponent)。已经在 Pastory 里的内容会自动跳过，原来的时间和 Pin 会保留。"
+                        a.addButton(withTitle: "导入")
+                        a.addButton(withTitle: "取消")
+                        return a.runModal() == .alertFirstButtonReturn
+                    }
+                    guard go else { importNote = nil; return }
+                    let n = ClipStore.shared.importEntries(scan.entries)
+                    importNote = n == 0 ? "没有新内容（都已存在）" : "已导入 \(n) 条"
+                }
+            }
+        }
     }
 
     private func chooseFolder() {

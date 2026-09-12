@@ -314,6 +314,67 @@ final class ClipStore {
         Retention.itemAdded()
     }
 
+    // MARK: - Import
+
+    struct ImportEntry {
+        enum Payload { case text(String), image(Data) }
+        var payload: Payload
+        var createdAt: Date
+        var pinned: Bool
+        var title: String?
+    }
+
+    /// Bulk insert from another store. Skips anything whose payload is already here (or repeated in the batch),
+    /// keeps the original dates so the cards land where they belong, and saves once. Returns how many were added.
+    func importEntries(_ entries: [ImportEntry]) -> Int {
+        var seen = Set(items.map(\.contentHash))
+        let source = Source(bundleID: nil, name: "导入")
+        var added: [ClipItem] = []
+        for e in entries {
+            switch e.payload {
+            case .text(let text):
+                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                let data = Data(text.utf8)
+                guard !trimmed.isEmpty, data.count <= Self.maxTextBytes else { continue }
+                let hash = stableHash(data)
+                guard seen.insert(hash).inserted else { continue }
+                var kind = ClipKind.text
+                if let url = URL(string: trimmed), let s = url.scheme, ["http", "https"].contains(s), !text.contains("\n") { kind = .url }
+                let item = ClipItem(id: UUID().uuidString, kind: kind, createdAt: e.createdAt,
+                                    sourceBundleID: source.bundleID, sourceAppName: source.name,
+                                    snippet: ClipItem.snippet(ofText: text), ocrText: nil, pinned: e.pinned,
+                                    ext: "txt", hasRTF: false, pixelWidth: nil, pixelHeight: nil,
+                                    byteCount: data.count, duration: nil, title: e.title, contentHash: hash)
+                guard (try? data.write(to: payloadURL(item), options: .atomic)) != nil else { continue }
+                added.append(item)
+            case .image(let png):
+                let hash = stableHash(png)
+                guard seen.insert(hash).inserted, let cg = Screenshotter.image(fromPNG: png) else { continue }
+                let item = ClipItem(id: UUID().uuidString, kind: .image, createdAt: e.createdAt,
+                                    sourceBundleID: source.bundleID, sourceAppName: source.name,
+                                    snippet: "\(cg.width)×\(cg.height)", ocrText: nil, pinned: e.pinned,
+                                    ext: "png", hasRTF: false, pixelWidth: cg.width, pixelHeight: cg.height,
+                                    byteCount: png.count, duration: nil, title: e.title, contentHash: hash)
+                guard (try? png.write(to: payloadURL(item), options: .atomic)) != nil else { continue }
+                if let t = Screenshotter.thumbnail(cg, maxPixels: 640), let td = Screenshotter.pngData(t) {
+                    try? td.write(to: thumbURL(item), options: .atomic)
+                }
+                added.append(item)
+            }
+        }
+        guard !added.isEmpty else { return 0 }
+        items = (items + added).sorted { $0.createdAt > $1.createdAt }
+        guard save() else {
+            // Disk said no: take the files back out so nothing half-exists.
+            let ids = Set(added.map(\.id))
+            items.removeAll { ids.contains($0.id) }
+            for a in added { try? FileManager.default.removeItem(at: payloadURL(a)); try? FileManager.default.removeItem(at: thumbURL(a)) }
+            return 0
+        }
+        Retention.reschedule()
+        return added.count
+    }
+
     // MARK: - Mutations
 
     func bump(_ id: String) {

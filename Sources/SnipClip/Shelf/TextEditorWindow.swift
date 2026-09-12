@@ -65,8 +65,8 @@ final class TextEditorWindow: NSObject, NSWindowDelegate {
         scroll.documentView = textView
 
         titleField.stringValue = item.title ?? ""
-        titleField.placeholderAttributedString = NSAttributedString(string: "标题（可选，例如：翻译 prompt）", attributes: [
-            .foregroundColor: Theme.inkMuted, .font: Theme.script(size: 22)])
+        titleField.placeholderAttributedString = NSAttributedString(string: "+ 加个标题", attributes: [
+            .foregroundColor: Theme.inkMuted.withAlphaComponent(0.7), .font: Theme.script(size: 20)])
         titleField.font = Theme.script(size: 22)
         titleField.textColor = Theme.ink
         titleField.isBordered = false

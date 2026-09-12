@@ -156,12 +156,12 @@ enum AnnotatePalette {
     /// Low-saturation set; purple first and default.
     static let colors: [NSColor] = [
         Theme.purple,                                                 // purple (default)
-        NSColor(srgbRed: 0.80, green: 0.40, blue: 0.38, alpha: 1),   // dusty red
-        NSColor(srgbRed: 0.87, green: 0.62, blue: 0.36, alpha: 1),   // dusty orange
-        NSColor(srgbRed: 0.45, green: 0.68, blue: 0.47, alpha: 1),   // dusty green
-        NSColor(srgbRed: 0.38, green: 0.55, blue: 0.82, alpha: 1),   // dusty blue
-        NSColor(srgbRed: 0.13, green: 0.13, blue: 0.14, alpha: 1),   // ink
-        .white,
+        NSColor(srgbRed: 0x7F / 255, green: 0x03 / 255, blue: 0x03 / 255, alpha: 1),   // maroon #7F0303
+        NSColor(srgbRed: 0xD8 / 255, green: 0xBA / 255, blue: 0x98 / 255, alpha: 1),   // tan #D8BA98
+        NSColor(srgbRed: 0x83 / 255, green: 0x99 / 255, blue: 0x58 / 255, alpha: 1),   // olive #839958
+        NSColor(srgbRed: 0x96 / 255, green: 0xC0 / 255, blue: 0xCE / 255, alpha: 1),   // light blue #96C0CE
+        NSColor(srgbRed: 0x0F / 255, green: 0x41 / 255, blue: 0x4A / 255, alpha: 1),   // midnight blue #0F414A
+        NSColor(srgbRed: 0xEF / 255, green: 0xE8 / 255, blue: 0xDF / 255, alpha: 1),   // alabaster #EFE8DF
     ]
     static let accent = Theme.paperBlueDeep
 }

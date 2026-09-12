@@ -12,7 +12,6 @@ final class SelectionOverlayController {
     static let shared = SelectionOverlayController()
     private var overlays: [OverlayWindow] = []
     private var completion: ((CaptureTarget?) -> Void)?
-    private var previousApp: NSRunningApplication?
     private(set) var isPresenting = false
     private(set) var mode: PickMode = .region
     private(set) var hoveredWindow: SCWindow?
@@ -49,7 +48,6 @@ final class SelectionOverlayController {
         self.completion = completion
         self.mode = mode
         hoveredWindow = nil
-        previousApp = NSWorkspace.shared.frontmostApplication
 
         let pickable = snapshot.pickableWindows
         for screen in NSScreen.screens {
@@ -59,7 +57,7 @@ final class SelectionOverlayController {
             w.overlayView.candidates = pickable.map { ($0, CoordinateSpace.cocoaRect(fromCG: $0.frame)) }
             overlays.append(w)
         }
-        NSApp.activate(ignoringOtherApps: true)
+        // Never activate: the app in front keeps its popovers and menus open, and they end up in the picture.
         overlays.forEach { $0.orderFrontRegardless() }
         let mouse = NSEvent.mouseLocation
         let key = overlays.first { $0.screenRef.frame.contains(mouse) } ?? overlays.first
@@ -194,12 +192,10 @@ final class SelectionOverlayController {
         topBar = nil
         overlays.forEach { $0.orderOut(nil); $0.close() }
         overlays.removeAll()
-        previousApp?.activate()
-        previousApp = nil
     }
 }
 
-final class OverlayWindow: NSWindow {
+final class OverlayWindow: NSPanel {
     let screenRef: NSScreen
     let display: SCDisplay
     let overlayView: OverlayView
@@ -208,7 +204,7 @@ final class OverlayWindow: NSWindow {
         screenRef = screen
         self.display = display
         overlayView = OverlayView(frame: CGRect(origin: .zero, size: screen.frame.size))
-        super.init(contentRect: screen.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+        super.init(contentRect: screen.frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         overlayView.screenRef = screen
         overlayView.display = display
         isReleasedWhenClosed = false
@@ -240,6 +236,8 @@ final class OverlayView: NSView {
     static let handleSize: CGFloat = 9
 
     override var acceptsFirstResponder: Bool { true }
+    /// The very first press must start the drag even when macOS has not made us key yet.
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     /// 8 handles: corners then edge midpoints (index → which sides move).
     private func handles(_ r: CGRect) -> [CGPoint] {
@@ -338,14 +336,14 @@ final class OverlayView: NSView {
             text = "\(Int((rect.width * s).rounded())) × \(Int((rect.height * s).rounded()))"
         }
         let attrs: [NSAttributedString.Key: Any] = [
-            .font: Theme.serif(size: 13), .foregroundColor: Theme.ink
+            .font: Theme.serif(size: 13), .foregroundColor: Theme.onBrown
         ]
         let size = (text as NSString).size(withAttributes: attrs)
         let pad: CGFloat = 9
         var box = CGRect(x: rect.maxX - size.width - pad * 2, y: rect.maxY + 10, width: size.width + pad * 2, height: size.height + 8)
         if box.maxY > bounds.maxY - 4 { box.origin.y = rect.maxY - box.height - 10 }
         box.origin.x = max(4, min(box.origin.x, bounds.maxX - box.width - 4))
-        Theme.drawPaper(NSBezierPath(roundedRect: box, xRadius: 4, yRadius: 4))
+        Theme.drawDesk(NSBezierPath(roundedRect: box, xRadius: 4, yRadius: 4))
         (text as NSString).draw(at: CGPoint(x: box.minX + pad, y: box.minY + 4), withAttributes: attrs)
     }
 
