@@ -224,7 +224,7 @@ struct ClipCardView: View {
                 .frame(width: 34, height: 30)
                 .background {
                     if item.pinned {
-                        ZStack { onClipboard ? Color.paper : Color.paperBlueDeep; Grain(opacity: 0.1) }
+                        ZStack { onClipboard ? Color.paper : Color.paperBlue; Grain(opacity: 0.1) }
                             .clipShape(TornPaper(top: true, right: true, bottom: true, left: true, seed: 77, amplitude: 1.5, step: 5))
                             .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
                     }

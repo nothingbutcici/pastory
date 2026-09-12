@@ -81,7 +81,7 @@ struct ShortcutRecorder: View {
                 } label: {
                     Text(capturing ? "按下组合键" : shortcut.display)
                         .font(.system(size: 13, weight: .medium).monospaced())
-                        .foregroundStyle(capturing ? Color.onPurple : (shortcut.isSet ? Color.purple : Color.shelfMuted))
+                        .foregroundStyle(shortcut.isSet || capturing ? Color.ink : Color.shelfMuted)
                         .frame(minWidth: 96)
                         .contentShape(Rectangle())
                 }
@@ -95,8 +95,8 @@ struct ShortcutRecorder: View {
                 }
             }
             .padding(.leading, 12).padding(.trailing, shortcut.isSet && !capturing ? 8 : 12).padding(.vertical, 7)
-            .background(capturing ? Color.paperBlue : Color.clear, in: RoundedRectangle(cornerRadius: 6))
-            .overlay(RoundedRectangle(cornerRadius: 6).stroke(taken ? Color(nsColor: Theme.tagMP4) : Color.ink.opacity(0.5), lineWidth: 1))
+            .background(capturing ? Color.paperBlue : Color.clear, in: Capsule())
+            .overlay(Capsule().stroke(taken ? Color(nsColor: Theme.tagMP4) : Color.ink.opacity(0.6), lineWidth: 1))
         }
         .onAppear { shortcut = Preferences.shared.shortcut(key); refreshTaken() }
         .onDisappear { stop(nil) }

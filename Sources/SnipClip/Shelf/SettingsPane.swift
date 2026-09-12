@@ -59,8 +59,8 @@ struct SettingsPane: View {
                                 HourWheel(hour: $prefs.cleanupHour, enabled: prefs.retentionDays != 0)
                                     .opacity(prefs.retentionDays == 0 ? 0.35 : 1)
                             }
-                            row("图片自动识别文字（可按文字搜图）") { Toggle("", isOn: $prefs.ocrImages).labelsHidden().toggleStyle(.switch).tint(Color.paperBlueDeep) }
-                            row("暂停同步至剪贴板") { Toggle("", isOn: $prefs.paused).labelsHidden().toggleStyle(.switch).tint(Color.paperBlueDeep) }
+                            row("图片自动识别文字（可按文字搜图）") { Toggle("", isOn: $prefs.ocrImages).labelsHidden().toggleStyle(.switch).tint(Color.paperBlue) }
+                            row("暂停同步至剪贴板") { Toggle("", isOn: $prefs.paused).labelsHidden().toggleStyle(.switch).tint(Color.paperBlue) }
                             row("手动清空一次（不含已 Pin 内容）") {
                                 pill(cleared ? "已清空" : "现在清空", disabled: cleared) {
                                     ClipStore.shared.removeAll { !$0.pinned }
@@ -81,9 +81,9 @@ struct SettingsPane: View {
                             }
                             row("剪贴板内容临时存放位置") {
                                 HStack(spacing: 8) {
-                                    Text("SQLite").font(.system(size: 11, weight: .semibold)).foregroundStyle(Color.purple)
+                                    Text("SQLite").font(.system(size: 11, weight: .semibold)).foregroundStyle(Color.ink)
                                         .padding(.horizontal, 7).padding(.vertical, 2)
-                                        .overlay(Capsule().stroke(Color.purple.opacity(0.7), lineWidth: 1))
+                                        .overlay(Capsule().stroke(Color.ink.opacity(0.6), lineWidth: 1))
                                     Text((ClipStore.shared.root.appendingPathComponent("pastory.sqlite").path as NSString).abbreviatingWithTildeInPath)
                                         .font(.system(size: 12)).foregroundStyle(Color.shelfMuted).lineLimit(1).truncationMode(.middle).frame(maxWidth: 340, alignment: .trailing)
                                         .textSelection(.enabled)
@@ -91,15 +91,16 @@ struct SettingsPane: View {
                             }
                         }
                         section("系统") {
-                            row("登录时启动") { Toggle("", isOn: $prefs.launchAtLogin).labelsHidden().toggleStyle(.switch).tint(Color.paperBlueDeep) }
+                            row("登录时启动") { Toggle("", isOn: $prefs.launchAtLogin).labelsHidden().toggleStyle(.switch).tint(Color.paperBlue) }
                             if let e = prefs.loginError { Text(e).font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.tagMP4)).padding(.horizontal, 16) }
                             row("屏幕录制权限（截图、录屏需要）") {
                                 HStack(spacing: 8) {
                                     Text(Permissions.hasScreenRecording ? "已授权" : "未授权")
                                         .font(.system(size: 11, weight: .semibold))
-                                        .foregroundStyle(Permissions.hasScreenRecording ? Color.purple : Color(nsColor: Theme.tagMP4))
+                                        .foregroundStyle(Permissions.hasScreenRecording ? Color.ink : Color(nsColor: Theme.tagMP4))
                                         .padding(.horizontal, 7).padding(.vertical, 2)
-                                        .overlay(Capsule().stroke((Permissions.hasScreenRecording ? Color.purple : Color(nsColor: Theme.tagMP4)).opacity(0.7), lineWidth: 1))
+                                        .background(Permissions.hasScreenRecording ? Color.paperBlue : Color.clear, in: Capsule())
+                                        .overlay(Capsule().stroke((Permissions.hasScreenRecording ? Color.clear : Color(nsColor: Theme.tagMP4)).opacity(0.7), lineWidth: 1))
                                     pill("系统设置") { Permissions.openSettings("Privacy_ScreenCapture") }
                                 }
                             }
@@ -119,8 +120,11 @@ struct SettingsPane: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.bottom, 8)
-        .background(ZStack { Color.paper; Grain(opacity: 0.07) }.clipShape(RoundedRectangle(cornerRadius: 6)))
-        .shadow(color: .black.opacity(0.35), radius: 8, x: 1, y: 4)
+        .background(
+            ZStack { Color.paper; Grain(opacity: 0.09) }
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .shadow(color: .black.opacity(0.35), radius: 8, x: 1, y: 4)      // the sheet casts it, the type does not
+        )
     }
 
     private func row<V: View>(_ label: String, @ViewBuilder _ trailing: () -> V) -> some View {
