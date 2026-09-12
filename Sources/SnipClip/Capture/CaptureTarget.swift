@@ -1,21 +1,11 @@
 import AppKit
 import ScreenCaptureKit
 
-enum CaptureKind { case region, display, window }
-
 enum CaptureTarget {
     case display(SCDisplay)
     /// Region in display-local points, origin top-left.
     case region(SCDisplay, CGRect)
     case window(SCWindow)
-
-    var kindName: String {
-        switch self {
-        case .display: return "display"
-        case .region: return "region"
-        case .window: return "window"
-        }
-    }
 }
 
 struct ShareableSnapshot {
@@ -63,17 +53,4 @@ enum CoordinateSpace {
                width: viewRect.width.rounded(), height: viewRect.height.rounded())
     }
 
-    /// The captured area in Cocoa global points — what the cursor tracker normalizes against.
-    static func cocoaCaptureRect(_ target: CaptureTarget, snapshot: ShareableSnapshot) -> CGRect {
-        switch target {
-        case .display(let d):
-            return snapshot.screen(for: d)?.frame ?? cocoaRect(fromCG: d.frame)
-        case .region(let d, let local):
-            let s = snapshot.screen(for: d)?.frame ?? cocoaRect(fromCG: d.frame)
-            return CGRect(x: s.minX + local.minX, y: s.maxY - local.minY - local.height,
-                          width: local.width, height: local.height)
-        case .window(let w):
-            return cocoaRect(fromCG: w.frame)
-        }
-    }
 }

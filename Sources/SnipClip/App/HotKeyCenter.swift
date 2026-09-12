@@ -71,16 +71,15 @@ final class HotKeyCenter {
         return false
     }
 
-    /// Which of our own bindings already uses this combo (for "和「截图」重复" messages).
-    func ownerName(of shortcut: Shortcut) -> String? {
-        shortcuts.first { $0.value == shortcut }?.key
-    }
     private var shortcuts: [String: Shortcut] = [:]
 
     private var suspended: [(name: String, shortcut: Shortcut, action: () -> Void)] = []
+    private var suspendDepth = 0
 
-    /// Release every binding (recorder is listening); `resume()` puts them back.
+    /// Release every binding (a recorder is listening); `resume()` puts them back once the last recorder is done.
     func suspend() {
+        suspendDepth += 1
+        guard suspendDepth == 1 else { return }
         suspended = refs.keys.compactMap { name in
             guard let s = shortcuts[name], let id = refs[name]?.id, let action = actions[id] else { return nil }
             return (name, s, action)
@@ -88,6 +87,8 @@ final class HotKeyCenter {
         for name in refs.keys.map({ $0 }) { unbind(name) }
     }
     func resume() {
+        suspendDepth = max(0, suspendDepth - 1)
+        guard suspendDepth == 0 else { return }
         let list = suspended
         suspended = []
         for b in list { _ = bind(b.shortcut, name: b.name, action: b.action) }

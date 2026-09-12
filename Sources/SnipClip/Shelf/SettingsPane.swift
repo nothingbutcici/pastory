@@ -46,7 +46,7 @@ struct SettingsPane: View {
                                         let on = prefs.retentionDays == days
                                         Button { changeRetention(to: days) } label: {
                                             Text(label).font(.system(size: 12.5, weight: on ? .semibold : .medium))
-                                                .foregroundStyle(on ? Color.onPurple : Color.shelfInk)
+                                                .foregroundStyle(on ? Color.ink : Color.ink)
                                                 .padding(.horizontal, 11).padding(.vertical, 6)
                                                 .background(on ? Color.paperBlue : Color.clear, in: Capsule())
                                         }
@@ -64,7 +64,7 @@ struct SettingsPane: View {
                             row("暂停同步至剪贴板") { PaperToggle(isOn: $prefs.paused) }
                             row("从其他剪贴板工具导入（SQLite）") {
                                 HStack(spacing: 8) {
-                                    if let importNote { Text(importNote).font(.system(size: 12)).foregroundStyle(Color.shelfMuted).lineLimit(1) }
+                                    if let importNote { Text(importNote).font(.system(size: 12)).foregroundStyle(Color.inkMuted).lineLimit(1) }
                                     pill("选择数据库…") { importDatabase() }
                                 }
                             }
@@ -81,7 +81,7 @@ struct SettingsPane: View {
                             row("「保存到本地」默认打开的文件夹") {
                                 HStack(spacing: 8) {
                                     Text(prefs.exportDir.isEmpty ? "~/Downloads" : (prefs.exportDir as NSString).abbreviatingWithTildeInPath)
-                                        .font(.system(size: 12)).foregroundStyle(Color.shelfMuted).lineLimit(1).truncationMode(.middle).frame(maxWidth: 220, alignment: .trailing)
+                                        .font(.system(size: 12)).foregroundStyle(Color.inkMuted).lineLimit(1).truncationMode(.middle).frame(maxWidth: 220, alignment: .trailing)
                                     if !prefs.exportDir.isEmpty { pill("默认") { prefs.exportDir = "" } }
                                     pill("选择…") { chooseFolder() }
                                 }
@@ -92,7 +92,7 @@ struct SettingsPane: View {
                                         .padding(.horizontal, 7).padding(.vertical, 2)
                                         .overlay(Capsule().stroke(Color.ink.opacity(0.6), lineWidth: 1))
                                     Text((ClipStore.shared.root.appendingPathComponent("pastory.sqlite").path as NSString).abbreviatingWithTildeInPath)
-                                        .font(.system(size: 12)).foregroundStyle(Color.shelfMuted).lineLimit(1).truncationMode(.middle).frame(maxWidth: 340, alignment: .trailing)
+                                        .font(.system(size: 12)).foregroundStyle(Color.inkMuted).lineLimit(1).truncationMode(.middle).frame(maxWidth: 340, alignment: .trailing)
                                         .textSelection(.enabled)
                                 }
                             }
@@ -121,7 +121,7 @@ struct SettingsPane: View {
 
     private func section<V: View>(_ title: String, @ViewBuilder _ content: () -> V) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(title).font(.serif(13, bold: true)).foregroundStyle(Color.shelfMuted)
+            Text(title).font(.serif(13, bold: true)).foregroundStyle(Color.inkMuted)
                 .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 8)
             VStack(spacing: 0) { content() }
         }
@@ -135,7 +135,7 @@ struct SettingsPane: View {
 
     private func row<V: View>(_ label: String, @ViewBuilder _ trailing: () -> V) -> some View {
         HStack {
-            Text(label).font(.serif(15)).foregroundStyle(Color.shelfInk).lineLimit(1).truncationMode(.middle)
+            Text(label).font(.serif(15)).foregroundStyle(Color.ink).lineLimit(1).truncationMode(.middle)
             Spacer(minLength: 12)
             trailing()
         }
@@ -143,18 +143,9 @@ struct SettingsPane: View {
         .padding(.vertical, 9)
     }
 
-    private func stepButton(_ symbol: String, _ action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol).font(.system(size: 11, weight: .bold)).foregroundStyle(Color.shelfInk)
-                .frame(width: 26, height: 26)
-                .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-    }
-
     private func pill(_ title: String, disabled: Bool = false, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(title).font(.system(size: 13, weight: .medium)).foregroundStyle(Color.shelfInk)
+            Text(title).font(.system(size: 13, weight: .medium)).foregroundStyle(Color.ink)
                 .padding(.horizontal, 12).padding(.vertical, 6)
                 .overlay(Capsule().stroke(Color.ink.opacity(0.6), lineWidth: 1))
         }
@@ -234,13 +225,13 @@ struct HourWheel: View {
     var body: some View {
         HStack(spacing: 8) {
             Text(String(format: "%02d:00", hour))
-                .font(.system(size: 13.5, weight: .semibold).monospacedDigit()).foregroundStyle(Color.shelfInk)
+                .font(.system(size: 13.5, weight: .semibold).monospacedDigit()).foregroundStyle(Color.ink)
                 .frame(width: 58)
             VStack(spacing: 0) {
                 Button { if enabled { hour = (hour + 23) % 24 } } label: { Image(systemName: "chevron.up").font(.system(size: 8, weight: .bold)).frame(width: 18, height: 11) }
                 Button { if enabled { hour = (hour + 1) % 24 } } label: { Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold)).frame(width: 18, height: 11) }
             }
-            .buttonStyle(.plain).foregroundStyle(Color.shelfMuted)
+            .buttonStyle(.plain).foregroundStyle(Color.inkMuted)
         }
         .padding(.leading, 12).padding(.trailing, 6).padding(.vertical, 5)
         .overlay(Capsule().stroke(Color.ink.opacity(0.5), lineWidth: 1))

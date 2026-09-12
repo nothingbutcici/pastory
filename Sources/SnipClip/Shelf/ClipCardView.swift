@@ -20,7 +20,7 @@ struct ClipCardView: View {
     @FocusState private var titleFocused: Bool
 
     private var paperPaint: ImagePaint { onClipboard ? Paint.paperBlue : Paint.paper }
-    private var ticket: TicketShape { TicketShape(notchFromBottom: index % 2 == 0 ? Self.stubHeight : nil, notchFromTop: nil) }
+    private var ticket: TicketShape { TicketShape(notchFromBottom: index % 2 == 0 ? Self.stubHeight : nil) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -242,14 +242,13 @@ struct ClipCardView: View {
         .help(item.pinned ? "取消 Pin" : "Pin 住，不会被自动清理")
     }
 
-    private func action(_ symbol: String, _ tip: String, active: Bool = false, _ act: @escaping () -> Void) -> some View {
+    private func action(_ symbol: String, _ tip: String, _ act: @escaping () -> Void) -> some View {
         Button(action: act) {
             Image(systemName: symbol)
                 .font(.system(size: 17, weight: .regular))
                 .foregroundStyle(Color.ink)
                 .frame(maxWidth: .infinity)
                 .frame(height: 36)
-                .background(active ? Color.ink.opacity(0.12) : Color.clear, in: RoundedRectangle(cornerRadius: 6))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -257,8 +256,6 @@ struct ClipCardView: View {
     }
 
     // MARK: Stationery
-
-    private var stableSeed: UInt64 { UInt64(truncatingIfNeeded: stableHash(Data(item.id.utf8))) }
 
     /// Only the copied card wears the pink pushpin, pushed through its top margin.
     private var hasPin: Bool { onClipboard }
@@ -299,15 +296,14 @@ struct ClipCardView: View {
     }
 }
 
-/// Rounded rectangle with a half-circle notch cut into each side, either `notchFromBottom` up from the bottom
-/// edge or `notchFromTop` down from the top edge (odd cards punch low, even cards punch high).
+/// Rounded rectangle with a half-circle notch cut into each side, `notchFromBottom` up from the bottom edge
+/// (odd cards are punched, even cards are plain).
 struct TicketShape: Shape {
     var notchFromBottom: CGFloat?
-    var notchFromTop: CGFloat?
     var radius: CGFloat = 5
     var notch: CGFloat = 11
     func path(in r: CGRect) -> Path {
-        let y: CGFloat? = notchFromBottom.map { r.maxY - $0 } ?? notchFromTop.map { r.minY + $0 }
+        let y: CGFloat? = notchFromBottom.map { r.maxY - $0 }
         var p = Path()
         p.move(to: CGPoint(x: r.minX + radius, y: r.minY))
         p.addLine(to: CGPoint(x: r.maxX - radius, y: r.minY))

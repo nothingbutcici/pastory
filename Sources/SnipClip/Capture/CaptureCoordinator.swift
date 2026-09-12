@@ -5,7 +5,6 @@ import AppKit
 final class CaptureCoordinator: AnnotateDelegate {
     static let shared = CaptureCoordinator()
     private var snapshot: ShareableSnapshot?
-    private var pickedTarget: CaptureTarget?
     private var fullImage: CGImage?
     private var fullScale: CGFloat = 2
     private var recording: RecordingSession?
@@ -17,9 +16,11 @@ final class CaptureCoordinator: AnnotateDelegate {
 
     func start(mode: PickMode = .region) {
         if let recording, recording.isRecording { recording.stop(); return }   // hotkey again = stop recording
+        if recording != nil { NSSound.beep(); return }      // preview / encoding is up: decide there first, nothing gets thrown away
         // Hotkey again while the picker or annotator is up: start over, but leave an open 识别文字 panel alone —
         // being able to screenshot that panel is the point.
         if isBusy { finish(keepOCRPanel: true) }
+        ocrToken = UUID()                    // a panel left over from the last capture is not this capture's text
         guard Permissions.ensureScreenRecording() else { return }
         isBusy = true
         ShelfPanelController.shared.holdOpen = true      // the shelf may be what you want to capture
@@ -38,8 +39,7 @@ final class CaptureCoordinator: AnnotateDelegate {
     }
 
     private func picked(_ target: CaptureTarget?) {
-        guard let target, let snapshot else { finish(); return }
-        pickedTarget = target
+        guard target != nil, let snapshot else { finish(); return }
         let overlay = SelectionOverlayController.shared
         guard let display = overlay.heldDisplay else { finish(); return }
         let screen = snapshot.screen(for: display)
@@ -88,7 +88,6 @@ final class CaptureCoordinator: AnnotateDelegate {
         let overlay = SelectionOverlayController.shared
         guard let rect = overlay.heldScreenRect, let display = overlay.heldDisplay, let local = overlay.heldDisplayLocalRect else { finish(); return }
         let target: CaptureTarget = local.size == overlay.heldScreenSize ? .display(display) : .region(display, local)
-        _ = pickedTarget
         OCRPanelController.shared.close()
         SelectionOverlayController.shared.release()
         let session = RecordingSession(target: target, regionScreenRect: rect)
@@ -110,11 +109,8 @@ final class CaptureCoordinator: AnnotateDelegate {
         }
     }
 
-    func cancelRecording() { recording?.cancel() }
-
     private func finish(keepOCRPanel: Bool = false) {
         if let recording { recording.cancel(); return }   // teardown calls back into finish()
-        pickedTarget = nil
         fullImage = nil
         ShelfPanelController.shared.holdOpen = false
         if !keepOCRPanel { OCRPanelController.shared.close() }

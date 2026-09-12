@@ -31,7 +31,7 @@ build/               构建产物，不进 git
 
 | 路径 | 内容 |
 | --- | --- |
-| `pastory.sqlite` | 索引（SQLite，WAL）：id、kind(text/url/image/files/video)、创建时间、来源 app、预览片段、OCR 文本、是否 Pin、标题、内容哈希。旧版 `index.json` 首次启动导入后改名 `index.migrated.json` |
+| `pastory.sqlite` | 索引（SQLite，WAL）：id、kind(text/url/image/files/video)、创建时间、来源 app、预览片段、OCR 文本、是否 Pin、标题、内容哈希。旧版 `index.json` 首次启动导入后改名 `index.migrated.<yyyyMMdd-HHmmss>.json` |
 | `items/<id>.txt` | 文本 / 链接正文；富文本另存 `<id>.rtf` |
 | `items/<id>.png` | 图片原图，带显示器色彩描述文件，不重编码 |
 | `items/<id>.json` | 文件条目：路径列表 |
@@ -108,17 +108,17 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
   米字 + 浅蓝选中；标注调色盘 = 紫 + #E9631A / #C56F8C / #A9C2E0 / #59382C / #1E151C / #EBEBDF（用户 2026-09-12 晚定）。
   logo 用品牌稿 `Project/codex相关/pastory clipboard concepts/brand/signature-assets/Pastory Logo/`：
   `Resources/Logo.png` 与 `AppIcon.icns` 由 `pastory-app-icon-hd.png` 圆角化生成（1024 画布放 824 圆角方，半径 22.37%），
-  `Resources/MenuIcon(@2x).png` 直接取自 `PastoryMenuBar.imageset`（template）。面包人 `Resources/Mascot.png` 目前没用上。
+  `Resources/MenuIcon(@2x).png` 直接取自 `PastoryMenuBar.imageset`（template，build.sh 会拷进包）。面包人 `Resources/Mascot.png` 留在仓库但不进包、代码不引用。
   品牌字体 Ysabeau Office（OFL，`Resources/Fonts/`，启动时按进程注册）只用在「Pastory」字样。
   截图 / 录屏只排除取景遮罩自己的窗口，货架开着时也能被截进去。
 - 框选完成后屏幕顶部出品牌条：logo · Snip Clip · [截屏 │ 录屏] · ✕，默认截屏；点录屏进录制流程。
-  选区是荧光绿框 + 8 个手柄，拖手柄可以改选区（截图是整屏取一次再按选区裁，拖手柄只是重新裁，标注位置不动），
+  选区是浅蓝框 + 8 个米纸手柄，拖手柄可以改选区（截图是整屏取一次再按选区裁，拖手柄只是重新裁，标注位置不动），
   右上角深色角标显示像素尺寸。
 - 工具条两层，结构对标飞书：主条 = 矩形 R / 椭圆 O / 箭头 A / 直线 L / 画笔 P / 文字 T / 马赛克 M │ 识别文字 │
-  撤销 · ✕ 取消 · ✓ 完成（三个纯紫图标一组）。子条只在点了某个工具、或选中了某个元素时从主条下方弹出（带指向小三角），
+  撤销 · ✕ 取消 · ✓ 完成（米色图标，✓ 浅蓝）。子条只在点了某个工具、或选中了某个元素时从主条下方弹出（带指向小三角），
   内容是三档粗细的小圆点（文字工具显示 小 / 中 / 大；马赛克档位 = 格子大小）和 7 个方形色块（选中打勾，马赛克不显示颜色）；
   改动作用于选中元素，没选中时作为新元素的默认值。再点一次当前工具 = 收起。没有虚线、没有「保存到文件」（剪贴板已经联动）。
-  没有选择工具、没有撤销按钮：点到已画的元素就选中它（矩形 / 椭圆只认边框，所以在框里仍能继续画），
+  没有选择工具：点到已画的元素就选中它（矩形 / 椭圆只认边框，所以在框里仍能继续画），
   拖动移动，拉手柄改形（直线 / 箭头两端点，方框四角），右上角 ✕ 或 ⌫ 删除，⌘Z 仍可撤销；
   已选中的文字再点一下进入编辑。画笔画完不选中，方便连画。
   线条是手绘感：路径打平后加低频噪声画两遍，每个形状带固定 seed，预览和导出一模一样。
@@ -127,6 +127,12 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
 - **⌥⌘F 搜索剪贴板**：打开面板并直接聚焦搜索框。三个全局快捷键都在设置里改；录制时当场试注册，
   被其他应用占用、和自己的另一个快捷键重复会拒绝并提示；单个键（没有 ⌘⌥⌃⇧）提示「至少两个键」；
   只有 ⌘/⇧ 加单键（如 ⌘A）允许设置，但保存后提示「所有应用里的 ⌘A 都会变成这个功能」（2026-09-12 改，之前是直接拒绝）。
+- **SQLite 写法**（2026-09-12 晚改）：单条改动（复制置顶、Pin、标题、OCR 回写、编辑、新增、删除）走单行 upsert / delete，
+  只有清空、导入、迁移走整表重写；写失败的语义不变（`lastSaveFailed`，UI 回滚）。
+- **录屏预览 / 转 GIF 期间按截图键**只响一声，不会丢弃录像；标注阶段 ⎋ 交回画布（先取消选中 / 退出文字框，再取消整次），
+  系统级的 ⎋ 热键只在框选阶段挂着。三个快捷键录制框共用一个 suspend 计数，先后打开不会把全局键弄丢。
+- **自测护栏**：会写库的子命令（clipboard / retention / shelf / settings / editors / import）必须带 `SNIPCLIP_STORE`，
+  且路径不能在 `~/Library/Application Support` 下面（不管叫什么名字），否则直接拒绝。
 - **截图中再按截图键 = 重新框选**，不是退出；打开着的「识别文字」面板会留在原地（这样才能截它），
   完成时只带上属于这次截图的识别文本（OCR 面板带 token）。⎋ 仍是取消。
 - **卡片标题**：输入框无论怎么离开（⏎、✓、点别处、切到别的卡、⎋）都算保存，删空即去掉标题；草稿没变就不写盘。
@@ -137,7 +143,7 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
   文本列 / UTF-8 blob 当文本、PNG/JPEG/TIFF blob 当图片、名字像 date/time/copied 的列当时间（识别 1970 秒、2001 秒、毫秒、ISO），
   像 pin/favorite 的列当 Pin；Core Data 子表通过整数列关联到有日期的父表，同一条的多种表示（plain+rtf、png+tiff）只留一份。
   弹窗先报数量再导入，已存在的内容按 hash 跳过，保留原时间和 Pin。`--selftest import <db>` 可用假库验证。
-- **⇧⌘V 剪贴板**：底部滑出（屏高 55%）深色货架，淡紫强调：左侧侧栏（logo、今日暂存、清理规则、Pin 说明；吉祥物位待素材），
+- **⇧⌘V 剪贴板**：底部滑出（屏高 44%）纸感货架：左侧侧栏（手写 Pastory、剪贴板 / 设置两行、今日暂存 + Pin 说明），
   侧栏底部「Pin 后一直保留」和「设置」两行，设置在面板右半区内展开（`Shelf/SettingsPane`），不弹窗；
   顶部胶囊筛选 全部 / Pin / 图片 / 录屏 / 文本 + 搜索 + ✕，深色卡片配米色内容纸面（app 图标、时间、内容、
   「已复制」标记 = 此刻剪贴板里的那条、说明行、编辑或预览 / Pin / 保存（仅图片、录屏）/ 删除），底部滚动条带左右箭头。左 = 最新。
@@ -159,7 +165,7 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
   文件上剪贴板用 Finder 同款写法（NSURL 对象 + NSFilenamesPboardType），只写 public.file-url 微信会当纯文本贴出路径。
   不做鼠标高亮、缩放、剪辑，那是 cc record 的事。
 - 菜单栏图标：左键开关货架，右键菜单（截图 / 暂停记录 / 打开存储文件夹 / 设置 / 退出）。
-- 设置：两个快捷键、保留期（默认到次日凌晨 4 点）、图片自动 OCR、保存位置、登录时启动。
+- 设置：三个快捷键、保留期（默认到次日凌晨 4 点）、图片自动 OCR、保存位置、登录时启动。
 
 ## 权限
 

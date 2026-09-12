@@ -27,7 +27,7 @@ final class RecordingSession {
 
     func start() {
         showFrame()
-        showBar(recording: true)
+        showBar()
         Task { @MainActor in
             do {
                 // Re-fetch so the frame and bar (created just now) are excluded; the shelf, if open, stays visible.
@@ -72,6 +72,7 @@ final class RecordingSession {
     }
 
     func cancel() {
+        guard !(stopping && isRecording) else { return }     // stop() is mid-flight; its continuation must not be raced
         timer?.invalidate()
         Task { @MainActor in
             if isRecording { await recorder.stop() }
@@ -81,7 +82,10 @@ final class RecordingSession {
         }
     }
 
+    private var failed = false
     private func fail(_ error: Error?) {
+        guard !failed else { return }      // both stream delegates report the same failure
+        failed = true
         timer?.invalidate()
         isRecording = false
         try? FileManager.default.removeItem(at: tmpURL)
@@ -122,7 +126,7 @@ final class RecordingSession {
         frame = w
     }
 
-    private func showBar(recording: Bool) {
+    private func showBar() {
         bar?.orderOut(nil); bar?.close()
         let p = NSPanel(contentRect: CGRect(x: 0, y: 0, width: 220, height: 40),
                         styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)

@@ -117,6 +117,8 @@ final class SelectionOverlayController {
         annotator = canvas
         toolbar = bar
         topBar = top
+        // From here the canvas owns ⎋ (deselect, leave the text box, then cancel); the system-wide hook would eat it.
+        HotKeyCenter.shared.unbind("picker.esc")
         layoutChrome()
         win.makeKeyAndOrderFront(nil)
         win.makeFirstResponder(canvas)

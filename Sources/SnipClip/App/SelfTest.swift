@@ -12,11 +12,13 @@ enum SelfTest {
         let cmd = args[i + 1]
         let rest = Array(args[(i + 2)...])
         // Anything that writes to a store must run inside SNIPCLIP_STORE. Never against the user's data.
-        let mutating: Set<String> = ["clipboard", "retention", "shelf", "settings", "editors"]
+        let mutating: Set<String> = ["clipboard", "retention", "shelf", "settings", "editors", "import"]
         if mutating.contains(cmd) {
             let env = ProcessInfo.processInfo.environment["SNIPCLIP_STORE"] ?? ""
-            let real = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Snip Clip").path
-            if env.isEmpty || env.hasPrefix(real) {
+            // Nothing under Application Support counts as a sandbox, whatever the folder is called.
+            let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].standardizedFileURL.path
+            let target = URL(fileURLWithPath: env).standardizedFileURL.path
+            if env.isEmpty || target.hasPrefix(support) {
                 print("refusing: --selftest \(cmd) needs SNIPCLIP_STORE pointing at a scratch folder (never the real store)")
                 exit(2)
             }

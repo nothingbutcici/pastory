@@ -28,8 +28,6 @@ final class AnnotateToolbar: NSView {
     }
     required init?(coder: NSCoder) { fatalError() }
 
-    static func shadow() -> NSShadow { Theme.shadow() }
-
     override var fittingSize: CGSize { CGSize(width: stack.fittingSize.width + 16, height: 56) }
     override func draw(_ dirtyRect: NSRect) { Theme.drawDesk(NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: Theme.paperRadius, yRadius: Theme.paperRadius)) }
 
@@ -166,7 +164,6 @@ final class SubBar: NSView {
     private var sizeButtons: [StrokeSize: NSButton] = [:]
     private var colorButtons: [NSButton] = []
     private var colorDivider: NSView!
-    private var kind: AnnotateTool = .rect
     var pointerX: CGFloat = 40
     var pointsUp = true
     private static let pointerH: CGFloat = 7
@@ -219,7 +216,6 @@ final class SubBar: NSView {
     override var fittingSize: CGSize { CGSize(width: stack.fittingSize.width + 28, height: 46 + Self.pointerH) }
 
     func configure(kind: AnnotateTool) {
-        self.kind = kind
         let colored = kind != .mosaic
         colorDivider.isHidden = !colored
         colorButtons.forEach { $0.isHidden = !colored }

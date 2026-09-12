@@ -1,8 +1,7 @@
 import SwiftUI
 
-// Paper theme tokens. `shelfInk` & co. are what the settings pane paints its paper sections with.
+// Paper theme tokens, shared by the shelf, its settings pane and the cards.
 extension Color {
-    static let brown = Color(nsColor: Theme.brown)
     static let brownDeep = Color(nsColor: Theme.brownDeep)
     static let paper = Color(nsColor: Theme.paper)
     static let paperDim = Color(nsColor: Theme.paperDim)
@@ -12,18 +11,6 @@ extension Color {
     static let inkMuted = Color(nsColor: Theme.inkMuted)
     static let onBrown = Color(nsColor: Theme.onBrown)
     static let onBrownMuted = Color(nsColor: Theme.onBrownMuted)
-    // legacy names still used by the settings pane
-    static let shelfBG = brown
-    static let shelfSide = brownDeep
-    static let shelfCard = paper
-    static let shelfInk = ink
-    static let shelfMuted = inkMuted
-    static let shelfBorder = Color(nsColor: Theme.ink).opacity(0.22)
-    static let purple = paperBlueDeep
-    static let onPurple = ink
-    static let lime = Color(nsColor: Theme.lime)
-    static let cream = paper
-    static let creamInk = ink
 }
 
 extension Font {
@@ -104,7 +91,7 @@ struct ShelfView: View {
             .frame(maxWidth: .infinity)
             .background(alignment: .leading) {
                 if active {
-                    PaperPatch(color: .paperBlue, top: true, right: true, bottom: true, left: true, seed: 11, amplitude: 2.2)
+                    PaperPatch(top: true, right: true, bottom: true, left: true, seed: 11, amplitude: 2.2)
                         .padding(.leading, 6).padding(.trailing, 10)
                 }
             }
@@ -129,7 +116,7 @@ struct ShelfView: View {
                     .foregroundStyle(on ? Color.ink : Color.onBrown)
                     .padding(.horizontal, 20).frame(height: 40)
                     .background {
-                        if on { PaperPatch(color: .paperBlue, top: true, right: true, bottom: true, left: true, seed: 23 + UInt64(i), amplitude: 2).padding(.vertical, 1) }
+                        if on { PaperPatch(top: true, right: true, bottom: true, left: true, seed: 23 + UInt64(i), amplitude: 2).padding(.vertical, 1) }
                     }
                     .overlay {
                         // Hand-ruled: left, bottom, right — no top edge.
@@ -315,13 +302,13 @@ struct TornPaper: Shape {
 
 /// Paper with grain, torn where asked, with a soft drop shadow.
 struct PaperPatch: View {
-    var color: Color = .paperBlue
+    var blue = true
     var top = false, right = false, bottom = false, left = false
     var seed: UInt64 = 7
     var amplitude: CGFloat = 3
     var body: some View {
         let shape = TornPaper(top: top, right: right, bottom: bottom, left: left, seed: seed, amplitude: amplitude)
-        shape.fill(color == .paperBlue ? Paint.paperBlue : Paint.paper)
+        shape.fill(blue ? Paint.paperBlue : Paint.paper)
             .shadow(color: .black.opacity(0.4), radius: 5, x: 1, y: 3)
     }
 }

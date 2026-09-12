@@ -45,18 +45,11 @@ final class ClipStore {
     static let maxTextBytes = 20 * 1024 * 1024
 
     init(root: URL? = nil) {
-        let fm = FileManager.default
-        let base: URL
-        if let root {
-            base = root
-        } else {
-            base = Self.defaultRoot
-        }
+        let base = root ?? Self.defaultRoot
         self.root = base
         itemsDir = base.appendingPathComponent("items", isDirectory: true)
         thumbsDir = base.appendingPathComponent("thumbs", isDirectory: true)
         shareDir = base.appendingPathComponent("share", isDirectory: true)
-        _ = fm
         ensureDirs()
         load()
     }
@@ -111,11 +104,18 @@ final class ClipStore {
     private(set) var lastSaveFailed = false
     private var warnedSaveFailure = false
 
+    /// Whole table (bulk changes: clear, import, migration). `persist` / `unpersist` are the one-row versions.
     @discardableResult
-    private func save() -> Bool {
+    private func save() -> Bool { write { try $0.saveAll(items) } }
+    @discardableResult
+    private func persist(_ item: ClipItem) -> Bool { write { try $0.upsert(item) } }
+    @discardableResult
+    private func unpersist(_ id: String) -> Bool { write { try $0.delete(id) } }
+
+    private func write(_ op: (ClipDB) throws -> Void) -> Bool {
         guard !loadFailed, let db else { lastSaveFailed = true; return false }    // never write over a table we could not read
         do {
-            try db.saveAll(items)
+            try op(db)
             let recovered = lastSaveFailed
             lastSaveFailed = false
             if recovered { Retention.reschedule() }
@@ -202,7 +202,7 @@ final class ClipStore {
         let hash = stableHash(png)
         if let dup = dedupe(hash: hash) { return dup }
         guard let cg = Screenshotter.image(fromPNG: png) else { return nil }
-        var item = ClipItem(id: UUID().uuidString, kind: .image, createdAt: Date(),
+        let item = ClipItem(id: UUID().uuidString, kind: .image, createdAt: Date(),
                             sourceBundleID: source.bundleID, sourceAppName: source.name,
                             snippet: "\(cg.width)×\(cg.height)", ocrText: ocrText, pinned: false,
                             ext: "png", hasRTF: false, pixelWidth: cg.width, pixelHeight: cg.height,
@@ -219,7 +219,6 @@ final class ClipStore {
                 await MainActor.run { ClipStore.shared.setOCR(text, for: id, ifHash: expected) }
             }
         }
-        item.ocrText = ocrText
         return item
     }
 
@@ -274,7 +273,7 @@ final class ClipStore {
         items[i].contentHash = stableHash(data)
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
         items[i].kind = (URL(string: t).flatMap(\.scheme).map { ["http", "https"].contains($0) } ?? false) && !t.contains("\n") ? .url : .text
-        save()
+        persist(items[i])
     }
 
     /// Edited image: new PNG + thumbnail, OCR again in the background. If the item is gone meanwhile, keep the work as a new one.
@@ -291,7 +290,7 @@ final class ClipStore {
         items[i].pixelHeight = cg.height
         items[i].byteCount = png.count
         items[i].contentHash = stableHash(png)
-        save()
+        persist(items[i])
         if Preferences.shared.ocrImages {
             let expected = stableHash(png)
             Task.detached(priority: .utility) {
@@ -310,7 +309,7 @@ final class ClipStore {
 
     private func prepend(_ item: ClipItem) {
         items.insert(item, at: 0)
-        save()
+        persist(item)
         Retention.itemAdded()
     }
 
@@ -382,13 +381,13 @@ final class ClipStore {
         var item = items.remove(at: i)
         item.createdAt = Date()
         items.insert(item, at: 0)
-        save()
+        persist(item)
     }
 
     func togglePin(_ id: String) {
         guard let i = items.firstIndex(where: { $0.id == id }) else { return }
         items[i].pinned.toggle()
-        guard save() else { items[i].pinned.toggle(); return }      // UI must not claim a pin the disk does not have
+        guard persist(items[i]) else { items[i].pinned.toggle(); return }      // UI must not claim a pin the disk does not have
         if !items[i].pinned { Retention.reschedule() }             // an un-pinned old item may be the next to expire
     }
 
@@ -396,27 +395,27 @@ final class ClipStore {
     func debugSetDate(_ date: Date, for id: String) {
         guard let i = items.firstIndex(where: { $0.id == id }) else { return }
         items[i].createdAt = date
-        save()
+        persist(items[i])
     }
 
     func setTitle(_ title: String?, for id: String) {
         guard let i = items.firstIndex(where: { $0.id == id }) else { return }
         let t = title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         items[i].title = t.isEmpty ? nil : t
-        save()
+        persist(items[i])
     }
 
     /// Only applies if the item still holds the image the OCR ran on.
     func setOCR(_ text: String?, for id: String, ifHash hash: Int) {
         guard let i = items.firstIndex(where: { $0.id == id }), items[i].contentHash == hash else { return }
         items[i].ocrText = text
-        save()
+        persist(items[i])
     }
 
     func remove(_ id: String) {
         guard let i = items.firstIndex(where: { $0.id == id }) else { return }
         let item = items.remove(at: i)
-        guard save() else { items.insert(item, at: i); return }    // index first; files only once the index agrees
+        guard unpersist(item.id) else { items.insert(item, at: i); return }    // index first; files only once the index agrees
         deleteFiles(item)
     }
 
@@ -451,6 +450,7 @@ final class ClipStore {
     func thumbnail(of item: ClipItem) -> NSImage? {
         if let t = thumbCache[item.id] { return t }
         guard item.kind == .image || item.kind == .video, let img = NSImage(contentsOf: thumbURL(item)) else { return nil }
+        if thumbCache.count > 300 { thumbCache.removeAll() }      // a full scroll through a big library must not pin everything in memory
         thumbCache[item.id] = img
         return img
     }

@@ -81,7 +81,7 @@ struct ShortcutRecorder: View {
                 } label: {
                     Text(capturing ? "按下组合键" : shortcut.display)
                         .font(.system(size: 13, weight: .medium).monospaced())
-                        .foregroundStyle(shortcut.isSet || capturing ? Color.ink : Color.shelfMuted)
+                        .foregroundStyle(shortcut.isSet || capturing ? Color.ink : Color.inkMuted)
                         .frame(minWidth: 96)
                         .contentShape(Rectangle())
                 }
@@ -89,7 +89,7 @@ struct ShortcutRecorder: View {
                 // Clear lives inside the box, gray; the action then stays reachable from the menu.
                 if shortcut.isSet, !capturing {
                     Button { stop(Shortcut.none) } label: {
-                        Image(systemName: "xmark.circle.fill").font(.system(size: 13)).foregroundStyle(Color.shelfMuted)
+                        Image(systemName: "xmark.circle.fill").font(.system(size: 13)).foregroundStyle(Color.inkMuted)
                     }
                     .buttonStyle(.plain).help("不设快捷键")
                 }

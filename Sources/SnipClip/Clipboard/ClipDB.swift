@@ -2,7 +2,7 @@ import Foundation
 import SQLite3
 
 /// The index, in SQLite (WAL). Payloads stay as files next to it; this replaces index.json.
-/// One table, whole-list writes inside a transaction: simple, atomic, and quick for thousands of rows.
+/// One table. Single-row upsert / delete for everyday edits; `saveAll` (whole table in one transaction) for bulk changes.
 final class ClipDB {
     private var db: OpaquePointer?
     let url: URL
@@ -64,30 +64,53 @@ final class ClipDB {
         return out
     }
 
+    private static let upsertSQL = """
+        INSERT OR REPLACE INTO items (id, kind, created_at, source_bundle, source_name, snippet, ocr_text, pinned, ext, has_rtf,
+                                      pixel_w, pixel_h, byte_count, duration, title, content_hash)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """
+
+    private func bind(_ it: ClipItem, to stmt: OpaquePointer?) {
+        sqlite3_reset(stmt)
+        sqlite3_clear_bindings(stmt)
+        func bindText(_ i: Int32, _ s: String?) { if let s { sqlite3_bind_text(stmt, i, s, -1, Self.transient) } else { sqlite3_bind_null(stmt, i) } }
+        func bindInt(_ i: Int32, _ v: Int?) { if let v { sqlite3_bind_int64(stmt, i, Int64(v)) } else { sqlite3_bind_null(stmt, i) } }
+        func bindReal(_ i: Int32, _ v: Double?) { if let v { sqlite3_bind_double(stmt, i, v) } else { sqlite3_bind_null(stmt, i) } }
+        bindText(1, it.id); bindText(2, it.kind.rawValue); bindReal(3, it.createdAt.timeIntervalSince1970)
+        bindText(4, it.sourceBundleID); bindText(5, it.sourceAppName); bindText(6, it.snippet); bindText(7, it.ocrText)
+        bindInt(8, it.pinned ? 1 : 0); bindText(9, it.ext); bindInt(10, it.hasRTF ? 1 : 0)
+        bindInt(11, it.pixelWidth); bindInt(12, it.pixelHeight); bindInt(13, it.byteCount)
+        bindReal(14, it.duration); bindText(15, it.title); bindInt(16, it.contentHash)
+    }
+
+    /// Insert or update one row.
+    func upsert(_ item: ClipItem) throws {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, Self.upsertSQL, -1, &stmt, nil) == SQLITE_OK else { throw Self.error(db, "prepare upsert") }
+        defer { sqlite3_finalize(stmt) }
+        bind(item, to: stmt)
+        guard sqlite3_step(stmt) == SQLITE_DONE else { throw Self.error(db, "upsert") }
+    }
+
+    /// Remove one row.
+    func delete(_ id: String) throws {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "DELETE FROM items WHERE id = ?", -1, &stmt, nil) == SQLITE_OK else { throw Self.error(db, "prepare delete") }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, id, -1, Self.transient)
+        guard sqlite3_step(stmt) == SQLITE_DONE else { throw Self.error(db, "delete") }
+    }
+
     /// Replace the whole table with `items` atomically.
     func saveAll(_ items: [ClipItem]) throws {
         try exec("BEGIN IMMEDIATE")
         do {
             try exec("DELETE FROM items")
             var stmt: OpaquePointer?
-            let sql = """
-                INSERT OR REPLACE INTO items (id, kind, created_at, source_bundle, source_name, snippet, ocr_text, pinned, ext, has_rtf,
-                                   pixel_w, pixel_h, byte_count, duration, title, content_hash)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-                """
-            guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { throw Self.error(db, "prepare insert") }
+            guard sqlite3_prepare_v2(db, Self.upsertSQL, -1, &stmt, nil) == SQLITE_OK else { throw Self.error(db, "prepare insert") }
             defer { sqlite3_finalize(stmt) }
             for it in items {
-                sqlite3_reset(stmt)
-                sqlite3_clear_bindings(stmt)
-                func bindText(_ i: Int32, _ s: String?) { if let s { sqlite3_bind_text(stmt, i, s, -1, Self.transient) } else { sqlite3_bind_null(stmt, i) } }
-                func bindInt(_ i: Int32, _ v: Int?) { if let v { sqlite3_bind_int64(stmt, i, Int64(v)) } else { sqlite3_bind_null(stmt, i) } }
-                func bindReal(_ i: Int32, _ v: Double?) { if let v { sqlite3_bind_double(stmt, i, v) } else { sqlite3_bind_null(stmt, i) } }
-                bindText(1, it.id); bindText(2, it.kind.rawValue); bindReal(3, it.createdAt.timeIntervalSince1970)
-                bindText(4, it.sourceBundleID); bindText(5, it.sourceAppName); bindText(6, it.snippet); bindText(7, it.ocrText)
-                bindInt(8, it.pinned ? 1 : 0); bindText(9, it.ext); bindInt(10, it.hasRTF ? 1 : 0)
-                bindInt(11, it.pixelWidth); bindInt(12, it.pixelHeight); bindInt(13, it.byteCount)
-                bindReal(14, it.duration); bindText(15, it.title); bindInt(16, it.contentHash)
+                bind(it, to: stmt)
                 guard sqlite3_step(stmt) == SQLITE_DONE else { throw Self.error(db, "insert") }
             }
             try exec("COMMIT")

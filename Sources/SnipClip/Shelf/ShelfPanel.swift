@@ -192,7 +192,7 @@ final class ShelfModel {
     var filter: ShelfFilter = .all
     var selectedID: String? {
         didSet {
-            ShelfPanelController.shared.quickLookSelectionChanged()
+            if QLPreviewPanel.sharedPreviewPanelExists() { ShelfPanelController.shared.quickLookSelectionChanged() }
             if let r = renamingID, r != selectedID { renamingID = nil }     // moving on cancels an open title box
         }
     }
@@ -250,7 +250,8 @@ final class ShelfModel {
         selectedID = list[n].id
     }
 
-    private var selected: ClipItem? { items.first { $0.id == selectedID } ?? items.first }
+    /// The highlighted card, and only that; keys never fall back to the first card silently.
+    private var selected: ClipItem? { items.first { $0.id == selectedID } }
     var selectedItem: ClipItem? { selected }
 
     /// Single click: copy and stay (the 已复制 tag moves to the card).

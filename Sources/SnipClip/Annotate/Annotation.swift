@@ -31,7 +31,6 @@ enum AnnotateTool: CaseIterable {
 /// One size control for everything: stroke width for shapes, font size for text.
 enum StrokeSize: Int, CaseIterable {
     case s = 1, m = 2, l = 3
-    var label: String { ["S", "M", "L"][rawValue - 1] }
     var lineWidth: CGFloat { [2.6, 4.2, 6.5][rawValue - 1] }
     var fontSize: CGFloat { [18, 24, 34][rawValue - 1] }
     /// Mosaic cell size in canvas points.
