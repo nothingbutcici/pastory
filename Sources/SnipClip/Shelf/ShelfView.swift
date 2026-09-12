@@ -151,8 +151,8 @@ struct ShelfView: View {
             }
             .buttonStyle(.plain).help("关闭 ⎋")
         }
-        .padding(.top, 14)
-        .padding(.bottom, 16)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
     }
 
     // MARK: Cards
@@ -160,7 +160,7 @@ struct ShelfView: View {
     private func cards(_ items: [ClipItem]) -> some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(alignment: .top, spacing: 22) {
+                LazyHStack(alignment: .top, spacing: 16) {
                     ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                         ClipCardView(item: item, selected: item.id == model.selectedID, onClipboard: item.id == ClipStore.shared.items.first?.id,
                                      index: index,
@@ -174,8 +174,8 @@ struct ShelfView: View {
                             .contextMenu { menu(for: item) }
                     }
                 }
-                .padding(.top, 40)              // room for the clip's head above the cards
-                .padding(.bottom, 8)
+                .padding(.top, 16)              // just enough for the pushpin's head
+                .padding(.bottom, 6)
                 .padding(.horizontal, 4)
             }
             .scrollPosition($scrollPos)
@@ -229,8 +229,8 @@ struct ShelfView: View {
             Button { model.move(3) } label: { Image(systemName: "chevron.right").font(.system(size: 13, weight: .regular)) }
                 .buttonStyle(.plain).foregroundStyle(Color.onBrownMuted)
         }
-        .padding(.top, 12)
-        .padding(.bottom, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 12)
     }
 
     @ViewBuilder

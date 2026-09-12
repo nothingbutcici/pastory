@@ -48,7 +48,7 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
         let p = panel ?? makePanel()
         panel = p
         let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main ?? NSScreen.screens[0]
-        let height = max(360, (screen.frame.height * 0.44).rounded())
+        let height = max(420, (screen.frame.height * 0.48).rounded())      // laptops need the extra rows of text
         let target = CGRect(x: screen.frame.minX, y: screen.frame.minY, width: screen.frame.width, height: height)
         model.reset()
         // The window itself never leaves this screen (a display arranged below would otherwise see it slide through);
