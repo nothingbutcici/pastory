@@ -150,6 +150,11 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
   `Clipboard/Importer.swift` 先复制一份再读（连同 -wal/-shm），Pastory 库按 schema 精确导，其他库按启发式：
   文本列 / UTF-8 blob 当文本、PNG/JPEG/TIFF blob 当图片、名字像 date/time/copied 的列当时间（识别 1970 秒、2001 秒、毫秒、ISO），
   像 pin/favorite 的列当 Pin；Core Data 子表通过整数列关联到有日期的父表，同一条的多种表示（plain+rtf、png+tiff）只留一份。
+  **Paste（wiheads，Setapp 版目录 `~/Library/Application Support/com.wiheads.paste-setapp/db.sqlite`）** 有专门读法：
+  `ZITEMENTITY`（时间 ZTIMESTAMP/ZCREATEDAT，ZLIST 指向列表，条目最多的列表当历史、其余当 Pinboard=Pin）→
+  `ZITEMDATAENTITY.ZRAWPASTEBOARDITEMS`（剪贴板项归档；大块走 Core Data 外置存储 `.db_SUPPORT/_EXTERNAL_DATA/<UUID>`，
+  引用格式未公开，按目录里真实存在的文件名匹配文本 / 原始 16 字节 UUID）→ `PasteboardArchive.payload`
+  （keyed archive / plist / 裸字节都试，取一张图或一段文本）。真实归档格式待朋友的样本确认（2026-09-12 夜）。
   弹窗先报数量再导入，已存在的内容按 hash 跳过，Pin 保留；导入的一批保持内部先后，整体后移到比 Pastory 自己最早的一条还早
   （导入的历史永远排在自己记录的后面）。保留期不是「永不删除」时弹窗会提醒这些旧内容下次清理就会被清，可一键改为永不删除。`--selftest import <db>` 可用假库验证。
 - **⇧⌘V 剪贴板**：底部滑出（屏高 44%）纸感货架：左侧侧栏（手写 Pastory、剪贴板 / 设置两行、今日暂存 + Pin 说明），

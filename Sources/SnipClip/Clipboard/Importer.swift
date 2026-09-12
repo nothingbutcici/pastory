@@ -73,6 +73,9 @@ enum Importer {
         scan.tables = tables
         if tables.contains("items"), columns(db, "items").contains("content_hash") {
             scan.entries = try pastory(db, itemsDir: file.deletingLastPathComponent().appendingPathComponent("items"))
+        } else if tables.contains("ZITEMENTITY"), tables.contains("ZITEMDATAENTITY") {
+            let ext = file.deletingLastPathComponent().appendingPathComponent(".\(file.deletingPathExtension().lastPathComponent)_SUPPORT/_EXTERNAL_DATA")
+            scan.entries = try paste(db, externalDir: ext)
         } else {
             scan.entries = try generic(db, tables: tables)
         }
@@ -100,6 +103,63 @@ enum Importer {
             }
         }
         return out
+    }
+
+    // MARK: Paste (wiheads) — Core Data: ZITEMENTITY → ZITEMDATAENTITY.ZRAWPASTEBOARDITEMS (inline or external file)
+
+    private static func paste(_ db: OpaquePointer, externalDir: URL) throws -> [ClipStore.ImportEntry] {
+        // Pinboards: every list that is not the biggest one (the history) counts as pinned.
+        let listCounts = (try? query(db, "SELECT ZLIST AS l, COUNT(*) AS n FROM ZITEMENTITY GROUP BY ZLIST")) ?? []
+        let historyList = listCounts.max { ($0["n"] as? Int64 ?? 0) < ($1["n"] as? Int64 ?? 0) }?["l"] as? Int64
+        let external = ExternalStore(dir: externalDir)
+        let rows = try query(db, """
+            SELECT i.Z_PK AS pk, i.ZCREATEDAT AS created, i.ZTIMESTAMP AS ts, i.ZLIST AS list, i.ZTITLE AS title,
+                   d.ZRAWPASTEBOARDITEMS AS blob
+            FROM ZITEMENTITY i LEFT JOIN ZITEMDATAENTITY d ON d.ZITEM = i.Z_PK OR d.Z_PK = i.ZDATA
+            ORDER BY COALESCE(i.ZTIMESTAMP, i.ZCREATEDAT) DESC
+            """)
+        var out: [ClipStore.ImportEntry] = []
+        var seenPK = Set<Int64>()
+        for row in rows {
+            guard let pk = row["pk"] as? Int64, seenPK.insert(pk).inserted else { continue }
+            guard var blob = row["blob"] as? Data else { continue }
+            if let resolved = external.resolve(blob) { blob = resolved }
+            guard let payload = PasteboardArchive.payload(in: blob) else { continue }
+            let date = (row["ts"] ?? row["created"]).flatMap(asDate) ?? Date()
+            let pinned = (row["list"] as? Int64) != historyList
+            let title = (row["title"] as? String).flatMap { t in t.isEmpty || looksLikeIdentifier(t) ? nil : t }
+            out.append(.init(payload: payload, createdAt: date, pinned: pinned, title: nil))
+            _ = title      // Paste's title is usually an auto preview, not a name; kept out on purpose
+        }
+        return out
+    }
+
+    /// Core Data "allows external storage": the column holds a small reference, the bytes live in
+    /// .<db>_SUPPORT/_EXTERNAL_DATA/<UUID>. The reference format is undocumented, so match the UUID
+    /// (as text or as raw 16 bytes) against the files that actually exist.
+    private struct ExternalStore {
+        let dir: URL
+        let names: Set<String>
+        init(dir: URL) {
+            self.dir = dir
+            names = Set((try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? [])
+        }
+        func resolve(_ ref: Data) -> Data? {
+            guard !names.isEmpty, ref.count <= 512 else { return nil }
+            if let s = String(data: ref, encoding: .utf8) {
+                for n in names where s.contains(n) { return try? Data(contentsOf: dir.appendingPathComponent(n)) }
+            }
+            let bytes = [UInt8](ref)
+            if bytes.count >= 16 {
+                for i in 0...(bytes.count - 16) {
+                    let u = UUID(uuid: (bytes[i], bytes[i+1], bytes[i+2], bytes[i+3], bytes[i+4], bytes[i+5], bytes[i+6], bytes[i+7],
+                                        bytes[i+8], bytes[i+9], bytes[i+10], bytes[i+11], bytes[i+12], bytes[i+13], bytes[i+14], bytes[i+15])).uuidString
+                    if names.contains(u) { return try? Data(contentsOf: dir.appendingPathComponent(u)) }
+                    if names.contains(u.lowercased()) { return try? Data(contentsOf: dir.appendingPathComponent(u.lowercased())) }
+                }
+            }
+            return nil
+        }
     }
 
     // MARK: Anything else
@@ -281,5 +341,70 @@ enum Importer {
             rows.append(row)
         }
         return rows
+    }
+}
+
+/// Serialized pasteboard items (Paste stores an archive of [UTI: bytes]). Walk whatever the archive turns out to be
+/// — keyed archive, plain plist, or raw bytes — and pull out one picture or one piece of text.
+enum PasteboardArchive {
+    static func payload(in blob: Data) -> ClipStore.ImportEntry.Payload? {
+        var found: [(uti: String, data: Data)] = []
+        if let obj = decode(blob) { collect(obj, into: &found, key: "") }
+        // Preference: an image, else plain text, else a URL string.
+        for (uti, d) in found where isImageUTI(uti) {
+            if let png = toPNG(d) { return .image(png) }
+        }
+        for (uti, d) in found where uti.contains("utf8-plain-text") || uti == "public.plain-text" || uti.hasSuffix("string") {
+            if let s = String(data: d, encoding: .utf8) ?? String(data: d, encoding: .utf16), !s.isEmpty { return .text(s) }
+        }
+        for (uti, d) in found where uti.contains("url") && !uti.contains("file") {
+            if let s = String(data: d, encoding: .utf8), !s.isEmpty { return .text(s) }
+        }
+        // Raw fallbacks: a bare picture, or bare text.
+        if let png = toPNG(blob) { return .image(png) }
+        if blob.count < 200_000, let s = String(data: blob, encoding: .utf8), !s.isEmpty, s.unicodeScalars.allSatisfy({ $0.value >= 0x20 || $0 == "\n" || $0 == "\t" || $0 == "\r" }) {
+            return .text(s)
+        }
+        return nil
+    }
+
+    private static func decode(_ blob: Data) -> Any? {
+        guard blob.starts(with: Array("bplist".utf8)) || blob.first == UInt8(ascii: "<") else { return nil }
+        if let obj = try? NSKeyedUnarchiver.unarchivedObject(ofClasses: [NSArray.self, NSDictionary.self, NSString.self, NSData.self, NSURL.self, NSNumber.self, NSDate.self], from: blob) {
+            return obj
+        }
+        // Not a keyed archive (or holds classes we do not allow): read the plist itself; keyed archives then expose $objects.
+        return try? PropertyListSerialization.propertyList(from: blob, options: [], format: nil)
+    }
+
+    private static func collect(_ obj: Any, into out: inout [(uti: String, data: Data)], key: String) {
+        switch obj {
+        case let d as Data:
+            if !key.isEmpty { out.append((key, d)) }
+            else if let inner = decode(d) { collect(inner, into: &out, key: "") }       // archive inside an archive
+        case let s as String:
+            if key.contains("text") || key.contains("string") || key.contains("url") { out.append((key, Data(s.utf8))) }
+        case let dict as [String: Any]:
+            // {"public.utf8-plain-text": <data>, "public.png": <data>} or {"type": "public.png", "data": <data>}
+            if let t = (dict["type"] ?? dict["uti"] ?? dict["typeIdentifier"]) as? String, let v = dict["data"] ?? dict["value"] ?? dict["bytes"] {
+                collect(v, into: &out, key: t.lowercased())
+            } else {
+                for (k, v) in dict where !k.hasPrefix("$") { collect(v, into: &out, key: k.contains(".") ? k.lowercased() : key) }
+                if let objects = dict["$objects"] as? [Any] { for o in objects { collect(o, into: &out, key: "") } }
+            }
+        case let arr as [Any]:
+            for v in arr { collect(v, into: &out, key: key) }
+        default: break
+        }
+    }
+
+    private static func isImageUTI(_ u: String) -> Bool { u.contains("png") || u.contains("tiff") || u.contains("jpeg") || u.contains("jpg") || u.contains("heic") }
+    private static func toPNG(_ d: Data) -> Data? {
+        guard d.count > 16 else { return nil }
+        if d.starts(with: [0x89, 0x50, 0x4E, 0x47]) { return d }
+        let b = [UInt8](d.prefix(4))
+        let looksImage = (b[0] == 0xFF && b[1] == 0xD8) || (b[0] == 0x49 && b[1] == 0x49) || (b[0] == 0x4D && b[1] == 0x4D) || (b[0] == 0x47 && b[1] == 0x49)
+        guard looksImage, let rep = NSBitmapImageRep(data: d) else { return nil }
+        return rep.representation(using: .png, properties: [:])
     }
 }
