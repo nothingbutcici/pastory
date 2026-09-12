@@ -83,6 +83,10 @@ struct ShelfView: View {
         }
         .frame(width: 162, alignment: .leading)
         .background(Color.brownDeep.opacity(0.6))
+        // A hand-ruled seam between the sidebar and the shelf.
+        .overlay(alignment: .trailing) {
+            TornPaper(right: true, seed: 5, amplitude: 0.8, step: 5).fill(Color.onBrown.opacity(0.28)).frame(width: 1.5)
+        }
     }
 
     /// Active row: a light-blue paper tab running off the left edge.
@@ -109,7 +113,9 @@ struct ShelfView: View {
 
     private var header: some View {
         HStack(spacing: 0) {
-            ForEach(ShelfFilter.allCases) { f in
+            // Tabs read like a ruled index: text separated by thin uprights, a baseline under the row;
+            // the active one is a torn scrap of blue paper laid on top.
+            ForEach(Array(ShelfFilter.allCases.enumerated()), id: \.element.id) { i, f in
                 let on = model.filter == f
                 Button { model.filter = f } label: {
                     HStack(spacing: 14) {
@@ -119,14 +125,16 @@ struct ShelfView: View {
                     .foregroundStyle(on ? Color.ink : Color.onBrown)
                     .padding(.horizontal, 18).frame(height: 40)
                     .background {
-                        if on { PaperPatch(top: true, right: true, bottom: true, seed: 23) }
+                        if on { PaperPatch(top: true, right: true, bottom: true, seed: 23 + UInt64(i)) }
                     }
-                    .overlay {
-                        if !on { Rectangle().stroke(Color.onBrown.opacity(0.35), lineWidth: 1) }
+                    .overlay(alignment: .bottom) {
+                        if !on { Rectangle().fill(Color.onBrown.opacity(0.35)).frame(height: 1) }
+                    }
+                    .overlay(alignment: .leading) {
+                        if i > 0 { Rectangle().fill(Color.onBrown.opacity(0.35)).frame(width: 1, height: 40) }
                     }
                 }
                 .buttonStyle(.plain)
-                .padding(.trailing, 10)
             }
             Spacer()
             HStack(spacing: 10) {
@@ -146,7 +154,7 @@ struct ShelfView: View {
                 }
             }
             .padding(.horizontal, 14).frame(width: 400, height: 40)
-            .overlay(Rectangle().stroke(Color.onBrown.opacity(0.35), lineWidth: 1))
+            .overlay(TornPaper(top: true, right: true, bottom: true, left: true, seed: 31, amplitude: 0.7, step: 6).stroke(Color.onBrown.opacity(0.45), lineWidth: 1))
             Button { ShelfPanelController.shared.hide() } label: {
                 Image(systemName: "xmark").font(.system(size: 15, weight: .regular)).foregroundStyle(Color.onBrown).frame(width: 40, height: 40)
             }
@@ -161,7 +169,7 @@ struct ShelfView: View {
     private func cards(_ items: [ClipItem]) -> some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(alignment: .top, spacing: 16) {
+                LazyHStack(alignment: .top, spacing: 22) {
                     ForEach(items) { item in
                         ClipCardView(item: item, selected: item.id == model.selectedID, onClipboard: item.id == ClipStore.shared.items.first?.id,
                                      renaming: Binding(get: { model.renamingID == item.id },
