@@ -16,8 +16,8 @@ enum SelfTest {
         if mutating.contains(cmd) {
             let env = ProcessInfo.processInfo.environment["SNIPCLIP_STORE"] ?? ""
             // Nothing under Application Support counts as a sandbox, whatever the folder is called.
-            let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].standardizedFileURL.path
-            let target = URL(fileURLWithPath: env).standardizedFileURL.path
+            let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].resolvingSymlinksInPath().path
+            let target = URL(fileURLWithPath: env).resolvingSymlinksInPath().path
             if env.isEmpty || target.hasPrefix(support) {
                 print("refusing: --selftest \(cmd) needs SNIPCLIP_STORE pointing at a scratch folder (never the real store)")
                 exit(2)

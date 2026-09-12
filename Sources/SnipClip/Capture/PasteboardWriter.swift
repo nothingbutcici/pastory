@@ -19,7 +19,7 @@ enum PasteboardWriter {
         let item = NSPasteboardItem()
         item.setString(text, forType: .string)
         if let rtf { item.setData(rtf, forType: .rtf) }
-        if let url = URL(string: text), let scheme = url.scheme, ["http", "https"].contains(scheme) {
+        if ClipItem.isURLText(text) {
             item.setString(text, forType: .URL)
         }
         item.setString(itemID, forType: marker)

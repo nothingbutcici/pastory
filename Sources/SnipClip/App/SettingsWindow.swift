@@ -96,7 +96,7 @@ struct ShortcutRecorder: View {
             }
             .padding(.leading, 12).padding(.trailing, shortcut.isSet && !capturing ? 8 : 12).padding(.vertical, 7)
             .background(capturing ? Color.paperBlue : Color.clear, in: Capsule())
-            .overlay(Capsule().stroke(taken ? Color(nsColor: Theme.tagMP4) : Color.ink.opacity(0.6), lineWidth: 1))
+            .overlay(Capsule().stroke(taken ? Color(nsColor: Theme.warn) : Color.ink.opacity(0.6), lineWidth: 1))
         }
         .onAppear { shortcut = Preferences.shared.shortcut(key); refreshTaken() }
         .onDisappear { stop(nil) }
@@ -160,6 +160,7 @@ struct ShortcutRecorder: View {
     }
 
     private func stop(_ newValue: Shortcut?) {
+        guard capturing || newValue != nil else { return }      // onDisappear on an idle recorder must not touch the hotkey suspend count
         if let monitor { NSEvent.removeMonitor(monitor) }
         if let flagsMonitor { NSEvent.removeMonitor(flagsMonitor) }
         if let resignObserver { NotificationCenter.default.removeObserver(resignObserver) }

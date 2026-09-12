@@ -228,7 +228,7 @@ final class ShelfModel {
 
     var items: [ClipItem] {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
-        let ordered = ClipStore.shared.items.sorted { (orderSnapshot[$0.id] ?? -1) < (orderSnapshot[$1.id] ?? -1) }
+        let ordered = ClipStore.shared.items.sorted { (orderSnapshot[$0.id] ?? Int.max) < (orderSnapshot[$1.id] ?? Int.max) }   // items array is already date-sorted
         return ordered.filter { item in
             switch filter {
             case .all: break
@@ -241,6 +241,11 @@ final class ShelfModel {
             return item.snippet.lowercased().contains(q) || (item.ocrText?.lowercased().contains(q) ?? false)
                 || (item.sourceAppName?.lowercased().contains(q) ?? false) || (item.title?.lowercased().contains(q) ?? false)
         }
+    }
+
+    /// After bulk changes (import, remove-imported) the frozen order is stale: freeze the store's current order again.
+    func refreshOrder() {
+        orderSnapshot = Dictionary(uniqueKeysWithValues: ClipStore.shared.items.enumerated().map { ($1.id, $0) })
     }
 
     func reset() {

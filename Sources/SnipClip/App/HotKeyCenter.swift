@@ -62,7 +62,6 @@ final class HotKeyCenter {
     /// Our own bindings are released around the probe so they do not count as "taken".
     func isAvailable(_ shortcut: Shortcut) -> Bool {
         guard shortcut.isSet else { return true }
-        installHandlerIfNeeded()
         if shortcuts.values.contains(shortcut) { return true }     // one of ours, not "taken"
         var ref: EventHotKeyRef?
         let id = EventHotKeyID(signature: OSType(0x534E_434C), id: 0xFFFF)

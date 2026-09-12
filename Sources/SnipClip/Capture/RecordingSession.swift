@@ -137,7 +137,7 @@ final class RecordingSession {
         p.hasShadow = true
         p.level = .statusBar
         p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
-        let v = IslandView()
+        let v = DeskStripView()
         let stack = NSStackView()
         stack.orientation = .horizontal
         stack.spacing = 10
@@ -223,7 +223,7 @@ final class RecordingSession {
 }
 
 /// Desk-coloured strip, used as a bare container.
-final class IslandView: NSView {
+final class DeskStripView: NSView {
     init() {
         super.init(frame: .zero)
         Theme.paperSheet(self)

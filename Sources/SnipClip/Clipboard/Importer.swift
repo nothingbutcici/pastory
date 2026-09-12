@@ -75,7 +75,8 @@ enum Importer {
             scan.entries = try pastory(db, itemsDir: file.deletingLastPathComponent().appendingPathComponent("items"))
         } else if tables.contains("ZITEMENTITY"), tables.contains("ZITEMDATAENTITY") {
             let ext = file.deletingLastPathComponent().appendingPathComponent(".\(file.deletingPathExtension().lastPathComponent)_SUPPORT/_EXTERNAL_DATA")
-            scan.entries = try paste(db, externalDir: ext)
+            if let fromPaste = try? paste(db, externalDir: ext), !fromPaste.isEmpty { scan.entries = fromPaste }
+            else { scan.entries = try generic(db, tables: tables) }
         } else {
             scan.entries = try generic(db, tables: tables)
         }
@@ -116,25 +117,35 @@ enum Importer {
             if let big = listCounts.max(by: { ($0["n"] as? Int64 ?? 0) < ($1["n"] as? Int64 ?? 0) })?["l"] as? Int64 { historyLists.insert(big) }
         }
         let external = ExternalStore(dir: externalDir)
+        let itemCols = columns(db, "ZITEMENTITY"), dataCols = columns(db, "ZITEMDATAENTITY")
+        guard dataCols.contains("ZRAWPASTEBOARDITEMS"), itemCols.contains("Z_PK") else { throw Failure.notSQLite }
+        let col: (String, [String]) -> String = { $1.contains($0) ? $0 : "NULL" }
         let rows = try query(db, """
-            SELECT i.Z_PK AS pk, i.ZCREATEDAT AS created, i.ZTIMESTAMP AS ts, i.ZLIST AS list, i.ZTITLE AS title,
-                   d.ZRAWPASTEBOARDITEMS AS blob
-            FROM ZITEMENTITY i LEFT JOIN ZITEMDATAENTITY d ON d.ZITEM = i.Z_PK OR d.Z_PK = i.ZDATA
-            ORDER BY COALESCE(i.ZTIMESTAMP, i.ZCREATEDAT) DESC
+            SELECT Z_PK AS pk, \(col("ZCREATEDAT", itemCols)) AS created, \(col("ZTIMESTAMP", itemCols)) AS ts,
+                   \(col("ZLIST", itemCols)) AS list, \(col("ZDATA", itemCols)) AS data
+            FROM ZITEMENTITY ORDER BY COALESCE(\(col("ZTIMESTAMP", itemCols)), \(col("ZCREATEDAT", itemCols))) DESC
             """)
+        // Data rows point at the item (ZITEM) and the item points at its data (ZDATA); either may be missing.
+        var byItem: [Int64: [Data]] = [:], byPK: [Int64: Data] = [:]
+        for d in try query(db, "SELECT Z_PK AS pk, \(col("ZITEM", dataCols)) AS item, ZRAWPASTEBOARDITEMS AS blob FROM ZITEMDATAENTITY") {
+            guard let blob = d["blob"] as? Data else { continue }
+            if let pk = d["pk"] as? Int64 { byPK[pk] = blob }
+            if let item = d["item"] as? Int64 { byItem[item, default: []].append(blob) }
+        }
         var out: [ClipStore.ImportEntry] = []
-        var seenPK = Set<Int64>()
         for row in rows {
-            guard let pk = row["pk"] as? Int64, seenPK.insert(pk).inserted else { continue }
-            guard var blob = row["blob"] as? Data else { continue }
-            if let resolved = external.resolve(blob) { blob = resolved }
-            blob = PasteboardArchive.unwrap(blob)
-            guard let payload = PasteboardArchive.payload(in: blob) else { continue }
+            guard let pk = row["pk"] as? Int64 else { continue }
+            var candidates = byItem[pk] ?? []
+            if let dataPK = row["data"] as? Int64, let b = byPK[dataPK], !candidates.contains(b) { candidates.append(b) }
+            var payload: ClipStore.ImportEntry.Payload?
+            for var blob in candidates {
+                if let resolved = external.resolve(blob) { blob = resolved }
+                if let p = PasteboardArchive.payload(in: PasteboardArchive.unwrap(blob)) { payload = p; break }
+            }
+            guard let payload else { continue }
             let date = (row["ts"] ?? row["created"]).flatMap(asDate) ?? Date()
             let pinned = !((row["list"] as? Int64).map { historyLists.contains($0) } ?? true)
-            let title = (row["title"] as? String).flatMap { t in t.isEmpty || looksLikeIdentifier(t) ? nil : t }
-            out.append(.init(payload: payload, createdAt: date, pinned: pinned, title: nil))
-            _ = title      // Paste's title is usually an auto preview, not a name; kept out on purpose
+            out.append(.init(payload: payload, createdAt: date, pinned: pinned, title: nil))   // Paste's ZTITLE is an auto preview, not a name
         }
         return out
     }
@@ -220,7 +231,7 @@ enum Importer {
                 let pinned = truthy(pinCol.flatMap { row[$0] }) || truthy(row["__ppin"])
                 var best: String?
                 var image: Data?
-                for c in cols where c != typeCol && !isDateColumn(c) {
+                for c in cols where c != typeCol && c != pinCol && !isDateColumn(c) {
                     let lower = c.lowercased()
                     if lower.hasSuffix("id") || lower == "uuid" || lower.contains("bundle") || lower.contains("source") || lower.contains("app")
                         || lower.contains("title") || lower.contains("name") || lower.contains("label") { continue }
@@ -258,7 +269,7 @@ enum Importer {
 
     private static func isDateColumn(_ c: String) -> Bool {
         let n = c.lowercased()
-        return n.contains("date") || n.contains("time") || n.contains("created") || n.contains("copied") || n.hasSuffix("_at") || n.hasSuffix("at") && n.count > 2 && n != "format"
+        return n.contains("date") || n.contains("time") || n.contains("created") || n.contains("copied") || n.contains("updated") || n.hasSuffix("_at")
     }
     /// Core Data object URIs, UUIDs, hashes: the kind of string a database is full of and nobody ever copied.
     private static func looksLikeIdentifier(_ s: String) -> Bool {
@@ -268,15 +279,18 @@ enum Importer {
         if t.count >= 16, t.count <= 128, t.range(of: "^[A-Fa-f0-9-]+$", options: .regularExpression) != nil { return true }
         return false
     }
+    /// The column has to *be* a pin flag, not merely contain "pin" (typing, shipping, mapping…).
     private static func isPinColumn(_ c: String) -> Bool {
-        let n = c.lowercased()
-        return n.contains("pin") || n.contains("favorite") || n.contains("favourite") || n.contains("starred")
+        var n = c.lowercased()
+        if n.hasPrefix("z") { n.removeFirst() }
+        if n.hasPrefix("is_") { n.removeFirst(3) } else if n.hasPrefix("is") { n.removeFirst(2) }
+        return ["pin", "pinned", "favorite", "favourite", "favorited", "starred", "star"].contains(n)
     }
     private static func truthy(_ v: Any?) -> Bool {
         switch v {
         case let i as Int64: return i != 0
         case let d as Double: return d != 0
-        case let s as String: return ["1", "true", "yes"].contains(s.lowercased()) || (!s.isEmpty && s != "0" && s.count < 40 && !s.contains(" "))
+        case let s as String: return ["1", "true", "yes"].contains(s.lowercased())
         default: return false
         }
     }
@@ -297,20 +311,7 @@ enum Importer {
         if x > 3e8 { return Date(timeIntervalSinceReferenceDate: x) }
         return nil
     }
-    /// PNG / JPEG / TIFF / GIF / HEIC blobs → PNG data.
-    private static func pngIfImage(_ d: Data) -> Data? {
-        guard d.count > 16 else { return nil }
-        let b = [UInt8](d.prefix(12))
-        let png = b[0] == 0x89 && b[1] == 0x50
-        let jpg = b[0] == 0xFF && b[1] == 0xD8
-        let tiff = (b[0] == 0x49 && b[1] == 0x49 && b[2] == 0x2A) || (b[0] == 0x4D && b[1] == 0x4D && b[2] == 0x00 && b[3] == 0x2A)
-        let gif = b[0] == 0x47 && b[1] == 0x49 && b[2] == 0x46
-        let heic = b[4] == 0x66 && b[5] == 0x74 && b[6] == 0x79 && b[7] == 0x70
-        guard png || jpg || tiff || gif || heic else { return nil }
-        if png { return d }
-        guard let rep = NSBitmapImageRep(data: d) ?? NSImage(data: d)?.representations.compactMap({ $0 as? NSBitmapImageRep }).first else { return nil }
-        return rep.representation(using: .png, properties: [:])
-    }
+    private static func pngIfImage(_ d: Data) -> Data? { Screenshotter.pngData(fromImageBytes: d) }
 
     // MARK: SQLite glue
 
@@ -361,7 +362,8 @@ enum PasteboardArchive {
         let nsd = Data(body) as NSData
         let order: [NSData.CompressionAlgorithm] = body.starts(with: Array("bvx".utf8)) ? [.lzfse] : [.zlib, .lzfse, .lz4, .lzma]
         for algo in order {
-            if let out = try? nsd.decompressed(using: algo) as Data, out.starts(with: Array("bplist".utf8)) || out.first == UInt8(ascii: "<") { return out }
+            if let out = try? nsd.decompressed(using: algo) as Data, out.count <= 64 << 20,
+               out.starts(with: Array("bplist".utf8)) || out.first == UInt8(ascii: "<") { return out }
         }
         return blob
     }
@@ -429,12 +431,5 @@ enum PasteboardArchive {
     }
 
     private static func isImageUTI(_ u: String) -> Bool { u.contains("png") || u.contains("tiff") || u.contains("jpeg") || u.contains("jpg") || u.contains("heic") }
-    private static func toPNG(_ d: Data) -> Data? {
-        guard d.count > 16 else { return nil }
-        if d.starts(with: [0x89, 0x50, 0x4E, 0x47]) { return d }
-        let b = [UInt8](d.prefix(4))
-        let looksImage = (b[0] == 0xFF && b[1] == 0xD8) || (b[0] == 0x49 && b[1] == 0x49) || (b[0] == 0x4D && b[1] == 0x4D) || (b[0] == 0x47 && b[1] == 0x49)
-        guard looksImage, let rep = NSBitmapImageRep(data: d) else { return nil }
-        return rep.representation(using: .png, properties: [:])
-    }
+    private static func toPNG(_ d: Data) -> Data? { Screenshotter.pngData(fromImageBytes: d) }
 }

@@ -45,8 +45,8 @@ enum Permissions {
     static func relaunch() {
         let cfg = NSWorkspace.OpenConfiguration()
         cfg.createsNewApplicationInstance = true
-        NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: cfg) { _, _ in
-            DispatchQueue.main.async { NSApp.terminate(nil) }
+        NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: cfg) { _, error in
+            if error == nil { DispatchQueue.main.async { NSApp.terminate(nil) } }      // if the new copy did not start, stay alive
         }
     }
 }

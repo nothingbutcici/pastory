@@ -10,6 +10,8 @@ final class CaptureCoordinator: AnnotateDelegate {
     private var recording: RecordingSession?
     private(set) var isBusy = false
     private var ocrToken = UUID()
+    /// Bumped by every start(); work resumed from an await belongs to a capture only while it matches.
+    private var generation = 0
     static let source = ClipStore.Source(bundleID: "com.cici.snipclip", name: "Pastory")
 
     private init() {}
@@ -23,15 +25,19 @@ final class CaptureCoordinator: AnnotateDelegate {
         ocrToken = UUID()                    // a panel left over from the last capture is not this capture's text
         guard Permissions.ensureScreenRecording() else { return }
         isBusy = true
+        generation += 1
+        let gen = generation
         ShelfPanelController.shared.holdOpen = true      // the shelf may be what you want to capture
         Task { @MainActor in
             do {
                 let snap = try await ShareableSnapshot.fetch()
+                guard gen == generation else { return }      // the hotkey was pressed again meanwhile
                 snapshot = snap
                 SelectionOverlayController.shared.present(snapshot: snap, mode: mode) { [weak self] target in
                     self?.picked(target)
                 }
             } catch {
+                guard gen == generation else { return }
                 NSSound.beep()
                 finish()
             }
@@ -43,16 +49,19 @@ final class CaptureCoordinator: AnnotateDelegate {
         let overlay = SelectionOverlayController.shared
         guard let display = overlay.heldDisplay else { finish(); return }
         let screen = snapshot.screen(for: display)
+        let gen = generation
         Task { @MainActor in
             do {
                 let colorSpaceName = screen?.colorSpace?.cgColorSpace?.name
                 let image = try await Screenshotter.captureDisplay(display, excluding: Set(overlay.ownWindowIDs), backingScale: screen?.backingScaleFactor, colorSpaceName: colorSpaceName)
+                guard gen == generation else { return }      // a newer capture owns the overlay now
                 fullImage = image
                 fullScale = CGFloat(image.width) / (screen?.frame.width ?? CGFloat(image.width))
                 overlay.cropProvider = { [weak self] local in self?.crop(local) }
                 guard let local = overlay.heldDisplayLocalRect, let cropped = crop(local) else { finish(); return }
                 overlay.showAnnotator(image: cropped, delegate: self)
             } catch {
+                guard gen == generation else { return }
                 NSSound.beep()
                 finish()
             }

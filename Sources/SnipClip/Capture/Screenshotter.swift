@@ -71,6 +71,19 @@ enum Screenshotter {
         }
     }
 
+    /// Any bitmap bytes (PNG / JPEG / TIFF / GIF / HEIC…) → PNG bytes; nil when the bytes are not a picture.
+    static func pngData(fromImageBytes d: Data) -> Data? {
+        guard d.count > 16 else { return nil }
+        if d.starts(with: [0x89, 0x50, 0x4E, 0x47]) { return d }
+        let b = [UInt8](d.prefix(12))
+        let jpg = b[0] == 0xFF && b[1] == 0xD8
+        let tiff = (b[0] == 0x49 && b[1] == 0x49 && b[2] == 0x2A) || (b[0] == 0x4D && b[1] == 0x4D && b[2] == 0x00 && b[3] == 0x2A)
+        let gif = b[0] == 0x47 && b[1] == 0x49 && b[2] == 0x46
+        let heic = b[4] == 0x66 && b[5] == 0x74 && b[6] == 0x79 && b[7] == 0x70
+        guard jpg || tiff || gif || heic, let rep = NSBitmapImageRep(data: d) else { return nil }
+        return rep.representation(using: .png, properties: [:])
+    }
+
     /// PNG with the image's ICC profile embedded.
     static func pngData(_ image: CGImage) -> Data? {
         let data = NSMutableData()

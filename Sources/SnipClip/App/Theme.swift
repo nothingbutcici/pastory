@@ -82,8 +82,8 @@ enum Theme {
         return made
     }
 
-    // Kind tags: low-saturation outline colours; the label itself stays gray
-    static let tagMP4 = NSColor(srgbRed: 0.78, green: 0.64, blue: 0.54, alpha: 1)       // dusty peach
+    // Warning colour (blocked shortcut, missing permission): a dusty peach that still reads on paper
+    static let warn = NSColor(srgbRed: 0.78, green: 0.64, blue: 0.54, alpha: 1)       // dusty peach
 
 
     /// Product logo (Resources/Logo.png). Falls back to the source tree so self-tests find it too.

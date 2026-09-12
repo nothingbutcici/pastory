@@ -112,16 +112,20 @@ final class ClipStore {
     @discardableResult
     private func unpersist(_ id: String) -> Bool { write { try $0.delete(id) } }
 
+    /// Set when a one-row write failed: the table no longer matches memory, so the next write rewrites the whole table.
+    private var needsFullSave = false
+
     private func write(_ op: (ClipDB) throws -> Void) -> Bool {
         guard !loadFailed, let db else { lastSaveFailed = true; return false }    // never write over a table we could not read
         do {
-            try op(db)
+            if needsFullSave { try db.saveAll(items); needsFullSave = false } else { try op(db) }
             let recovered = lastSaveFailed
             lastSaveFailed = false
             if recovered { Retention.reschedule() }
             return true
         } catch {
             lastSaveFailed = true
+            needsFullSave = true
             reportStorageFailure(error)
             return false
         }
@@ -150,7 +154,7 @@ final class ClipStore {
     func shareURL(_ item: ClipItem) -> URL {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd HH.mm.ss"
-        let prefix = item.kind == .video ? "Rec" : (item.kind == .image ? "Snip" : "Clip")
+        let prefix = "Rec"          // only recordings are shared as files
         let dir = shareDir.appendingPathComponent(item.id, isDirectory: true)
         let url = dir.appendingPathComponent("\(prefix) \(f.string(from: item.createdAt)).\(item.ext)")
         let fm = FileManager.default
@@ -181,9 +185,7 @@ final class ClipStore {
         guard data.count <= Self.maxTextBytes else { return nil }
         let hash = stableHash(data)
         if let dup = dedupe(hash: hash, kinds: [.text, .url]) { return dup }
-        var kind = ClipKind.text
-        if let url = URL(string: text.trimmingCharacters(in: .whitespacesAndNewlines)),
-           let s = url.scheme, ["http", "https"].contains(s), !text.contains("\n") { kind = .url }
+        let kind: ClipKind = ClipItem.isURLText(text) ? .url : .text
         let item = ClipItem(id: UUID().uuidString, kind: kind, createdAt: Date(),
                             sourceBundleID: source.bundleID, sourceAppName: source.name,
                             snippet: ClipItem.snippet(ofText: text), ocrText: nil, pinned: false,
@@ -271,8 +273,7 @@ final class ClipStore {
         items[i].snippet = ClipItem.snippet(ofText: text)
         items[i].byteCount = data.count
         items[i].contentHash = stableHash(data)
-        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        items[i].kind = (URL(string: t).flatMap(\.scheme).map { ["http", "https"].contains($0) } ?? false) && !t.contains("\n") ? .url : .text
+        items[i].kind = ClipItem.isURLText(text) ? .url : .text
         persist(items[i])
     }
 
@@ -344,8 +345,7 @@ final class ClipStore {
                 guard !trimmed.isEmpty, data.count <= Self.maxTextBytes else { continue }
                 let hash = stableHash(data)
                 guard seen.insert(hash).inserted else { continue }
-                var kind = ClipKind.text
-                if let url = URL(string: trimmed), let s = url.scheme, ["http", "https"].contains(s), !text.contains("\n") { kind = .url }
+                let kind: ClipKind = ClipItem.isURLText(text) ? .url : .text
                 let item = ClipItem(id: UUID().uuidString, kind: kind, createdAt: e.createdAt,
                                     sourceBundleID: source.bundleID, sourceAppName: source.name,
                                     snippet: ClipItem.snippet(ofText: text), ocrText: nil, pinned: e.pinned,

@@ -39,6 +39,13 @@ struct ClipItem: Codable, Identifiable, Equatable {
 
     var fileName: String { "\(id).\(ext)" }
 
+    /// One http(s) link on its own line, nothing else.
+    static func isURLText(_ text: String) -> Bool {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.contains("\n"), let url = URL(string: t), let s = url.scheme else { return false }
+        return ["http", "https"].contains(s)
+    }
+
     static func snippet(ofText s: String) -> String {
         let trimmed = s.trimmingCharacters(in: .whitespacesAndNewlines)
         return String(trimmed.prefix(400))

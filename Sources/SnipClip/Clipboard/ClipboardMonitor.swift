@@ -76,7 +76,7 @@ final class ClipboardMonitor {
             return store.insertImage(png: png, source: source)
         }
         if let one = urls.first, urls.count == 1, Self.isImageFile(one), Self.isTemporary(one),
-           let data = try? Data(contentsOf: one), let png = Self.pngFromAny(data) {
+           let data = try? Data(contentsOf: one), let png = Screenshotter.pngData(fromImageBytes: data) {
             return store.insertImage(png: png, source: source)      // tool copied only a temp file: same thing
         }
         if !urls.isEmpty { return store.insertFiles(urls, source: source) }
@@ -98,10 +98,6 @@ final class ClipboardMonitor {
         let p = u.path
         return p.contains("/T/") || p.hasPrefix("/tmp") || p.hasPrefix("/private/tmp") || p.contains("/Caches/") || p.contains("/Library/Containers/")
     }
-    private static func pngFromAny(_ data: Data) -> Data? {
-        data.starts(with: [0x89, 0x50, 0x4E, 0x47]) ? data : NSBitmapImageRep(data: data)?.representation(using: .png, properties: [:])
-    }
-
     private static func pngFromTIFF(_ tiff: Data) -> Data? {
         // NSBitmapImageRep keeps the embedded profile when re-encoding.
         NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:])

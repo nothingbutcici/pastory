@@ -104,15 +104,15 @@ struct SettingsPane: View {
                         }
                         section("系统") {
                             row("登录时启动") { PaperToggle(isOn: $prefs.launchAtLogin) }
-                            if let e = prefs.loginError { Text(e).font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.tagMP4)).padding(.horizontal, 16) }
+                            if let e = prefs.loginError { Text(e).font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.warn)).padding(.horizontal, 16) }
                             row("屏幕录制权限（截图、录屏需要）") {
                                 HStack(spacing: 8) {
                                     Text(Permissions.hasScreenRecording ? "已授权" : "未授权")
                                         .font(.system(size: 11, weight: .semibold))
-                                        .foregroundStyle(Permissions.hasScreenRecording ? Color.ink : Color(nsColor: Theme.tagMP4))
+                                        .foregroundStyle(Permissions.hasScreenRecording ? Color.ink : Color(nsColor: Theme.warn))
                                         .padding(.horizontal, 7).padding(.vertical, 2)
                                         .background(Permissions.hasScreenRecording ? Color.paperBlue : Color.clear, in: Capsule())
-                                        .overlay(Capsule().stroke((Permissions.hasScreenRecording ? Color.clear : Color(nsColor: Theme.tagMP4)).opacity(0.7), lineWidth: 1))
+                                        .overlay(Capsule().stroke((Permissions.hasScreenRecording ? Color.clear : Color(nsColor: Theme.warn)).opacity(0.7), lineWidth: 1))
                                     pill("系统设置") { Permissions.openSettings("Privacy_ScreenCapture") }
                                 }
                             }
@@ -192,6 +192,7 @@ struct SettingsPane: View {
         }
         guard go else { return }
         ClipStore.shared.removeAll { $0.sourceAppName == "导入" }
+        model.refreshOrder()
         importNote = "已移除 \(n) 条"
     }
 
@@ -219,19 +220,15 @@ struct SettingsPane: View {
                         let a = NSAlert()
                         a.messageText = "找到 \(scan.texts) 条文本、\(scan.images) 张图片"
                         a.informativeText = "来自 \(picked.lastPathComponent)。已经在 Pastory 里的内容会自动跳过，Pin 会保留；导入的内容排在 Pastory 自己记录的后面。"
-                            + (cleans ? "\n\n当前保留期是 \(Preferences.shared.retentionDays) 天，这些旧内容会在下次清理时被清掉（Pin 住的除外）。" : "")
+                            + (cleans ? "\n\n当前保留期是 \(Preferences.shared.retentionDays) 天，而这些内容都比保留期老：导入会同时把保留期改为「永不删除」，否则它们马上就会被清掉。" : "")
                         a.addButton(withTitle: cleans ? "导入并改为永不删除" : "导入")
-                        if cleans { a.addButton(withTitle: "只导入") }
                         a.addButton(withTitle: "取消")
-                        switch a.runModal() {
-                        case .alertFirstButtonReturn: return 1
-                        case .alertSecondButtonReturn: return cleans ? 2 : 0
-                        default: return 0
-                        }
+                        return a.runModal() == .alertFirstButtonReturn ? 1 : 0
                     }
                     guard choice != 0 else { importNote = nil; return }
-                    if choice == 1, cleans { prefs.retentionDays = 0 }
+                    if cleans { prefs.retentionDays = 0 }
                     let n = ClipStore.shared.importEntries(scan.entries)
+                    model.refreshOrder()
                     importNote = n == 0 ? "没有新内容（都已存在）" : "已导入 \(n) 条"
                 }
             }
