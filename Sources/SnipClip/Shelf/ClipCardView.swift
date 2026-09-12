@@ -214,16 +214,17 @@ struct ClipCardView: View {
 
     private var divider: some View { Rectangle().fill(Color.ink.opacity(0.35)).frame(width: 1, height: 22) }
 
-    /// Pinned: the pin turns blue. On the blue (copied) card it sits on a small cream paper so the blue still reads.
+    /// Pinned = a small torn patch behind the pin: cream patch with a blue pin on the blue card,
+    /// blue patch with a cream pin on cream cards.
     private var pinAction: some View {
         Button { ClipStore.shared.togglePin(item.id) } label: {
             Image(systemName: item.pinned ? "pin.fill" : "pin")
                 .font(.system(size: 17, weight: .regular))
-                .foregroundStyle(item.pinned ? Color.paperBlueDeep : Color.ink)
+                .foregroundStyle(item.pinned ? (onClipboard ? Color.paperBlueDeep : Color.paper) : Color.ink)
                 .frame(width: 34, height: 30)
                 .background {
-                    if item.pinned && onClipboard {
-                        ZStack { Color.paper; Grain(opacity: 0.1) }
+                    if item.pinned {
+                        ZStack { onClipboard ? Color.paper : Color.paperBlueDeep; Grain(opacity: 0.1) }
                             .clipShape(TornPaper(top: true, right: true, bottom: true, left: true, seed: 77, amplitude: 1.5, step: 5))
                             .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
                     }
@@ -259,9 +260,9 @@ struct ClipCardView: View {
     private var decoration: some View {
         if index % 6 == 2, !onClipboard, let img = Theme.clip {
             Image(nsImage: img).resizable().scaledToFit()
-                .frame(width: 70)
-                .shadow(color: .black.opacity(0.35), radius: 3, x: 1, y: 3)
-                .offset(x: 52, y: -24)          // jaws over the card's top edge, head above it
+                .frame(width: 84)
+                .shadow(color: .black.opacity(0.3), radius: 4, x: 1, y: 4)
+                .offset(x: 12, y: -34)          // plate over the card top edge, clear of the time
         }
     }
 

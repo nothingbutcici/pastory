@@ -193,7 +193,7 @@ struct ShelfView: View {
                             .contextMenu { menu(for: item) }
                     }
                 }
-                .padding(.top, 30)              // room for the clip's head above the cards
+                .padding(.top, 40)              // room for the clip's head above the cards
                 .padding(.bottom, 8)
                 .padding(.horizontal, 4)
             }
