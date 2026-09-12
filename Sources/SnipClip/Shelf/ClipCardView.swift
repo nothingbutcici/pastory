@@ -34,7 +34,7 @@ struct ClipCardView: View {
         }
         .frame(width: Self.width)
         .background(ZStack { paperColor; Grain(opacity: 0.11) })
-        .clipShape(TicketShape(notchFromBottom: index % 2 == 0 ? Self.stubHeight : nil, notchFromTop: index % 2 == 1 ? 54 : nil))
+        .clipShape(TicketShape(notchFromBottom: index % 2 == 0 ? Self.stubHeight : nil, notchFromTop: nil))
         .shadow(color: .black.opacity(selected ? 0.55 : 0.4), radius: selected ? 14 : 9, x: 2, y: selected ? 9 : 6)
         .overlay(alignment: .top) { decoration }
         .contentShape(Rectangle())
