@@ -161,7 +161,7 @@ enum Importer {
                         || lower.contains("title") || lower.contains("name") || lower.contains("label") { continue }
                     switch row[c] {
                     case let s as String:
-                        if s.count > (best?.count ?? 0) { best = s }
+                        if !looksLikeIdentifier(s), s.count > (best?.count ?? 0) { best = s }
                     case let d as Data:
                         if let png = pngIfImage(d) { image = png }
                         else if hint.isEmpty || hint.contains("text") || hint.contains("utf8") || hint.contains("string") || hint.contains("url"),
@@ -194,6 +194,14 @@ enum Importer {
     private static func isDateColumn(_ c: String) -> Bool {
         let n = c.lowercased()
         return n.contains("date") || n.contains("time") || n.contains("created") || n.contains("copied") || n.hasSuffix("_at") || n.hasSuffix("at") && n.count > 2 && n != "format"
+    }
+    /// Core Data object URIs, UUIDs, hashes: the kind of string a database is full of and nobody ever copied.
+    private static func looksLikeIdentifier(_ s: String) -> Bool {
+        let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
+        if t.hasPrefix("x-coredata://") { return true }
+        if t.count == 36, UUID(uuidString: t) != nil { return true }
+        if t.count >= 16, t.count <= 128, t.range(of: "^[A-Fa-f0-9-]+$", options: .regularExpression) != nil { return true }
+        return false
     }
     private static func isPinColumn(_ c: String) -> Bool {
         let n = c.lowercased()

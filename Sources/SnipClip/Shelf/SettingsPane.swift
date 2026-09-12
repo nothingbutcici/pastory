@@ -68,6 +68,11 @@ struct SettingsPane: View {
                                     pill("选择数据库…") { importDatabase() }
                                 }
                             }
+                            if ClipStore.shared.items.contains(where: { $0.sourceAppName == "导入" }) {
+                                row("移除所有导入进来的条目（来源为「导入」）") {
+                                    pill("移除") { removeImported() }
+                                }
+                            }
                             row("手动清空一次（不含已 Pin 内容）") {
                                 pill(cleared ? "已清空" : "现在清空", disabled: cleared) {
                                     ClipStore.shared.removeAll { !$0.pinned }
@@ -173,6 +178,21 @@ struct SettingsPane: View {
             }
         }
         prefs.retentionDays = days
+    }
+
+    private func removeImported() {
+        let n = ClipStore.shared.items.filter { $0.sourceAppName == "导入" }.count
+        let go = ShelfPanelController.shared.withDialog { () -> Bool in
+            let a = NSAlert()
+            a.messageText = "移除 \(n) 条导入的内容？"
+            a.informativeText = "只删来源标为「导入」的条目，包括其中已 Pin 的；其他内容不动。"
+            a.addButton(withTitle: "移除")
+            a.addButton(withTitle: "取消")
+            return a.runModal() == .alertFirstButtonReturn
+        }
+        guard go else { return }
+        ClipStore.shared.removeAll { $0.sourceAppName == "导入" }
+        importNote = "已移除 \(n) 条"
     }
 
     /// Pick a .sqlite (or a Pastory folder), count what is inside, ask, import.
