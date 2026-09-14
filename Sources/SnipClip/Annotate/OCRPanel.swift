@@ -25,7 +25,7 @@ final class OCRPanelController: NSObject, NSWindowDelegate {
         let p = panel ?? makePanel()
         panel = p
         textView?.string = ""
-        status?.stringValue = "识别中…"
+        status?.stringValue = "识别中…".l
         place(p, near: anchor)
         p.orderFrontRegardless()
         p.makeKey()
@@ -39,7 +39,7 @@ final class OCRPanelController: NSObject, NSWindowDelegate {
 
     private func showResult(_ result: String) {
         textView?.string = result
-        status?.stringValue = result.isEmpty ? "没有识别到文字" : "\(result.count) 字 · 可直接编辑"
+        status?.stringValue = result.isEmpty ? "没有识别到文字".l : String(format: "%d 字 · 可直接编辑".l, result.count)
         if !result.isEmpty { panel?.makeFirstResponder(textView) }
     }
 
@@ -62,7 +62,7 @@ final class OCRPanelController: NSObject, NSWindowDelegate {
         let p = NSPanel(contentRect: CGRect(x: 0, y: 0, width: 400, height: 350),
                         styleMask: [.titled, .closable, .utilityWindow, .nonactivatingPanel, .resizable, .fullSizeContentView],
                         backing: .buffered, defer: false)
-        p.title = "识别文字"
+        p.title = "识别文字".l
         p.titleVisibility = .hidden
         p.titlebarAppearsTransparent = true
         p.appearance = NSAppearance(named: .darkAqua)
@@ -74,7 +74,7 @@ final class OCRPanelController: NSObject, NSWindowDelegate {
         p.minSize = CGSize(width: 280, height: 180)
 
         let content = GridBackdropView()
-        let heading = NSTextField(labelWithString: "识别文字")
+        let heading = NSTextField(labelWithString: "识别文字".l)
         heading.font = Theme.script(size: 24)
         heading.textColor = Theme.onBrown
         let scroll = NSScrollView()
@@ -103,9 +103,9 @@ final class OCRPanelController: NSObject, NSWindowDelegate {
         st.font = Theme.serif(size: 13)
         st.textColor = Theme.onBrownMuted
         status = st
-        let copy = Theme.paperButton("复制文字", primary: true, target: self, action: #selector(copyTapped))
+        let copy = Theme.paperButton("复制文字".l, primary: true, target: self, action: #selector(copyTapped))
         copy.keyEquivalent = "\r"
-        let cancel = Theme.paperButton("关闭", onGround: true, target: self, action: #selector(closeTapped))
+        let cancel = Theme.paperButton("关闭".l, onGround: true, target: self, action: #selector(closeTapped))
 
         for v in [heading, scroll, st, copy, cancel] { v.translatesAutoresizingMaskIntoConstraints = false; content.addSubview(v) }
         NSLayoutConstraint.activate([

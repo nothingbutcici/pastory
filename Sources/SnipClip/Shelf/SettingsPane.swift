@@ -11,12 +11,12 @@ struct SettingsPane: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 12) {
-                Text("设置").font(.serif(22, bold: true)).foregroundStyle(Color.onBrown)
+                Text("设置".l).font(.serif(22, bold: true)).foregroundStyle(Color.onBrown)
                 Spacer()
                 Button { model.showSettings = false } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "chevron.left").font(.system(size: 12, weight: .semibold))
-                        Text("返回剪贴板").font(.system(size: 13, weight: .medium))
+                        Text("返回剪贴板".l).font(.system(size: 13, weight: .medium))
                     }
                     .foregroundStyle(Color.onBrown)
                     .padding(.horizontal, 12).padding(.vertical, 7)
@@ -34,15 +34,15 @@ struct SettingsPane: View {
             ScrollView(.vertical, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 16) {
                     VStack(spacing: 16) {
-                        section("快捷键") {
-                            row("截图") { ShortcutRecorder(key: Preferences.Key.hotkeyCapture) }
-                            row("显示 / 隐藏剪贴板") { ShortcutRecorder(key: Preferences.Key.hotkeyShelf) }
-                            row("搜索剪贴板") { ShortcutRecorder(key: Preferences.Key.hotkeySearch) }
+                        section("快捷键".l) {
+                            row("截图".l) { ShortcutRecorder(key: Preferences.Key.hotkeyCapture) }
+                            row("显示 / 隐藏剪贴板".l) { ShortcutRecorder(key: Preferences.Key.hotkeyShelf) }
+                            row("搜索剪贴板".l) { ShortcutRecorder(key: Preferences.Key.hotkeySearch) }
                         }
-                        section("剪贴板") {
-                            row("未 Pin 内容保留时间") {
+                        section("剪贴板".l) {
+                            row("未 Pin 内容保留时间".l) {
                                 HStack(spacing: 4) {
-                                    ForEach([(1, "1 天"), (3, "3 天"), (7, "7 天"), (30, "30 天"), (365, "一年"), (0, "永不删除")], id: \.0) { days, label in
+                                    ForEach([(1, "1 天".l), (3, "3 天".l), (7, "7 天".l), (30, "30 天".l), (365, "一年".l), (0, "永不删除".l)], id: \.0) { days, label in
                                         let on = prefs.retentionDays == days
                                         Button { changeRetention(to: days) } label: {
                                             Text(label).font(.system(size: 12.5, weight: on ? .semibold : .medium))
@@ -56,25 +56,41 @@ struct SettingsPane: View {
                                 .padding(3)
                                 .overlay(Capsule().stroke(Color.ink.opacity(0.5), lineWidth: 1))
                             }
-                            row("当日清理时间") {
+                            row("当日清理时间".l) {
                                 HourWheel(hour: $prefs.cleanupHour, enabled: prefs.retentionDays != 0)
                                     .opacity(prefs.retentionDays == 0 ? 0.35 : 1)
                             }
-                            row("图片自动识别文字（可按文字搜图）") { PaperToggle(isOn: $prefs.ocrImages) }
-                            row("暂停同步至剪贴板") { PaperToggle(isOn: $prefs.paused) }
-                            row("从其他剪贴板工具导入（SQLite）") {
+                            row("图片自动识别文字（可按文字搜图）".l) { PaperToggle(isOn: $prefs.ocrImages) }
+                            row("暂停同步至剪贴板".l) { PaperToggle(isOn: $prefs.paused) }
+                            row("语言".l) {
+                                HStack(spacing: 4) {
+                                    ForEach([("system", "跟随系统".l), ("zh", "中文".l), ("en", "English")], id: \.0) { code, label in
+                                        let on = Preferences.shared.language == code
+                                        Button { Preferences.shared.language = code; model.langTick += 1 } label: {
+                                            Text(label.l).font(.system(size: 12.5, weight: on ? .semibold : .medium))
+                                                .foregroundStyle(Color.ink)
+                                                .padding(.horizontal, 11).padding(.vertical, 6)
+                                                .background(on ? Color.paperBlue : Color.clear, in: Capsule())
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                .padding(3)
+                                .overlay(Capsule().stroke(Color.ink.opacity(0.5), lineWidth: 1))
+                            }
+                            row("从其他剪贴板工具导入（SQLite）".l) {
                                 HStack(spacing: 8) {
                                     if let importNote { Text(importNote).font(.system(size: 12)).foregroundStyle(Color.inkMuted).lineLimit(1) }
-                                    pill("选择数据库…") { importDatabase() }
+                                    pill("选择数据库…".l) { importDatabase() }
                                 }
                             }
-                            if ClipStore.shared.items.contains(where: { $0.sourceAppName == "导入" }) {
-                                row("移除所有导入进来的条目（来源为「导入」）") {
-                                    pill("移除") { removeImported() }
+                            if ClipStore.shared.items.contains(where: { $0.sourceAppName == ClipStore.importSourceName }) {
+                                row("移除所有导入进来的条目（来源为「导入」）".l) {
+                                    pill("移除".l) { removeImported() }
                                 }
                             }
-                            row("手动清空一次（不含已 Pin 内容）") {
-                                pill(cleared ? "已清空" : "现在清空", disabled: cleared) {
+                            row("手动清空一次（不含已 Pin 内容）".l) {
+                                pill(cleared ? "已清空".l : "现在清空".l, disabled: cleared) {
                                     ClipStore.shared.removeAll { !$0.pinned }
                                     cleared = true
                                 }
@@ -82,16 +98,16 @@ struct SettingsPane: View {
                         }
                     }
                     VStack(spacing: 16) {
-                        section("位置") {
-                            row("「保存到本地」默认打开的文件夹") {
+                        section("位置".l) {
+                            row("「保存到本地」默认打开的文件夹".l) {
                                 HStack(spacing: 8) {
                                     Text(prefs.exportDir.isEmpty ? "~/Downloads" : (prefs.exportDir as NSString).abbreviatingWithTildeInPath)
                                         .font(.system(size: 12)).foregroundStyle(Color.inkMuted).lineLimit(1).truncationMode(.middle).frame(maxWidth: 220, alignment: .trailing)
-                                    if !prefs.exportDir.isEmpty { pill("默认") { prefs.exportDir = "" } }
-                                    pill("选择…") { chooseFolder() }
+                                    if !prefs.exportDir.isEmpty { pill("默认".l) { prefs.exportDir = "" } }
+                                    pill("选择…".l) { chooseFolder() }
                                 }
                             }
-                            row("剪贴板内容临时存放位置") {
+                            row("剪贴板内容临时存放位置".l) {
                                 HStack(spacing: 8) {
                                     Text("SQLite").font(.system(size: 11, weight: .semibold)).foregroundStyle(Color.ink)
                                         .padding(.horizontal, 7).padding(.vertical, 2)
@@ -102,18 +118,18 @@ struct SettingsPane: View {
                                 }
                             }
                         }
-                        section("系统") {
-                            row("登录时启动") { PaperToggle(isOn: $prefs.launchAtLogin) }
+                        section("系统".l) {
+                            row("登录时启动".l) { PaperToggle(isOn: $prefs.launchAtLogin) }
                             if let e = prefs.loginError { Text(e).font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.warn)).padding(.horizontal, 16) }
-                            row("屏幕录制权限（截图、录屏需要）") {
+                            row("屏幕录制权限（截图、录屏需要）".l) {
                                 HStack(spacing: 8) {
-                                    Text(Permissions.hasScreenRecording ? "已授权" : "未授权")
+                                    Text(Permissions.hasScreenRecording ? "已授权".l : "未授权".l)
                                         .font(.system(size: 11, weight: .semibold))
                                         .foregroundStyle(Permissions.hasScreenRecording ? Color.ink : Color(nsColor: Theme.warn))
                                         .padding(.horizontal, 7).padding(.vertical, 2)
                                         .background(Permissions.hasScreenRecording ? Color.paperBlue : Color.clear, in: Capsule())
                                         .overlay(Capsule().stroke((Permissions.hasScreenRecording ? Color.clear : Color(nsColor: Theme.warn)).opacity(0.7), lineWidth: 1))
-                                    pill("系统设置") { Permissions.openSettings("Privacy_ScreenCapture") }
+                                    pill("系统设置".l) { Permissions.openSettings("Privacy_ScreenCapture") }
                                 }
                             }
                         }
@@ -168,10 +184,10 @@ struct SettingsPane: View {
             if doomed > 0 {
                 let go = ShelfPanelController.shared.withDialog { () -> Bool in
                     let a = NSAlert()
-                    a.messageText = "把保留期改成 \(days) 天？"
-                    a.informativeText = "会立刻清掉 \(doomed) 条未 Pin 的记录。Pin 住的不受影响。"
-                    a.addButton(withTitle: "改并清理")
-                    a.addButton(withTitle: "取消")
+                    a.messageText = String(format: "把保留期改成 %d 天？".l, days)
+                    a.informativeText = String(format: "会立刻清掉 %d 条未 Pin 的记录。Pin 住的不受影响。".l, doomed)
+                    a.addButton(withTitle: "改并清理".l)
+                    a.addButton(withTitle: "取消".l)
                     return a.runModal() == .alertFirstButtonReturn
                 }
                 if !go { return }
@@ -181,32 +197,32 @@ struct SettingsPane: View {
     }
 
     private func removeImported() {
-        let n = ClipStore.shared.items.filter { $0.sourceAppName == "导入" }.count
+        let n = ClipStore.shared.items.filter { $0.sourceAppName == ClipStore.importSourceName }.count
         let go = ShelfPanelController.shared.withDialog { () -> Bool in
             let a = NSAlert()
-            a.messageText = "移除 \(n) 条导入的内容？"
-            a.informativeText = "只删来源标为「导入」的条目，包括其中已 Pin 的；其他内容不动。"
-            a.addButton(withTitle: "移除")
-            a.addButton(withTitle: "取消")
+            a.messageText = String(format: "移除 %d 条导入的内容？".l, n)
+            a.informativeText = "只删来源标为「导入」的条目，包括其中已 Pin 的；其他内容不动。".l
+            a.addButton(withTitle: "移除".l)
+            a.addButton(withTitle: "取消".l)
             return a.runModal() == .alertFirstButtonReturn
         }
         guard go else { return }
-        ClipStore.shared.removeAll { $0.sourceAppName == "导入" }
+        ClipStore.shared.removeAll { $0.sourceAppName == ClipStore.importSourceName }
         model.refreshOrder()
-        importNote = "已移除 \(n) 条"
+        importNote = String(format: "已移除 %d 条".l, n)
     }
 
     /// Pick a .sqlite (or a Pastory folder), count what is inside, ask, import.
     private func importDatabase() {
         let picked: URL? = ShelfPanelController.shared.withDialog {
             let panel = NSOpenPanel()
-            panel.canChooseDirectories = true; panel.canChooseFiles = true; panel.prompt = "扫描"
+            panel.canChooseDirectories = true; panel.canChooseFiles = true; panel.prompt = "扫描".l
             panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support")
-            panel.message = "选另一个剪贴板工具的数据库文件或它的数据文件夹，或另一台机器的 Pastory 文件夹"
+            panel.message = "选另一个剪贴板工具的数据库文件或它的数据文件夹，或另一台机器的 Pastory 文件夹".l
             return panel.runModal() == .OK ? panel.url : nil
         }
         guard let picked else { return }
-        importNote = "扫描中…"
+        importNote = "扫描中…".l
         Task.detached(priority: .userInitiated) {
             let result = Result { try Importer.scan(picked) }
             await MainActor.run {
@@ -218,18 +234,18 @@ struct SettingsPane: View {
                     let cleans = !Preferences.shared.neverCleans
                     let choice = ShelfPanelController.shared.withDialog { () -> Int in
                         let a = NSAlert()
-                        a.messageText = "找到 \(scan.texts) 条文本、\(scan.images) 张图片"
-                        a.informativeText = "来自 \(picked.lastPathComponent)。已经在 Pastory 里的内容会自动跳过，Pin 会保留；导入的内容排在 Pastory 自己记录的后面。"
-                            + (cleans ? "\n\n当前保留期是 \(Preferences.shared.retentionDays) 天，而这些内容都比保留期老：导入会同时把保留期改为「永不删除」，否则它们马上就会被清掉。" : "")
-                        a.addButton(withTitle: cleans ? "导入并改为永不删除" : "导入")
-                        a.addButton(withTitle: "取消")
+                        a.messageText = String(format: "找到 %d 条文本、%d 张图片".l, scan.texts, scan.images)
+                        a.informativeText = String(format: "来自 %@。已经在 Pastory 里的内容会自动跳过，Pin 会保留；导入的内容排在 Pastory 自己记录的后面。".l, picked.lastPathComponent)
+                            + (cleans ? String(format: "\n\n当前保留期是 %d 天，而这些内容都比保留期老：导入会同时把保留期改为「永不删除」，否则它们马上就会被清掉。".l, Preferences.shared.retentionDays) : "")
+                        a.addButton(withTitle: cleans ? "导入并改为永不删除".l : "导入".l)
+                        a.addButton(withTitle: "取消".l)
                         return a.runModal() == .alertFirstButtonReturn ? 1 : 0
                     }
                     guard choice != 0 else { importNote = nil; return }
                     if cleans { prefs.retentionDays = 0 }
                     let n = ClipStore.shared.importEntries(scan.entries)
                     model.refreshOrder()
-                    importNote = n == 0 ? "没有新内容（都已存在）" : "已导入 \(n) 条"
+                    importNote = n == 0 ? "没有新内容（都已存在）".l : String(format: "已导入 %d 条".l, n)
                 }
             }
         }
@@ -238,7 +254,7 @@ struct SettingsPane: View {
     private func chooseFolder() {
         let picked: URL? = ShelfPanelController.shared.withDialog {
             let panel = NSOpenPanel()
-            panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.prompt = "选择"
+            panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.prompt = "选择".l
             return panel.runModal() == .OK ? panel.url : nil
         }
         if let picked { prefs.exportDir = picked.path }
@@ -263,7 +279,7 @@ struct HourWheel: View {
         .padding(.leading, 12).padding(.trailing, 6).padding(.vertical, 5)
         .overlay(Capsule().stroke(Color.ink.opacity(0.5), lineWidth: 1))
         .overlay(ScrollSteps(enabled: enabled) { step in hour = (hour + step + 24) % 24 })
-        .help("上下滑动或点箭头调整")
+        .help("上下滑动或点箭头调整".l)
     }
 }
 

@@ -4,8 +4,8 @@ import AppKit
 final class TopBar: NSView {
     var onRecord: (() -> Void)?
     var onClose: (() -> Void)?
-    private let shot = NSButton(title: "截屏", target: nil, action: nil)
-    private let rec = NSButton(title: "录屏", target: nil, action: nil)
+    private let shot = NSButton(title: "截屏".l, target: nil, action: nil)
+    private let rec = NSButton(title: "录屏".l, target: nil, action: nil)
     private let stack = NSStackView()
 
     init() {
@@ -59,17 +59,19 @@ final class TopBar: NSView {
             b.target = self
             b.translatesAutoresizingMaskIntoConstraints = false
             b.heightAnchor.constraint(equalToConstant: 28).isActive = true
-            b.widthAnchor.constraint(equalToConstant: 80).isActive = true
         }
+        // Both segments share one width, sized to the longer title in the current language.
+        let widest = [shot, rec].map { (($0.title.trimmingCharacters(in: .whitespaces)) as NSString).size(withAttributes: [.font: Theme.serif(size: 14, bold: true)]).width }.max() ?? 40
+        for b in [shot, rec] { b.widthAnchor.constraint(equalToConstant: (widest + 44).rounded(.up)).isActive = true }
         shot.action = #selector(pickShot)
         rec.action = #selector(pickRec)
         stack.addArrangedSubview(seg)
         stack.addArrangedSubview(Theme.deskDivider(height: 28))
-        let close = NSButton(image: NSImage(systemSymbolName: "xmark", accessibilityDescription: "取消")!
+        let close = NSButton(image: NSImage(systemSymbolName: "xmark", accessibilityDescription: "取消".l)!
             .withSymbolConfiguration(.init(pointSize: 15, weight: .semibold))!, target: self, action: #selector(closeTapped))
         close.isBordered = false
         close.contentTintColor = Theme.onBrown
-        close.toolTip = "取消 ⎋"
+        close.toolTip = "取消 ⎋".l
         close.translatesAutoresizingMaskIntoConstraints = false
         close.widthAnchor.constraint(equalToConstant: 40).isActive = true
         close.heightAnchor.constraint(equalToConstant: 40).isActive = true

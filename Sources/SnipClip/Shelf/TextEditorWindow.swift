@@ -31,7 +31,7 @@ final class TextEditorWindow: NSObject, NSWindowDelegate {
         window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 620, height: 460),
                           styleMask: [.titled, .closable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
         super.init()
-        window.title = "编辑文字"
+        window.title = "编辑文字".l
         window.titlebarAppearsTransparent = true
         window.appearance = NSAppearance(named: .darkAqua)
         window.backgroundColor = Theme.brown
@@ -65,7 +65,7 @@ final class TextEditorWindow: NSObject, NSWindowDelegate {
         scroll.documentView = textView
 
         titleField.stringValue = item.title ?? ""
-        titleField.placeholderAttributedString = NSAttributedString(string: "+ 加个标题", attributes: [
+        titleField.placeholderAttributedString = NSAttributedString(string: "+ 加个标题".l, attributes: [
             .foregroundColor: Theme.inkMuted.withAlphaComponent(0.7), .font: Theme.script(size: 20)])
         titleField.font = Theme.script(size: 22)
         titleField.textColor = Theme.ink
@@ -79,8 +79,8 @@ final class TextEditorWindow: NSObject, NSWindowDelegate {
         (titleField.cell as? NSTextFieldCell)?.lineBreakMode = .byTruncatingTail
         count.font = Theme.serif(size: 13)
         count.textColor = Theme.onBrownMuted
-        let cancel = Theme.paperButton("取消", onGround: true, target: self, action: #selector(cancelTapped))
-        let save = Theme.paperButton("保存并复制", primary: true, target: self, action: #selector(saveTapped))
+        let cancel = Theme.paperButton("取消".l, onGround: true, target: self, action: #selector(cancelTapped))
+        let save = Theme.paperButton("保存并复制".l, primary: true, target: self, action: #selector(saveTapped))
         save.toolTip = "⌘⏎"
         save.keyEquivalent = "\r"
         save.keyEquivalentModifierMask = [.command]
@@ -114,7 +114,7 @@ final class TextEditorWindow: NSObject, NSWindowDelegate {
         updateCount()
     }
 
-    private func updateCount() { count.stringValue = "\(textView.string.count) 字" }
+    private func updateCount() { count.stringValue = String(format: "%d 字".l, textView.string.count) }
 
     @objc private func cancelTapped() { window.close() }
     @objc private func saveTapped() {

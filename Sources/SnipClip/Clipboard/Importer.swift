@@ -16,8 +16,8 @@ enum Importer {
         case notSQLite, empty
         var errorDescription: String? {
             switch self {
-            case .notSQLite: return "这不是 SQLite 数据库文件"
-            case .empty: return "没有找到能导入的文本或图片"
+            case .notSQLite: return "这不是 SQLite 数据库文件".l
+            case .empty: return "没有找到能导入的文本或图片".l
             }
         }
     }

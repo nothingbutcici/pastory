@@ -53,7 +53,7 @@ struct ClipCardView: View {
                     else { Image(systemName: "doc.on.clipboard").font(.system(size: 13)) }
                 }
                 .frame(width: 22, height: 22)
-                Text(item.sourceAppName ?? item.kind.label).font(.serif(16)).foregroundStyle(Color.ink).lineLimit(1)
+                Text(sourceTitle).font(.serif(16)).foregroundStyle(Color.ink).lineLimit(1)
                 Spacer()
                 Text(item.createdAt, style: .time).font(.serif(14)).foregroundStyle(Color.ink.opacity(0.75))
             }
@@ -70,7 +70,7 @@ struct ClipCardView: View {
             HStack(spacing: 8) {
                 ZStack(alignment: .leading) {
                     if draftTitle.isEmpty && !titleFocused {
-                        Text("输入标题").font(.script(26)).foregroundColor(Color.inkMuted).allowsHitTesting(false)
+                        Text("输入标题".l).font(.script(26)).foregroundColor(Color.inkMuted).allowsHitTesting(false)
                     }
                     TextField("", text: $draftTitle)
                         .textFieldStyle(.plain).font(.script(26))
@@ -81,7 +81,7 @@ struct ClipCardView: View {
                 Button { renaming = false } label: {
                     Image(systemName: "checkmark").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.ink)
                 }
-                .buttonStyle(.plain).help("保存 ⏎")
+                .buttonStyle(.plain).help("保存 ⏎".l)
             }
             .padding(.horizontal, 18).padding(.top, 8).padding(.bottom, 4)
             .overlay(alignment: .bottom) { Rectangle().fill(Color.ink.opacity(0.6)).frame(height: 1).padding(.horizontal, 18) }
@@ -99,7 +99,7 @@ struct ClipCardView: View {
                 .overlay(alignment: .bottom) { Rectangle().fill(Color.ink.opacity(0.6)).frame(height: 1).padding(.horizontal, 18) }
                 .contentShape(Rectangle())
                 .onTapGesture { renaming = true }
-                .help("点击重命名")
+                .help("点击重命名".l)
         } else {
             HStack(spacing: 0) {
                 if selected { Text("+ add title").font(.script(26)).foregroundStyle(Color.inkMuted.opacity(0.8)) }
@@ -185,7 +185,7 @@ struct ClipCardView: View {
             if onClipboard {
                 HStack(spacing: 5) {
                     Image(systemName: "checkmark").font(.system(size: 10, weight: .semibold))
-                    Text("已复制").font(.serif(13))
+                    Text("已复制".l).font(.serif(13))
                 }
                 .foregroundStyle(Color.ink)
                 .padding(.horizontal, 10).padding(.vertical, 4)
@@ -200,18 +200,18 @@ struct ClipCardView: View {
     private var actions: some View {
         HStack(spacing: 0) {
             if item.kind == .text || item.kind == .url || item.kind == .image {
-                action("pencil", item.kind == .image ? "编辑标注" : "编辑文字", onEdit)
+                action("pencil", item.kind == .image ? "编辑标注".l : "编辑文字".l, onEdit)
             } else {
-                action("eye", "预览", onPreview)
+                action("eye", "预览".l, onPreview)
             }
             divider
             pinAction
             if item.kind == .image || item.kind == .video {
                 divider
-                action("arrow.down.to.line", "保存到本地…") { Exporter.export(item) }
+                action("arrow.down.to.line", "保存到本地…".l) { Exporter.export(item) }
             }
             divider
-            action("trash", "删除") { ClipStore.shared.remove(item.id) }
+            action("trash", "删除".l) { ClipStore.shared.remove(item.id) }
         }
         .padding(.horizontal, 10)
         .frame(height: Self.stubHeight - 44)
@@ -239,7 +239,7 @@ struct ClipCardView: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(item.pinned ? "取消 Pin" : "Pin 住，不会被自动清理")
+        .help(item.pinned ? "取消 Pin".l : "Pin 住，不会被自动清理".l)
     }
 
     private func action(_ symbol: String, _ tip: String, _ act: @escaping () -> Void) -> some View {
@@ -271,21 +271,25 @@ struct ClipCardView: View {
 
     // MARK: Text bits
 
+    private var sourceTitle: String {
+        if item.sourceAppName == ClipStore.importSourceName { return "已导入".l }
+        return item.sourceAppName ?? item.kind.label
+    }
     private var kindLabel: String {
         switch item.kind {
-        case .image: return "图片"
-        case .text: return "文本"
-        case .url: return "链接"
-        case .files: return "文件"
+        case .image: return "图片".l
+        case .text: return "文本".l
+        case .url: return "链接".l
+        case .files: return "文件".l
         case .video: return item.ext.uppercased()
         }
     }
     private var note: String? {
         switch item.kind {
         case .image: return item.snippet.replacingOccurrences(of: "×", with: " × ")
-        case .text: return "\(charCount) 字"
+        case .text: return String(format: "%d 字".l, charCount)
         case .url: return nil
-        case .files: return "\(item.snippet.split(separator: "\n").count) 项"
+        case .files: return String(format: "%d 项".l, item.snippet.split(separator: "\n").count)
         case .video: return durationText
         }
     }

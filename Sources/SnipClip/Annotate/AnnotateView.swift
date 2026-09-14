@@ -250,7 +250,7 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
         tf.isBordered = false
         tf.drawsBackground = false
         tf.focusRingType = .none
-        tf.placeholderAttributedString = NSAttributedString(string: "输入文字", attributes: [.font: font, .foregroundColor: color.withAlphaComponent(0.35)])
+        tf.placeholderAttributedString = NSAttributedString(string: "输入文字".l, attributes: [.font: font, .foregroundColor: color.withAlphaComponent(0.35)])
         tf.delegate = self
         tf.target = self
         tf.action = #selector(editorReturn)

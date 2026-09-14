@@ -42,7 +42,7 @@ final class ImageEditorWindow: NSObject, NSWindowDelegate, AnnotateDelegate {
         let rect = CGRect(x: 0, y: 0, width: max(canvasSize.width + pad * 2, 900), height: canvasSize.height + pad + 44 + barH)
         window = NSWindow(contentRect: rect, styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
         super.init()
-        window.title = "编辑图片"
+        window.title = "编辑图片".l
         window.titlebarAppearsTransparent = true
         window.appearance = NSAppearance(named: .darkAqua)
         window.backgroundColor = Theme.brown
@@ -58,7 +58,7 @@ final class ImageEditorWindow: NSObject, NSWindowDelegate, AnnotateDelegate {
         canvas = AnnotateView(frame: canvasFrame, image: image)
         canvas.delegate = self
         content.addSubview(canvas)
-        toolbar = AnnotateToolbar(canvas: canvas, doneTitle: "保存")
+        toolbar = AnnotateToolbar(canvas: canvas, doneTitle: "保存".l)
         let ts = toolbar.fittingSize
         toolbar.frame = CGRect(x: ((rect.width - ts.width) / 2).rounded(), y: barH - ts.height - 4, width: ts.width, height: ts.height)
         content.addSubview(toolbar)

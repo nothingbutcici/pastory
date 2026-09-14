@@ -5,11 +5,11 @@ enum ClipKind: String, Codable {
 
     var label: String {
         switch self {
-        case .text: return "文本"
-        case .url: return "链接"
-        case .image: return "图片"
-        case .files: return "文件"
-        case .video: return "录屏"
+        case .text: return "文本".l
+        case .url: return "链接".l
+        case .image: return "图片".l
+        case .files: return "文件".l
+        case .video: return "录屏".l
         }
     }
 }

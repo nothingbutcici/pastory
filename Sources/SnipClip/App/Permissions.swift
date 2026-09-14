@@ -26,11 +26,11 @@ enum Permissions {
         _ = requestScreenRecording()
         if hasScreenRecording { return true }
         let alert = NSAlert()
-        alert.messageText = "Pastory 还没有屏幕录制权限"
-        alert.informativeText = "在「系统设置 › 隐私与安全性 › 屏幕录制」里打开 Pastory。已经打开了的话，权限要重新启动后才生效。"
-        alert.addButton(withTitle: "我已打开，重新启动 Pastory")
-        alert.addButton(withTitle: "打开系统设置")
-        alert.addButton(withTitle: "取消")
+        alert.messageText = "Pastory 还没有屏幕录制权限".l
+        alert.informativeText = "在「系统设置 › 隐私与安全性 › 屏幕录制」里打开 Pastory。已经打开了的话，权限要重新启动后才生效。".l
+        alert.addButton(withTitle: "我已打开，重新启动 Pastory".l)
+        alert.addButton(withTitle: "打开系统设置".l)
+        alert.addButton(withTitle: "取消".l)
         NSApp.activate(ignoringOtherApps: true)
         switch alert.runModal() {
         case .alertFirstButtonReturn: relaunch()

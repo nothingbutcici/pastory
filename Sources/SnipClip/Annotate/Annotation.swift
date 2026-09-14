@@ -3,15 +3,16 @@ import AppKit
 enum AnnotateTool: CaseIterable {
     case rect, ellipse, arrow, line, pen, text, mosaic
 
-    var tip: String {
+    var tip: String { rawTip.l }
+    private var rawTip: String {
         switch self {
-        case .rect: return "矩形  R"
-        case .ellipse: return "椭圆  O"
-        case .arrow: return "箭头  A"
-        case .line: return "直线  L"
-        case .pen: return "画笔  P"
-        case .text: return "文字  T"
-        case .mosaic: return "马赛克  M"
+        case .rect: return "矩形  R".l
+        case .ellipse: return "椭圆  O".l
+        case .arrow: return "箭头  A".l
+        case .line: return "直线  L".l
+        case .pen: return "画笔  P".l
+        case .text: return "文字  T".l
+        case .mosaic: return "马赛克  M".l
         }
     }
     /// Single-key shortcut (Excalidraw-style).

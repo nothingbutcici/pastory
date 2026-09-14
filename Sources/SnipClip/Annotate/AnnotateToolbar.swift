@@ -16,7 +16,7 @@ final class AnnotateToolbar: NSView {
 
     private let doneTitle: String
 
-    init(canvas: AnnotateView, doneTitle: String = "复制") {
+    init(canvas: AnnotateView, doneTitle: String = "复制".l) {
         self.canvas = canvas
         self.doneTitle = doneTitle
         subBar = SubBar(canvas: canvas)
@@ -50,33 +50,33 @@ final class AnnotateToolbar: NSView {
         }
         stack.addArrangedSubview(Self.divider())
         // 识别文字: icon + label
-        let ocrBtn = NSButton(title: " 识别文字", image: NSImage(systemSymbolName: "text.viewfinder", accessibilityDescription: nil)!
+        let ocrBtn = NSButton(title: " " + "识别文字".l, image: NSImage(systemSymbolName: "text.viewfinder", accessibilityDescription: nil)!
             .withSymbolConfiguration(.init(pointSize: 15, weight: .regular))!, target: self, action: #selector(ocr))
         ocrBtn.isBordered = false
         ocrBtn.imagePosition = .imageLeading
         ocrBtn.imageHugsTitle = true
         ocrBtn.contentTintColor = Self.ink
-        ocrBtn.attributedTitle = NSAttributedString(string: " 识别文字", attributes: [
+        ocrBtn.attributedTitle = NSAttributedString(string: " " + "识别文字".l, attributes: [
             .foregroundColor: Self.ink, .font: Theme.serif(size: 15)])
         ocrBtn.wantsLayer = true
         ocrBtn.layer?.cornerRadius = 9
         ocrBtn.translatesAutoresizingMaskIntoConstraints = false
         ocrBtn.heightAnchor.constraint(equalToConstant: 38).isActive = true
-        ocrBtn.widthAnchor.constraint(equalToConstant: 112).isActive = true
+        ocrBtn.widthAnchor.constraint(equalToConstant: (ocrBtn.attributedTitle.size().width + 44).rounded(.up)).isActive = true
         stack.addArrangedSubview(ocrBtn)
         stack.addArrangedSubview(Self.divider())
         // Function group: 撤销 · 取消 · 完成 — plain ink glyphs; 完成 in the deep blue.
         undoButton = Self.iconButton(NSImage(systemSymbolName: "arrow.uturn.backward", accessibilityDescription: nil)!
-            .withSymbolConfiguration(.init(pointSize: 16, weight: .medium))!, tip: "撤销 ⌘Z", target: self, action: #selector(undo))
+            .withSymbolConfiguration(.init(pointSize: 16, weight: .medium))!, tip: "撤销 ⌘Z".l, target: self, action: #selector(undo))
         undoButton.contentTintColor = Theme.onBrown
         stack.addArrangedSubview(undoButton)
         let cancel = Self.iconButton(NSImage(systemSymbolName: "xmark", accessibilityDescription: nil)!
-            .withSymbolConfiguration(.init(pointSize: 17, weight: .semibold))!, tip: "取消 ⎋", target: self, action: #selector(cancel))
+            .withSymbolConfiguration(.init(pointSize: 17, weight: .semibold))!, tip: "取消 ⎋".l, target: self, action: #selector(cancel))
         cancel.contentTintColor = Theme.onBrown
         stack.addArrangedSubview(cancel)
         let done = Self.iconButton(NSImage(systemSymbolName: "checkmark", accessibilityDescription: nil)!
             .withSymbolConfiguration(.init(pointSize: 17, weight: .bold))!,
-            tip: doneTitle == "复制" ? "完成 ⏎ · 复制到剪贴板" : "\(doneTitle) ⏎", target: self, action: #selector(done))
+            tip: doneTitle == "复制".l ? "完成 ⏎ · 复制到剪贴板".l : "\(doneTitle) ⏎", target: self, action: #selector(done))
         done.contentTintColor = Theme.paperBlue
         stack.addArrangedSubview(done)
     }
@@ -226,7 +226,7 @@ final class SubBar: NSView {
             let tint = on ? Theme.ink : Theme.onBrown
             if kind == .text {
                 b.image = nil
-                b.attributedTitle = NSAttributedString(string: ["小", "中", "大"][s.rawValue - 1], attributes: [
+                b.attributedTitle = NSAttributedString(string: ["小".l, "中".l, "大".l][s.rawValue - 1], attributes: [
                     .foregroundColor: tint, .font: Theme.serif(size: 13, bold: on)])
             } else {
                 b.attributedTitle = NSAttributedString(string: "")

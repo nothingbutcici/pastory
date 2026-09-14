@@ -208,6 +208,8 @@ final class ShelfModel {
         }
     }
     var focusSearch = 0
+    /// Bumped when the language changes; the shelf view is keyed on it.
+    var langTick = 0
     /// Bumped on every show(); the view uses it to drop keyboard focus so the caret does not sit in the search box.
     var openTick = 0
     /// Card order is frozen while the shelf is open, so copying (which bumps the item in the store)

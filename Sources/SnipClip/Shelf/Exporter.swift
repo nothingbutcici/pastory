@@ -29,7 +29,7 @@ enum Exporter {
                 panel.nameFieldStringValue = "Clip \(stamp).txt"
                 panel.allowedContentTypes = [.plainText]
             }
-            panel.prompt = "保存"
+            panel.prompt = "保存".l
             guard panel.runModal() == .OK, let url = panel.url else { return }
             let fm = FileManager.default
             do {
@@ -48,8 +48,8 @@ enum Exporter {
             panel.canChooseFiles = false
             panel.canCreateDirectories = true
             panel.directoryURL = Preferences.shared.exportDirectory()
-            panel.prompt = "保存到这里"
-            panel.message = "选择一个文件夹，把这些文件复制过去"
+            panel.prompt = "保存到这里".l
+            panel.message = "选择一个文件夹，把这些文件复制过去".l
             guard panel.runModal() == .OK, let dir = panel.url else { return }
             let fm = FileManager.default
             var out: [URL] = []

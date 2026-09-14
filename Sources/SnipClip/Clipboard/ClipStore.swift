@@ -138,8 +138,8 @@ final class ClipStore {
         let path = root.path, msg = error.localizedDescription
         DispatchQueue.main.async {
             let a = NSAlert()
-            a.messageText = "Pastory 读写不了存储目录"
-            a.informativeText = "\(path)\n\n\(msg)\n\n在修好之前不会写入任何改动，也不会清理。检查磁盘空间后重新打开 Pastory。"
+            a.messageText = "Pastory 读写不了存储目录".l
+            a.informativeText = path + "\n\n" + msg + "\n\n" + "在修好之前不会写入任何改动，也不会清理。检查磁盘空间后重新打开 Pastory。".l
             NSApp.activate(ignoringOtherApps: true)
             a.runModal()
         }
@@ -231,7 +231,7 @@ final class ClipStore {
         let hash = stableHash(data)
         if let dup = dedupe(hash: hash, kinds: [.files]) { return dup }
         let names = urls.map(\.lastPathComponent)
-        let snippet = names.count <= 3 ? names.joined(separator: "\n") : names.prefix(3).joined(separator: "\n") + "\n… 共 \(names.count) 项"
+        let snippet = names.count <= 3 ? names.joined(separator: "\n") : names.prefix(3).joined(separator: "\n") + "\n" + String(format: "… 共 %d 项".l, names.count)
         let item = ClipItem(id: UUID().uuidString, kind: .files, createdAt: Date(),
                             sourceBundleID: source.bundleID, sourceAppName: source.name,
                             snippet: snippet, ocrText: nil, pinned: false,
@@ -252,7 +252,7 @@ final class ClipStore {
         if let poster { dims = " · \(poster.width)×\(poster.height)" }
         let item = ClipItem(id: UUID().uuidString, kind: .video, createdAt: Date(),
                             sourceBundleID: source.bundleID, sourceAppName: source.name,
-                            snippet: "\(ext.uppercased()) · \(secs) 秒\(dims)", ocrText: nil, pinned: false,
+                            snippet: String(format: "%@ · %d 秒%@".l, ext.uppercased(), secs, dims), ocrText: nil, pinned: false,
                             ext: ext, hasRTF: false, pixelWidth: poster?.width, pixelHeight: poster?.height,
                             byteCount: size, duration: duration, title: nil, contentHash: Int(truncatingIfNeeded: UInt64.random(in: 0...UInt64.max)))
         do { try FileManager.default.moveItem(at: tempFile, to: payloadURL(item)) } catch { return nil }
@@ -317,6 +317,9 @@ final class ClipStore {
 
     // MARK: - Import
 
+    /// Marker in `sourceAppName` for imported items (stored as-is in the DB; shown localized). Never rename.
+    static let importSourceName = "导入"
+
     struct ImportEntry {
         enum Payload { case text(String), image(Data) }
         var payload: Payload
@@ -335,7 +338,7 @@ final class ClipStore {
             if shift > 0 { for i in entries.indices { entries[i].createdAt.addTimeInterval(-shift) } }
         }
         var seen = Set(items.map(\.contentHash))
-        let source = Source(bundleID: nil, name: "导入")
+        let source = Source(bundleID: nil, name: Self.importSourceName)
         var added: [ClipItem] = []
         for e in entries {
             switch e.payload {

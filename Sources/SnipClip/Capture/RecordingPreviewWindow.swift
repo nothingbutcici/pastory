@@ -34,7 +34,7 @@ final class RecordingPreviewWindow: NSObject, NSWindowDelegate {
         let rect = CGRect(x: 0, y: 0, width: videoSize.width + pad * 2, height: 44 + videoSize.height + transportH + buttonsH)
         window = NSWindow(contentRect: rect, styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
         super.init()
-        window.title = "录屏预览"
+        window.title = "录屏预览".l
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.appearance = NSAppearance(named: .darkAqua)
@@ -65,9 +65,9 @@ final class RecordingPreviewWindow: NSObject, NSWindowDelegate {
         info.font = Theme.serif(size: 13)
         info.textColor = Theme.onBrownMuted
         info.lineBreakMode = .byTruncatingTail
-        let discard = Theme.paperButton("丢弃", onGround: true, target: self, action: #selector(discardTapped))
-        let gif = Theme.paperButton(duration > 30 ? "复制为 GIF（会很大）" : "复制为 GIF", onGround: true, target: self, action: #selector(gifTapped))
-        let mp4 = Theme.paperButton("复制为 MP4", primary: true, target: self, action: #selector(mp4Tapped))
+        let discard = Theme.paperButton("丢弃".l, onGround: true, target: self, action: #selector(discardTapped))
+        let gif = Theme.paperButton(duration > 30 ? "复制为 GIF（会很大）".l : "复制为 GIF".l, onGround: true, target: self, action: #selector(gifTapped))
+        let mp4 = Theme.paperButton("复制为 MP4".l, primary: true, target: self, action: #selector(mp4Tapped))
         mp4.keyEquivalent = "\r"
         buttons = [discard, gif, mp4]
         let stack = NSStackView(views: buttons)

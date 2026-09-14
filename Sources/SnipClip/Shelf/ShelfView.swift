@@ -52,6 +52,7 @@ struct ShelfView: View {
         .contentShape(Rectangle())
         .onTapGesture { searchFocused = false; NSApp.keyWindow?.makeFirstResponder(nil) })
         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 14, topTrailingRadius: 14))
+        .id(model.langTick)                 // language switch rebuilds the whole shelf
         .onChange(of: model.focusSearch) { _, _ in searchFocused = true }
         .onChange(of: model.openTick) { _, _ in searchFocused = false }
     }
@@ -62,12 +63,12 @@ struct ShelfView: View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Pastory").font(.script(42)).foregroundStyle(Color.onBrown)
                 .padding(.leading, 22).padding(.top, 10).padding(.bottom, 22)
-            navRow(icon: "clipboard", "剪贴板", active: !model.showSettings) { model.showSettings = false }
-            navRow(icon: "gearshape", "设置", active: model.showSettings) { model.showSettings = true }
+            navRow(icon: "clipboard", "剪贴板".l, active: !model.showSettings) { model.showSettings = false }
+            navRow(icon: "gearshape", "设置".l, active: model.showSettings) { model.showSettings = true }
             Spacer()
             Rectangle().fill(Color.onBrown.opacity(0.25)).frame(height: 1).padding(.horizontal, 22)
-            Text("今日暂存").font(.serif(15)).foregroundStyle(Color.onBrown).padding(.leading, 22).padding(.top, 14)
-            Text("Pin 后长期保存").font(.serif(12)).foregroundStyle(Color.onBrownMuted).padding(.leading, 22).padding(.top, 4).padding(.bottom, 18)
+            Text("今日暂存".l).font(.serif(15)).foregroundStyle(Color.onBrown).padding(.leading, 22).padding(.top, 14)
+            Text("Pin 后长期保存".l).font(.serif(12)).foregroundStyle(Color.onBrownMuted).padding(.leading, 22).padding(.top, 4).padding(.bottom, 18)
         }
         .frame(width: 162, alignment: .leading)
         .background(Color.brownDeep.opacity(0.6))
@@ -110,7 +111,7 @@ struct ShelfView: View {
                 let on = model.filter == f
                 Button { model.filter = f } label: {
                     HStack(spacing: 18) {
-                        Text(f.rawValue).font(.serif(17))
+                        Text(f.rawValue.l("tab")).font(.serif(17))
                         Text("\(model.count(for: f))").font(.serif(16))
                     }
                     .foregroundStyle(on ? Color.ink : Color.onBrown)
@@ -132,7 +133,7 @@ struct ShelfView: View {
                 Image(systemName: "magnifyingglass").font(.system(size: 14)).foregroundStyle(Color.onBrownMuted)
                 ZStack(alignment: .leading) {
                     if model.query.isEmpty && !searchFocused {
-                        Text("搜索剪贴板").font(.serif(15)).foregroundColor(Color.onBrownMuted).allowsHitTesting(false)
+                        Text("搜索剪贴板".l).font(.serif(15)).foregroundColor(Color.onBrownMuted).allowsHitTesting(false)
                     }
                     TextField("", text: $model.query)
                         .textFieldStyle(.plain).font(.serif(15))
@@ -149,7 +150,7 @@ struct ShelfView: View {
             Button { ShelfPanelController.shared.hide() } label: {
                 Image(systemName: "xmark").font(.system(size: 15, weight: .regular)).foregroundStyle(Color.onBrown).frame(width: 40, height: 40)
             }
-            .buttonStyle(.plain).help("关闭 ⎋")
+            .buttonStyle(.plain).help("关闭 ⎋".l)
         }
         .padding(.top, 12)
         .padding(.bottom, 8)
@@ -195,8 +196,8 @@ struct ShelfView: View {
             Image(systemName: model.query.isEmpty ? "clipboard" : "magnifyingglass")
                 .font(.system(size: 34, weight: .light)).foregroundStyle(Color.onBrownMuted.opacity(0.7))
             Text(model.query.isEmpty
-                 ? "还没有内容。复制点什么，或者按 \(Preferences.shared.shortcut(Preferences.Key.hotkeyCapture).display) 截个图。"
-                 : "没有匹配的内容")
+                 ? String(format: "还没有内容。复制点什么，或者按 %@ 截个图。".l, Preferences.shared.shortcut(Preferences.Key.hotkeyCapture).display)
+                 : "没有匹配的内容".l)
                 .font(.serif(15)).foregroundStyle(Color.onBrownMuted)
             Spacer()
         }
@@ -235,31 +236,31 @@ struct ShelfView: View {
 
     @ViewBuilder
     private func menu(for item: ClipItem) -> some View {
-        Button("复制") { model.copy(item) }
-        Button("复制并关闭") { model.copyAndClose(item) }
-        Button(item.title == nil ? "命名…" : "重命名…") { model.selectedID = item.id; model.renamingID = item.id }
-        if item.title != nil { Button("去掉标题") { ClipStore.shared.setTitle(nil, for: item.id) } }
+        Button("复制".l) { model.copy(item) }
+        Button("复制并关闭".l) { model.copyAndClose(item) }
+        Button(item.title == nil ? "命名…".l : "重命名…".l) { model.selectedID = item.id; model.renamingID = item.id }
+        if item.title != nil { Button("去掉标题".l) { ClipStore.shared.setTitle(nil, for: item.id) } }
         if item.kind == .text || item.kind == .url || item.kind == .image {
-            Button("编辑") { model.selectedID = item.id; model.edit(item) }
+            Button("编辑".l) { model.selectedID = item.id; model.edit(item) }
         }
-        Button("预览") { model.selectedID = item.id; model.previewSelected() }
-        Button(item.pinned ? "取消 Pin" : "Pin") { ClipStore.shared.togglePin(item.id) }
-        Button("保存到本地…") { Exporter.export(item) }
+        Button("预览".l) { model.selectedID = item.id; model.previewSelected() }
+        Button(item.pinned ? "取消 Pin".l : "Pin") { ClipStore.shared.togglePin(item.id) }
+        Button("保存到本地…".l) { Exporter.export(item) }
         if item.kind == .files {
-            Button("在 Finder 中显示") { NSWorkspace.shared.activateFileViewerSelecting(ClipStore.shared.fileURLs(of: item)) }
+            Button("在 Finder 中显示".l) { NSWorkspace.shared.activateFileViewerSelecting(ClipStore.shared.fileURLs(of: item)) }
         }
         if item.kind == .video {
-            Button("打开") { NSWorkspace.shared.open(ClipStore.shared.payloadURL(item)) }
+            Button("打开".l) { NSWorkspace.shared.open(ClipStore.shared.payloadURL(item)) }
         }
         if item.kind == .image, let t = item.ocrText, !t.isEmpty {
-            Button("复制识别出的文字") {
+            Button("复制识别出的文字".l) {
                 let it = ClipStore.shared.insertText(t, rtf: nil, source: CaptureCoordinator.source)
                 PasteboardWriter.writeText(t, rtf: nil, itemID: it?.id ?? "")
                 ShelfPanelController.shared.hide()
             }
         }
         Divider()
-        Button("删除", role: .destructive) { ClipStore.shared.remove(item.id) }
+        Button("删除".l, role: .destructive) { ClipStore.shared.remove(item.id) }
     }
 }
 

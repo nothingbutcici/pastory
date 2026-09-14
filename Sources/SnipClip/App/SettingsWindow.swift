@@ -68,18 +68,18 @@ struct ShortcutRecorder: View {
     @State private var sawModifiers = false
     @State private var sawKey = false
 
-    private static let names = ["capture": "截图", "shelf": "剪贴板", "search": "搜索剪贴板"]
+    private static let names = ["capture": "截图".l, "shelf": "剪贴板".l, "search": "搜索剪贴板".l]
 
     var body: some View {
         HStack(spacing: 8) {
             if let notice, !capturing { Text(notice).font(.system(size: 12)).foregroundStyle(Color.inkMuted) }
-            else if taken, !capturing { Text("被其他应用占用").font(.system(size: 12)).foregroundStyle(Color.inkMuted) }
+            else if taken, !capturing { Text("被其他应用占用".l).font(.system(size: 12)).foregroundStyle(Color.inkMuted) }
             HStack(spacing: 6) {
                 Button {
                     // The click-anywhere monitor already cancelled on mouse-down; do not re-arm on the mouse-up.
                     if !capturing, Date().timeIntervalSince(lastCancel) > 0.4 { startCapture() }
                 } label: {
-                    Text(capturing ? "按下组合键" : shortcut.display)
+                    Text(capturing ? "按下组合键".l : shortcut.display)
                         .font(.system(size: 13, weight: .medium).monospaced())
                         .foregroundStyle(shortcut.isSet || capturing ? Color.ink : Color.inkMuted)
                         .frame(minWidth: 96)
@@ -91,7 +91,7 @@ struct ShortcutRecorder: View {
                     Button { stop(Shortcut.none) } label: {
                         Image(systemName: "xmark.circle.fill").font(.system(size: 13)).foregroundStyle(Color.inkMuted)
                     }
-                    .buttonStyle(.plain).help("不设快捷键")
+                    .buttonStyle(.plain).help("不设快捷键".l)
                 }
             }
             .padding(.leading, 12).padding(.trailing, shortcut.isSet && !capturing ? 8 : 12).padding(.vertical, 7)
@@ -121,7 +121,7 @@ struct ShortcutRecorder: View {
             if event.keyCode == 53 { stop(nil) }
             else if event.keyCode == 51 { stop(Shortcut.none) }
             else if let s = Shortcut(event: event) { stop(s) }
-            else { stop(nil); notice = "至少两个键：⌘ ⌥ ⌃ ⇧ 中的一个加一个键" }
+            else { stop(nil); notice = "至少两个键：⌘ ⌥ ⌃ ⇧ 中的一个加一个键".l }
             return nil
         }
         // A combo another app already owns as a global hotkey is swallowed before it reaches us: we only ever
@@ -130,7 +130,7 @@ struct ShortcutRecorder: View {
             let mods = event.modifierFlags.intersection([.command, .shift, .option, .control])
             if !mods.isEmpty { sawModifiers = true; sawKey = false }
             else if sawModifiers, !sawKey, capturing {
-                notice = "没收到按键。如果对方应用弹出来了，说明这个组合已被它占用"
+                notice = "没收到按键。如果对方应用弹出来了，说明这个组合已被它占用".l
             }
             return event
         }
@@ -150,11 +150,11 @@ struct ShortcutRecorder: View {
 
     private func swallowed() {
         stop(nil)
-        notice = "已被其他应用占用，换一个"
+        notice = "已被其他应用占用，换一个".l
         // If the owner brought itself to the front, we can name it.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             if let app = NSWorkspace.shared.frontmostApplication, app != NSRunningApplication.current, let name = app.localizedName {
-                notice = "已被 \(name) 占用，换一个"
+                notice = String(format: "已被 %@ 占用，换一个".l, name)
             }
         }
     }
@@ -179,11 +179,11 @@ struct ShortcutRecorder: View {
         if newValue.isSet {
             let mine: [(String, String)] = [("capture", Preferences.Key.hotkeyCapture), ("shelf", Preferences.Key.hotkeyShelf), ("search", Preferences.Key.hotkeySearch)]
             if let (owner, _) = mine.first(where: { $0.0 != bindingName && Preferences.shared.shortcut($0.1) == newValue }) {
-                notice = "已被 Pastory 的「\(Self.names[owner] ?? owner)」占用，换一个"
+                notice = String(format: "已被 Pastory 的「%@」占用，换一个".l, (Self.names[owner] ?? owner).l)
                 return
             }
             if !HotKeyCenter.shared.isAvailable(newValue) {
-                notice = "已被其他应用占用，换一个"
+                notice = "已被其他应用占用，换一个".l
                 return
             }
         }
@@ -194,7 +194,7 @@ struct ShortcutRecorder: View {
         if newValue.isSet {
             let m = newValue.carbonModifiers
             if m == UInt32(cmdKey) || m == UInt32(shiftKey) || m == UInt32(cmdKey | shiftKey) {
-                notice = "已设置。注意：所有应用里的 \(newValue.display) 都会变成这个功能"
+                notice = String(format: "已设置。注意：所有应用里的 %@ 都会变成这个功能".l, newValue.display)
             }
         }
     }

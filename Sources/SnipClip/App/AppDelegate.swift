@@ -46,20 +46,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         var taken: [String] = []
         if !HotKeyCenter.shared.bind(p.shortcut(Preferences.Key.hotkeyCapture), name: "capture", action: {
             MainActor.assumeIsolated { CaptureCoordinator.shared.start() }
-        }) { taken.append("截图 \(p.shortcut(Preferences.Key.hotkeyCapture).display)") }
+        }) { taken.append("截图".l + " " + p.shortcut(Preferences.Key.hotkeyCapture).display) }
         if !HotKeyCenter.shared.bind(p.shortcut(Preferences.Key.hotkeyShelf), name: "shelf", action: {
             MainActor.assumeIsolated { ShelfPanelController.shared.toggle() }
-        }) { taken.append("剪贴板 \(p.shortcut(Preferences.Key.hotkeyShelf).display)") }
+        }) { taken.append("剪贴板".l + " " + p.shortcut(Preferences.Key.hotkeyShelf).display) }
         if !HotKeyCenter.shared.bind(p.shortcut(Preferences.Key.hotkeySearch), name: "search", action: {
             MainActor.assumeIsolated { ShelfPanelController.shared.showSearch() }
-        }) { taken.append("搜索剪贴板 \(p.shortcut(Preferences.Key.hotkeySearch).display)") }
+        }) { taken.append("搜索剪贴板".l + " " + p.shortcut(Preferences.Key.hotkeySearch).display) }
         NotificationCenter.default.post(name: .shortcutBindingChanged, object: nil)
         guard !taken.isEmpty else { return }
         let alert = NSAlert()
-        alert.messageText = "快捷键被其他应用占用"
-        alert.informativeText = taken.joined(separator: "、") + "\n\n另一个应用（常见是微信、飞书）已经注册了同样的组合键，系统只认先注册的那个。换一个组合键，或者去那个应用里改掉它的。"
-        alert.addButton(withTitle: "打开设置")
-        alert.addButton(withTitle: "稍后")
+        alert.messageText = "快捷键被其他应用占用".l
+        alert.informativeText = taken.joined(separator: "、") + "\n\n另一个应用（常见是微信、飞书）已经注册了同样的组合键，系统只认先注册的那个。换一个组合键，或者去那个应用里改掉它的。".l
+        alert.addButton(withTitle: "打开设置".l)
+        alert.addButton(withTitle: "稍后".l)
         NSApp.activate(ignoringOtherApps: true)
         if alert.runModal() == .alertFirstButtonReturn { SettingsWindowController.shared.show() }
     }
@@ -69,17 +69,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
         let p = Preferences.shared
-        add(menu, "截图", #selector(menuCapture), hint: p.shortcut(Preferences.Key.hotkeyCapture))
-        add(menu, ShelfPanelController.shared.isVisible ? "隐藏剪贴板" : "显示剪贴板", #selector(menuShelf),
+        add(menu, "截图".l, #selector(menuCapture), hint: p.shortcut(Preferences.Key.hotkeyCapture))
+        add(menu, ShelfPanelController.shared.isVisible ? "隐藏剪贴板".l : "显示剪贴板".l, #selector(menuShelf),
             hint: p.shortcut(Preferences.Key.hotkeyShelf))
-        add(menu, "搜索剪贴板", #selector(menuSearch), hint: p.shortcut(Preferences.Key.hotkeySearch))
+        add(menu, "搜索剪贴板".l, #selector(menuSearch), hint: p.shortcut(Preferences.Key.hotkeySearch))
         menu.addItem(.separator())
-        let pause = add(menu, "暂停记录剪贴板", #selector(menuTogglePause))
+        let pause = add(menu, "暂停记录剪贴板".l, #selector(menuTogglePause))
         pause.state = p.monitoringPaused ? .on : .off
-        add(menu, "打开存储文件夹", #selector(menuOpenStore))
+        add(menu, "打开存储文件夹".l, #selector(menuOpenStore))
         menu.addItem(.separator())
-        add(menu, "设置…", #selector(menuSettings), keyEquivalent: ",")
-        add(menu, "退出 Pastory", #selector(menuQuit), keyEquivalent: "q")
+        add(menu, "设置…".l, #selector(menuSettings), keyEquivalent: ",")
+        add(menu, "退出 Pastory".l, #selector(menuQuit), keyEquivalent: "q")
     }
 
     /// Menu-bar apps get no menu for free; without an Edit menu, ⌘V/⌘C are dead in every text field.
@@ -87,21 +87,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let main = NSMenu()
         let appItem = NSMenuItem()
         let appMenu = NSMenu()
-        let quitItem = NSMenuItem(title: "退出 Pastory", action: #selector(menuQuit), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: "退出 Pastory".l, action: #selector(menuQuit), keyEquivalent: "q")
         quitItem.target = self
         appMenu.addItem(quitItem)
         appItem.submenu = appMenu
         main.addItem(appItem)
 
         let editItem = NSMenuItem()
-        let edit = NSMenu(title: "编辑")
-        edit.addItem(withTitle: "撤销", action: Selector(("undo:")), keyEquivalent: "z")
-        edit.addItem(withTitle: "重做", action: Selector(("redo:")), keyEquivalent: "Z")
+        let edit = NSMenu(title: "编辑".l)
+        edit.addItem(withTitle: "撤销".l, action: Selector(("undo:")), keyEquivalent: "z")
+        edit.addItem(withTitle: "重做".l, action: Selector(("redo:")), keyEquivalent: "Z")
         edit.addItem(.separator())
-        edit.addItem(withTitle: "剪切", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        edit.addItem(withTitle: "拷贝", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        edit.addItem(withTitle: "粘贴", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
-        edit.addItem(withTitle: "全选", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        edit.addItem(withTitle: "剪切".l, action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edit.addItem(withTitle: "拷贝".l, action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: "粘贴".l, action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: "全选".l, action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
         editItem.submenu = edit
         main.addItem(editItem)
         NSApp.mainMenu = main

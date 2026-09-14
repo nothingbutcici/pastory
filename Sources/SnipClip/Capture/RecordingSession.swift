@@ -62,7 +62,7 @@ final class RecordingSession {
         guard isRecording, !stopping else { return }
         stopping = true
         timer?.invalidate()
-        timeLabel?.stringValue = "保存中…"
+        timeLabel?.stringValue = "保存中…".l
         Task { @MainActor in
             await recorder.stop()
             isRecording = false
@@ -93,7 +93,7 @@ final class RecordingSession {
         teardown()
         if let error {
             let a = NSAlert()
-            a.messageText = "录屏失败"
+            a.messageText = "录屏失败".l
             a.informativeText = (error as NSError).localizedDescription
             NSApp.activate(ignoringOtherApps: true)
             a.runModal()
@@ -160,8 +160,8 @@ final class RecordingSession {
         label.font = NSFont.monospacedDigitSystemFont(ofSize: 15, weight: .semibold)
         label.textColor = Theme.onBrown
         timeLabel = label
-        let stopBtn = Theme.paperButton("■ 停止", primary: true, target: self, action: #selector(stopTapped))
-        let cancelBtn = Theme.paperButton("丢弃", onGround: true, target: self, action: #selector(cancelTapped))
+        let stopBtn = Theme.paperButton("■ 停止".l, primary: true, target: self, action: #selector(stopTapped))
+        let cancelBtn = Theme.paperButton("丢弃".l, onGround: true, target: self, action: #selector(cancelTapped))
         for x in [d, label, NSView(), stopBtn, cancelBtn] { stack.addArrangedSubview(x) }
         p.contentView = v
         place(p, size: CGSize(width: 290, height: 52))
@@ -198,14 +198,14 @@ final class RecordingSession {
 
     private func deliver(gif: Bool) {
         let src = tmpURL
-        preview?.setBusy(gif ? "正在转 GIF…" : "保存中…")
+        preview?.setBusy(gif ? "正在转 GIF…".l : "保存中…".l)
         Task { @MainActor in
             var fileURL = src
             if gif {
                 let g = src.deletingPathExtension().appendingPathExtension("gif")
                 do {
                     try await GIFEncoder.encode(movie: src, to: g) { [weak self] p in
-                        Task { @MainActor in self?.preview?.setBusy("正在转 GIF… \(Int(p * 100))%") }
+                        Task { @MainActor in self?.preview?.setBusy(String(format: "正在转 GIF… %d%%".l, Int(p * 100))) }
                     }
                     fileURL = g
                 } catch {

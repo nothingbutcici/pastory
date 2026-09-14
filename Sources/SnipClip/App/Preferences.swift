@@ -27,7 +27,7 @@ struct Shortcut: Equatable {
     }
 
     var display: String {
-        guard isSet else { return "未设置" }
+        guard isSet else { return "未设置".l }
         var s = ""
         if carbonModifiers & UInt32(controlKey) != 0 { s += "⌃" }
         if carbonModifiers & UInt32(optionKey) != 0 { s += "⌥" }
@@ -115,6 +115,8 @@ final class Preferences {
     }
     var monitoringPaused: Bool { get { d.bool(forKey: Key.monitoringPaused) } set { d.set(newValue, forKey: Key.monitoringPaused) } }
     var ocrImages: Bool { get { d.bool(forKey: Key.ocrImages) } set { d.set(newValue, forKey: Key.ocrImages) } }
+    /// "system" (follow macOS), "zh" or "en".
+    var language: String { get { d.string(forKey: "language") ?? "system" } set { d.set(newValue, forKey: "language") } }
     /// First launch on this Mac: the shelf opens once by itself, so a menu-bar-only app does not look like it failed to start.
     var didWelcome: Bool { get { d.bool(forKey: "didWelcome") } set { d.set(newValue, forKey: "didWelcome") } }
 
