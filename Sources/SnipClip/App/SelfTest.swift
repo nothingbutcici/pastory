@@ -5,6 +5,9 @@ import SwiftUI
 /// `--selftest capture <out.png>` · `--selftest ocr [in.png]` · `--selftest clipboard <seconds>`
 /// Set SNIPCLIP_STORE=<dir> to keep test items out of the real store.
 enum SelfTest {
+    /// A file that exists in any checkout, for the file-list tests.
+    static let sampleFile = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+        .deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("Package.swift")
     @MainActor
     static func handleCommandLine() -> Bool {
         let args = CommandLine.arguments
@@ -79,7 +82,7 @@ enum SelfTest {
             case "retention": ok = retention()
             case "gif": ok = await gif()
             case "pbfiles":
-                PasteboardWriter.writeFiles([URL(fileURLWithPath: rest.first ?? "/Users/cici/Project/Claude/snip clip/README.md")], itemID: "test")
+                PasteboardWriter.writeFiles([URL(fileURLWithPath: rest.first ?? SelfTest.sampleFile.path)], itemID: "test")
                 print((NSPasteboard.general.types ?? []).map(\.rawValue).joined(separator: "\n"))
                 let urls = NSPasteboard.general.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL]
                 print("readObjects → \(urls?.map(\.lastPathComponent) ?? [])")
@@ -333,7 +336,7 @@ enum SelfTest {
         if let img = renderSample(), let png = Screenshotter.pngData(img) {
             store.insertImage(png: png, source: CaptureCoordinator.source, ocrText: "Snip Clip 是一个截图工具")
         }
-        store.insertFiles([URL(fileURLWithPath: "/Users/cici/Project/Claude/snip clip/README.md"),
+        store.insertFiles([URL(fileURLWithPath: SelfTest.sampleFile.path),
                            URL(fileURLWithPath: "/Users/cici/Project/Claude/snip clip/Package.swift")],
                           source: ClipStore.Source(bundleID: "com.apple.finder", name: "Finder"))
         store.insertText("const shelf = items.filter(i => i.pinned)\n  .map(render)\n  .join('')", rtf: nil, source: ClipStore.Source(bundleID: "com.microsoft.VSCode", name: "Code"))
@@ -468,7 +471,7 @@ extension SelfTest {
             pb.writeObjects([tmp as NSURL])
         }, .image)
         check("finder copy of a document", board { pb in
-            pb.writeObjects([URL(fileURLWithPath: "/Users/cici/Project/Claude/snip clip/README.md") as NSURL])
+            pb.writeObjects([URL(fileURLWithPath: SelfTest.sampleFile.path) as NSURL])
         }, .files)
         check("lone temp image file", board { pb in pb.writeObjects([tmp as NSURL]) }, .image)
         check("plain text", board { pb in pb.setString("hello", forType: .string) }, .text)
