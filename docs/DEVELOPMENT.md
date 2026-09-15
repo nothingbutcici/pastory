@@ -210,7 +210,7 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
 
 ## 权限
 
-屏幕录制（截图必需）。不需要辅助功能：货架选中只是「复制回剪贴板」，不模拟粘贴。
+屏幕录制（截图必需）。辅助功能：可选，只用于「双击 / ⏎ 后直接粘贴」那一次 ⌘V；不授权则退化为只复制并收起。
 丢权限时 `tccutil reset ScreenCapture com.cici.snipclip` 后重新启动。
 
 ## 已知边界
