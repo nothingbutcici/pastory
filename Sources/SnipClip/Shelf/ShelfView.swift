@@ -107,12 +107,13 @@ struct ShelfView: View {
         HStack(spacing: 0) {
             // Tabs read like a ruled index: text separated by thin uprights, a baseline under the row;
             // the active one is a torn scrap of blue paper laid on top.
+            let counts = model.counts
             ForEach(Array(ShelfFilter.allCases.enumerated()), id: \.element.id) { i, f in
                 let on = model.filter == f
                 Button { model.filter = f } label: {
                     HStack(spacing: 18) {
                         Text(f.rawValue.l("tab")).font(.serif(17))
-                        Text("\(model.count(for: f))").font(.serif(16))
+                        Text("\(counts[f] ?? 0)").font(.serif(16))
                     }
                     .foregroundStyle(on ? Color.ink : Color.onBrown)
                     .padding(.horizontal, 20).frame(height: 40)
@@ -170,7 +171,8 @@ struct ShelfView: View {
                                      onCopy: { model.copy(item) },
                                      onCopyAndClose: { model.copyAndClose(item) },
                                      onPreview: { model.selectedID = item.id; model.previewSelected() },
-                                     onEdit: { model.selectedID = item.id; model.edit(item) })
+                                     onEdit: { model.selectedID = item.id; model.edit(item) },
+                                     onDelete: { model.delete(item) })
                             .id(item.id)
                             .contextMenu { menu(for: item) }
                     }
@@ -260,7 +262,7 @@ struct ShelfView: View {
             }
         }
         Divider()
-        Button("删除".l, role: .destructive) { ClipStore.shared.remove(item.id) }
+        Button("删除".l, role: .destructive) { model.delete(item) }
     }
 }
 

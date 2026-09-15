@@ -182,7 +182,15 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
         case kVK_Delete where !typing: model.deleteSelected(); return true
         case kVK_ANSI_F where cmd: model.focusSearch += 1; return true
         case kVK_Space where !typing: toggleQuickLook(); return true
-        default: return false
+        default:
+            // Just start typing: letters go straight into the search box.
+            if !typing, !cmd, !event.modifierFlags.contains(.control), !event.modifierFlags.contains(.option),
+               let chars = event.characters, !chars.isEmpty, chars.unicodeScalars.allSatisfy({ !CharacterSet.controlCharacters.contains($0) }) {
+                model.query += chars
+                model.focusSearch += 1
+                return true
+            }
+            return false
         }
     }
 
@@ -269,16 +277,29 @@ final class ShelfModel {
     /// does not make cards jump around. Rebuilt on every show.
     private var orderSnapshot: [String: Int] = [:]
 
-    /// Totals per filter (ignoring the search box), for the pills.
-    func count(for f: ShelfFilter) -> Int {
-        let all = ClipStore.shared.items
-        switch f {
-        case .all: return all.count
-        case .pinned: return all.filter(\.pinned).count
-        case .images: return all.filter { $0.kind == .image }.count
-        case .videos: return all.filter { $0.kind == .video }.count
-        case .text: return all.filter { $0.kind == .text || $0.kind == .url }.count
+    /// Totals per filter (ignoring the search box), for the pills — one pass over the store, not five.
+    var counts: [ShelfFilter: Int] {
+        var c: [ShelfFilter: Int] = [.all: 0, .pinned: 0, .images: 0, .videos: 0, .text: 0]
+        for it in ClipStore.shared.items {
+            c[.all, default: 0] += 1
+            if it.pinned { c[.pinned, default: 0] += 1 }
+            switch it.kind {
+            case .image: c[.images, default: 0] += 1
+            case .video: c[.videos, default: 0] += 1
+            case .text, .url: c[.text, default: 0] += 1
+            case .files: break
+            }
         }
+        return c
+    }
+
+    /// Lower-cased searchable text per item, built once per (id, modifiedAt) instead of on every keystroke.
+    private var searchBlobs: [String: (Date, String)] = [:]
+    private func searchBlob(_ item: ClipItem) -> String {
+        if let hit = searchBlobs[item.id], hit.0 == item.modifiedAt { return hit.1 }
+        let blob = [item.snippet, item.ocrText ?? "", item.sourceAppName ?? "", item.title ?? ""].joined(separator: "\n").lowercased()
+        searchBlobs[item.id] = (item.modifiedAt, blob)
+        return blob
     }
 
     var items: [ClipItem] {
@@ -293,8 +314,7 @@ final class ShelfModel {
             case .text: if item.kind != .text && item.kind != .url { return false }
             }
             guard !q.isEmpty else { return true }
-            return item.snippet.lowercased().contains(q) || (item.ocrText?.lowercased().contains(q) ?? false)
-                || (item.sourceAppName?.lowercased().contains(q) ?? false) || (item.title?.lowercased().contains(q) ?? false)
+            return searchBlob(item).contains(q)
         }
     }
 
@@ -355,8 +375,26 @@ final class ShelfModel {
         guard let id = selectedID, let s = items.first(where: { $0.id == id }) else { return }
         let list = items
         let i = list.firstIndex { $0.id == s.id } ?? 0
-        ClipStore.shared.remove(s.id)
+        guard delete(s) else { return }
         let rest = items
         selectedID = rest.isEmpty ? nil : rest[min(i, rest.count - 1)].id
+    }
+
+    /// The one way to delete from the shelf: a pinned card asks first, everything else goes straight away.
+    @discardableResult
+    func delete(_ item: ClipItem) -> Bool {
+        if item.pinned {
+            let go = ShelfPanelController.shared.withDialog { () -> Bool in
+                let a = NSAlert()
+                a.messageText = "这条是 Pin 住的，确定删除？".l
+                a.informativeText = "Pin 住的内容不会被自动清理，只有这样手动删除才会消失，而且不能恢复。".l
+                a.addButton(withTitle: "删除".l)
+                a.addButton(withTitle: "取消".l)
+                return a.runModal() == .alertFirstButtonReturn
+            }
+            guard go else { return false }
+        }
+        ClipStore.shared.remove(item.id)
+        return true
     }
 }

@@ -71,6 +71,7 @@ enum L {
         "图片自动识别文字（可按文字搜图）": "OCR images automatically (search images by text)", "暂停同步至剪贴板": "Pause clipboard capture",
         "本地数据库截图存储方式": "How screenshots are stored locally", "无损 PNG（默认）": "Lossless PNG (default)", "高质量 HEIC（约小 3 倍）": "High-quality HEIC (about 3× smaller)",
         "双击 / ⏎ 后直接粘贴到刚才的应用": "Double-click / ⏎ pastes into the app you came from", "需要辅助功能权限": "Needs Accessibility",
+        "这条是 Pin 住的，确定删除？": "This one is pinned. Delete it?", "Pin 住的内容不会被自动清理，只有这样手动删除才会消失，而且不能恢复。": "Pinned items are never cleaned up automatically; deleting by hand is the only way they go, and it cannot be undone.",
         "语言": "Language", "跟随系统": "System", "中文": "中文",
         "从其他剪贴板工具导入（SQLite）": "Import from another clipboard app (SQLite)", "选择数据库…": "Choose Database…", "导入": "Import",
         "移除所有导入进来的条目（来源为「导入」）": "Remove everything that was imported", "移除": "Remove",

@@ -141,6 +141,8 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
   语言 = 设置 › 语言（跟随系统 / 中文 / English，`Preferences.language`），切换时 `ShelfModel.langTick` 让货架整体重建，
   菜单栏菜单每次打开时重建；`SNIPCLIP_LANG=en` 可强制离屏渲染英文。新增文案：写中文字面量 + `.l`，再往表里加一行英文；
   `ClipStore.importSourceName`（"导入"）是存库的标记，永远不翻译，显示时走「已导入」。
+- **货架细节**（2026-09-16）：面板打开、没有输入框聚焦时直接敲字母 = 开始搜索；删 Pin 住的卡（⌫、垃圾桶、右键）先弹确认，
+  没 Pin 的直接删；五个筛选标签的计数一次遍历算完；搜索用每条缓存好的小写文本（按 id + modifiedAt 失效），不再每次按键全量 lowercased。
 - **双击 / ⏎ 直接粘贴**（2026-09-16，设置里可关，默认开）：`copyAndClose` 收起货架后重新激活之前的前台应用，确认它在前台后
   用 CGEvent 发一次 ⌘V（`Permissions.sendPaste`）。这一步需要「辅助功能」权限：没有时第一次双击会弹系统提示，并退化为只复制并收起。
   单击仍然只复制。分发包每次重签，权限要重新授（和屏幕录制一样）。这是唯一用到辅助功能的地方。

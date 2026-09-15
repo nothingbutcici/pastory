@@ -13,6 +13,7 @@ struct ClipCardView: View {
     let onCopyAndClose: () -> Void
     let onPreview: () -> Void
     let onEdit: () -> Void
+    let onDelete: () -> Void
 
     static let width: CGFloat = 288
     private static let stubHeight: CGFloat = 96      // caption row + action row below the perforation
@@ -210,7 +211,7 @@ struct ClipCardView: View {
                 action("arrow.down.to.line", "保存到本地…".l) { Exporter.export(item) }
             }
             divider
-            action("trash", "删除".l) { ClipStore.shared.remove(item.id) }
+            action("trash", "删除".l) { onDelete() }
         }
         .padding(.horizontal, 10)
         .frame(height: Self.stubHeight - 44)
