@@ -6,6 +6,7 @@ struct SettingsPane: View {
     @State private var prefs = PrefsMirror()
     @State private var cleared = false
     @State private var importNote: String?
+    @State private var storeSize: String?
 
 
     var body: some View {
@@ -115,6 +116,18 @@ struct SettingsPane: View {
                                     Text((ClipStore.shared.root.appendingPathComponent("pastory.sqlite").path as NSString).abbreviatingWithTildeInPath)
                                         .font(.system(size: 12)).foregroundStyle(Color.inkMuted).lineLimit(1).truncationMode(.middle).frame(maxWidth: 340, alignment: .trailing)
                                         .textSelection(.enabled)
+                                    if let storeSize { Text(storeSize).font(.system(size: 12)).foregroundStyle(Color.inkMuted) }
+                                }
+                                .task {
+                                    let root = ClipStore.shared.root, n = ClipStore.shared.items.count
+                                    let bytes = await Task.detached { () -> Int64 in
+                                        var total: Int64 = 0
+                                        if let e = FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.fileSizeKey]) {
+                                            for case let u as URL in e { total += Int64((try? u.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0) }
+                                        }
+                                        return total
+                                    }.value
+                                    storeSize = "· " + ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file) + " · " + String(format: "%d 项".l, n)
                                 }
                             }
                         }

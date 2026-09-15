@@ -211,7 +211,7 @@ final class ClipStore {
                             ext: "png", hasRTF: false, pixelWidth: cg.width, pixelHeight: cg.height,
                             byteCount: png.count, duration: nil, title: nil, contentHash: hash)
         do { try png.write(to: payloadURL(item), options: .atomic) } catch { return nil }
-        if let t = Screenshotter.thumbnail(cg, maxPixels: 1200), let td = Screenshotter.pngData(t) {
+        if let t = Screenshotter.thumbnail(cg, maxPixels: 900), let td = Screenshotter.pngData(t) {
             try? td.write(to: thumbURL(item), options: .atomic)
         }
         prepend(item)
@@ -257,7 +257,7 @@ final class ClipStore {
                             ext: ext, hasRTF: false, pixelWidth: poster?.width, pixelHeight: poster?.height,
                             byteCount: size, duration: duration, title: nil, contentHash: Int(truncatingIfNeeded: UInt64.random(in: 0...UInt64.max)))
         do { try FileManager.default.moveItem(at: tempFile, to: payloadURL(item)) } catch { return nil }
-        if let poster, let t = Screenshotter.thumbnail(poster, maxPixels: 1200), let td = Screenshotter.pngData(t) {
+        if let poster, let t = Screenshotter.thumbnail(poster, maxPixels: 900), let td = Screenshotter.pngData(t) {
             try? td.write(to: thumbURL(item), options: .atomic)
         }
         prepend(item)
@@ -284,7 +284,7 @@ final class ClipStore {
         guard let cg = Screenshotter.image(fromPNG: png) else { return }
         guard let i = items.firstIndex(where: { $0.id == id }) else { insertImage(png: png, source: CaptureCoordinator.source); return }
         do { try png.write(to: payloadURL(items[i]), options: .atomic) } catch { return }
-        if let t = Screenshotter.thumbnail(cg, maxPixels: 1200), let td = Screenshotter.pngData(t) {
+        if let t = Screenshotter.thumbnail(cg, maxPixels: 900), let td = Screenshotter.pngData(t) {
             try? td.write(to: thumbURL(items[i]), options: .atomic)
         }
         thumbCache[id] = nil
@@ -368,7 +368,7 @@ final class ClipStore {
                                     ext: "png", hasRTF: false, pixelWidth: cg.width, pixelHeight: cg.height,
                                     byteCount: png.count, duration: nil, title: e.title, contentHash: hash)
                 guard (try? png.write(to: payloadURL(item), options: .atomic)) != nil else { continue }
-                if let t = Screenshotter.thumbnail(cg, maxPixels: 1200), let td = Screenshotter.pngData(t) {
+                if let t = Screenshotter.thumbnail(cg, maxPixels: 900), let td = Screenshotter.pngData(t) {
                     try? td.write(to: thumbURL(item), options: .atomic)
                 }
                 added.append(item)
@@ -485,7 +485,7 @@ final class ClipStore {
     func thumbnail(of item: ClipItem) -> NSImage? {
         if let t = thumbCache[item.id] { return t }
         guard item.kind == .image || item.kind == .video, let img = NSImage(contentsOf: thumbURL(item)) else { return nil }
-        if thumbCache.count > 300 { thumbCache.removeAll() }      // a full scroll through a big library must not pin everything in memory
+        if thumbCache.count > 100 { thumbCache.removeAll() }      // ~2 MB decoded each; the shelf only shows a handful at a time
         thumbCache[item.id] = img
         return img
     }
