@@ -15,7 +15,7 @@ enum SelfTest {
         let cmd = args[i + 1]
         let rest = Array(args[(i + 2)...])
         // Anything that writes to a store must run inside SNIPCLIP_STORE. Never against the user's data.
-        let mutating: Set<String> = ["clipboard", "retention", "shelf", "settings", "editors", "import", "ingest"]
+        let mutating: Set<String> = ["clipboard", "retention", "shelf", "settings", "editors", "import", "ingest", "tombstone"]
         if mutating.contains(cmd) {
             let env = ProcessInfo.processInfo.environment["SNIPCLIP_STORE"] ?? ""
             // Nothing under Application Support counts as a sandbox, whatever the folder is called.
@@ -88,6 +88,7 @@ enum SelfTest {
                 print("readObjects → \(urls?.map(\.lastPathComponent) ?? [])")
                 ok = (urls?.count ?? 0) == 1
             case "ingest": ok = ingest()
+            case "tombstone": ok = tombstone()
             case "openpanel":
                 // How long until the system open panel is actually on screen (first show in this process)?
                 let t0 = Date()
@@ -479,4 +480,35 @@ extension SelfTest {
         store.removeAll { _ in true }
         return ok
     }
+}
+
+// MARK: - Tombstones
+
+extension SelfTest {
+    /// Delete an item, then import a copy of the store taken before the deletion: the deleted one must stay gone,
+    /// the other two are already present, nothing is added.
+    @MainActor static func tombstone() -> Bool {
+        let store = ClipStore.shared
+        store.removeAll { _ in true }
+        let src = Source(bundleID: "test", name: "Test")
+        _ = store.insertText("alpha", rtf: nil, source: src)
+        _ = store.insertText("beta", rtf: nil, source: src)
+        _ = store.insertText("gamma", rtf: nil, source: src)
+        let copy = FileManager.default.temporaryDirectory.appendingPathComponent("pastory-copy-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.removeItem(at: copy)
+        do { try FileManager.default.copyItem(at: store.root, to: copy) } catch { print("copy failed: \(error)"); return false }
+        defer { try? FileManager.default.removeItem(at: copy) }
+        guard let beta = store.items.first(where: { $0.snippet == "beta" }) else { return false }
+        store.remove(beta.id)
+        guard let scan = try? Importer.scan(copy) else { print("scan failed"); return false }
+        let added = store.importEntries(scan.entries)
+        let back = store.items.contains { $0.snippet == "beta" }
+        print("\(added == 0 && !back ? "ok  " : "FAIL") deleted item stays deleted after importing the old copy (added \(added), beta back: \(back))")
+        _ = store.insertText("beta", rtf: nil, source: src)
+        let fresh = store.items.contains { $0.snippet == "beta" }
+        print("\(fresh ? "ok  " : "FAIL") a fresh copy of the same text is a new item again")
+        store.removeAll { _ in true }
+        return added == 0 && !back && fresh
+    }
+    typealias Source = ClipStore.Source
 }

@@ -90,6 +90,7 @@ final class ClipStore {
             }
             db = d
             items = rows
+            buried = (try? d.tombstoneHashes()) ?? []
             loadFailed = false
         } catch {
             db = nil
@@ -270,6 +271,7 @@ final class ClipStore {
         do { try data.write(to: payloadURL(items[i]), options: .atomic) } catch { return }
         try? FileManager.default.removeItem(at: rtfURL(items[i]))
         items[i].hasRTF = false
+        items[i].modifiedAt = Date()
         items[i].snippet = ClipItem.snippet(ofText: text)
         items[i].byteCount = data.count
         items[i].contentHash = stableHash(data)
@@ -286,6 +288,7 @@ final class ClipStore {
             try? td.write(to: thumbURL(items[i]), options: .atomic)
         }
         thumbCache[id] = nil
+        items[i].modifiedAt = Date()
         items[i].snippet = "\(cg.width)×\(cg.height)"
         items[i].pixelWidth = cg.width
         items[i].pixelHeight = cg.height
@@ -337,7 +340,7 @@ final class ClipStore {
             let shift = newestImport.timeIntervalSince(oldestOwn) + 1
             if shift > 0 { for i in entries.indices { entries[i].createdAt.addTimeInterval(-shift) } }
         }
-        var seen = Set(items.map(\.contentHash))
+        var seen = Set(items.map(\.contentHash)).union(buried)      // what you deleted here stays deleted
         let source = Source(bundleID: nil, name: Self.importSourceName)
         var added: [ClipItem] = []
         for e in entries {
@@ -390,6 +393,7 @@ final class ClipStore {
         guard let i = items.firstIndex(where: { $0.id == id }), i != 0 else { return }
         var item = items.remove(at: i)
         item.createdAt = Date()
+        item.modifiedAt = item.createdAt
         items.insert(item, at: 0)
         persist(item)
     }
@@ -397,6 +401,7 @@ final class ClipStore {
     func togglePin(_ id: String) {
         guard let i = items.firstIndex(where: { $0.id == id }) else { return }
         items[i].pinned.toggle()
+        items[i].modifiedAt = Date()
         guard persist(items[i]) else { items[i].pinned.toggle(); return }      // UI must not claim a pin the disk does not have
         if !items[i].pinned { Retention.reschedule() }             // an un-pinned old item may be the next to expire
     }
@@ -412,6 +417,7 @@ final class ClipStore {
         guard let i = items.firstIndex(where: { $0.id == id }) else { return }
         let t = title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         items[i].title = t.isEmpty ? nil : t
+        items[i].modifiedAt = Date()
         persist(items[i])
     }
 
@@ -419,6 +425,7 @@ final class ClipStore {
     func setOCR(_ text: String?, for id: String, ifHash hash: Int) {
         guard let i = items.firstIndex(where: { $0.id == id }), items[i].contentHash == hash else { return }
         items[i].ocrText = text
+        items[i].modifiedAt = Date()
         persist(items[i])
     }
 
@@ -426,6 +433,7 @@ final class ClipStore {
         guard let i = items.firstIndex(where: { $0.id == id }) else { return }
         let item = items.remove(at: i)
         guard unpersist(item.id) else { items.insert(item, at: i); return }    // index first; files only once the index agrees
+        bury([item])
         deleteFiles(item)
     }
 
@@ -435,7 +443,24 @@ final class ClipStore {
         let before = items
         items.removeAll(where: pred)
         guard save() else { items = before; return }
+        bury(gone)
         gone.forEach(deleteFiles)
+    }
+
+    /// Deleted is deleted: remember the id and content hash so an import (or, one day, a sync) cannot resurrect it.
+    private func bury(_ gone: [ClipItem]) {
+        guard let db, !gone.isEmpty else { return }
+        try? db.addTombstones(gone)
+        for g in gone { buried.insert(g.contentHash) }
+    }
+    /// Content hashes of deleted items, loaded with the index; consulted by `importEntries`.
+    private var buried = Set<Int>()
+
+    /// Tombstones older than this are forgotten; a fresh copy of the same content is a new item anyway.
+    func purgeTombstones(olderThan days: Int = 30) {
+        guard let db else { return }
+        try? db.purgeTombstones(before: Date().addingTimeInterval(-Double(days) * 86400))
+        buried = (try? db.tombstoneHashes()) ?? buried
     }
 
     private func deleteFiles(_ item: ClipItem) {

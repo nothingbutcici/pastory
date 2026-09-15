@@ -141,6 +141,10 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
   语言 = 设置 › 语言（跟随系统 / 中文 / English，`Preferences.language`），切换时 `ShelfModel.langTick` 让货架整体重建，
   菜单栏菜单每次打开时重建；`SNIPCLIP_LANG=en` 可强制离屏渲染英文。新增文案：写中文字面量 + `.l`，再往表里加一行英文；
   `ClipStore.importSourceName`（"导入"）是存库的标记，永远不翻译，显示时走「已导入」。
+- **为将来同步预留的两样东西**（2026-09-15）：每条有 `modifiedAt`（任何字段改动都更新；老行 = created_at，`ALTER TABLE` 自动补列），
+  删除（手动或清理）在 `tombstones` 表留 `id + content_hash + deleted_at`，正文照删；`importEntries` 跳过墓碑里的 hash
+  （在这台机器删过的东西不会被另一份 Pastory 库导回来），墓碑 30 天后在清理时顺带清掉。新复制同样内容仍是新条目，不受墓碑影响。
+  `--selftest tombstone` 验证。
 - **去重**（2026-09-12 夜改）：再次复制历史里已有的内容（同 kind 家族、内容 hash 相同）不会生成新卡，而是把那张卡提到最前，
   标题和 Pin 跟着；之前只和最新一条比。
 - **货架出场**：窗口固定在所在屏幕底部不越界，动画是窗口内内容上滑 28pt + 淡入，系统窗口阴影关掉

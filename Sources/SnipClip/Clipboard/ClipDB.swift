@@ -26,6 +26,55 @@ final class ClipDB {
             )
             """)
         try exec("CREATE INDEX IF NOT EXISTS items_created ON items(created_at DESC)")
+        // Added later: last-modified time (sync merges on it). Old rows get created_at.
+        if !columnNames("items").contains("modified_at") {
+            try exec("ALTER TABLE items ADD COLUMN modified_at REAL")
+            try exec("UPDATE items SET modified_at = created_at WHERE modified_at IS NULL")
+        }
+        // Deleted items leave a marker so an import or a future sync cannot bring them back.
+        try exec("CREATE TABLE IF NOT EXISTS tombstones (id TEXT PRIMARY KEY, content_hash INTEGER NOT NULL, deleted_at REAL NOT NULL)")
+    }
+
+    private func columnNames(_ table: String) -> [String] {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "PRAGMA table_info(\(table))", -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+        var out: [String] = []
+        while sqlite3_step(stmt) == SQLITE_ROW { out.append(String(cString: sqlite3_column_text(stmt, 1))) }
+        return out
+    }
+
+    // MARK: Tombstones
+
+    func addTombstones(_ items: [ClipItem], at date: Date = Date()) throws {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "INSERT OR REPLACE INTO tombstones (id, content_hash, deleted_at) VALUES (?,?,?)", -1, &stmt, nil) == SQLITE_OK else { throw Self.error(db, "prepare tombstone") }
+        defer { sqlite3_finalize(stmt) }
+        for it in items {
+            sqlite3_reset(stmt)
+            sqlite3_bind_text(stmt, 1, it.id, -1, Self.transient)
+            sqlite3_bind_int64(stmt, 2, Int64(it.contentHash))
+            sqlite3_bind_double(stmt, 3, date.timeIntervalSince1970)
+            guard sqlite3_step(stmt) == SQLITE_DONE else { throw Self.error(db, "tombstone") }
+        }
+    }
+
+    /// Content hashes of everything deleted and not yet purged.
+    func tombstoneHashes() throws -> Set<Int> {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "SELECT content_hash FROM tombstones", -1, &stmt, nil) == SQLITE_OK else { throw Self.error(db, "prepare tombstones") }
+        defer { sqlite3_finalize(stmt) }
+        var out = Set<Int>()
+        while sqlite3_step(stmt) == SQLITE_ROW { out.insert(Int(sqlite3_column_int64(stmt, 0))) }
+        return out
+    }
+
+    func purgeTombstones(before date: Date) throws {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "DELETE FROM tombstones WHERE deleted_at < ?", -1, &stmt, nil) == SQLITE_OK else { throw Self.error(db, "prepare purge") }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_double(stmt, 1, date.timeIntervalSince1970)
+        guard sqlite3_step(stmt) == SQLITE_DONE else { throw Self.error(db, "purge") }
     }
 
     deinit { sqlite3_close(db) }
@@ -44,7 +93,7 @@ final class ClipDB {
         var stmt: OpaquePointer?
         let sql = """
             SELECT id, kind, created_at, source_bundle, source_name, snippet, ocr_text, pinned, ext, has_rtf,
-                   pixel_w, pixel_h, byte_count, duration, title, content_hash FROM items ORDER BY created_at DESC
+                   pixel_w, pixel_h, byte_count, duration, title, content_hash, modified_at FROM items ORDER BY created_at DESC
             """
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { throw Self.error(db, "prepare select") }
         defer { sqlite3_finalize(stmt) }
@@ -59,15 +108,16 @@ final class ClipDB {
                                 sourceBundleID: text(3), sourceAppName: text(4), snippet: snippet, ocrText: text(6),
                                 pinned: (int(7) ?? 0) != 0, ext: ext, hasRTF: (int(9) ?? 0) != 0,
                                 pixelWidth: int(10), pixelHeight: int(11), byteCount: int(12) ?? 0,
-                                duration: real(13), title: text(14), contentHash: int(15) ?? 0))
+                                duration: real(13), title: text(14), contentHash: int(15) ?? 0,
+                                modifiedAt: real(16).map { Date(timeIntervalSince1970: $0) }))
         }
         return out
     }
 
     private static let upsertSQL = """
         INSERT OR REPLACE INTO items (id, kind, created_at, source_bundle, source_name, snippet, ocr_text, pinned, ext, has_rtf,
-                                      pixel_w, pixel_h, byte_count, duration, title, content_hash)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                                      pixel_w, pixel_h, byte_count, duration, title, content_hash, modified_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """
 
     private func bind(_ it: ClipItem, to stmt: OpaquePointer?) {
@@ -81,6 +131,7 @@ final class ClipDB {
         bindInt(8, it.pinned ? 1 : 0); bindText(9, it.ext); bindInt(10, it.hasRTF ? 1 : 0)
         bindInt(11, it.pixelWidth); bindInt(12, it.pixelHeight); bindInt(13, it.byteCount)
         bindReal(14, it.duration); bindText(15, it.title); bindInt(16, it.contentHash)
+        bindReal(17, it.modifiedAt.timeIntervalSince1970)
     }
 
     /// Insert or update one row.

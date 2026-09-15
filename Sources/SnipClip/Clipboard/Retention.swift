@@ -37,6 +37,7 @@ enum Retention {
         guard !p.neverCleans else { return }
         let hour = p.cleanupHour, days = p.retentionDays
         ClipStore.shared.removeAll { isExpired($0, now: now, cleanupHour: hour, retentionDays: days) }
+        ClipStore.shared.purgeTombstones()
     }
 
     /// The instant an item created on `day` stops being kept: (day + N days) at hour X.
