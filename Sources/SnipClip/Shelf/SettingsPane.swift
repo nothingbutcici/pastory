@@ -7,6 +7,8 @@ struct SettingsPane: View {
     @State private var cleared = false
     @State private var importNote: String?
     @State private var storeSize: String?
+    @State private var hasAX = Permissions.hasAccessibility
+    @State private var hasSR = Permissions.hasScreenRecording
 
 
     var body: some View {
@@ -31,6 +33,13 @@ struct SettingsPane: View {
             }
             .padding(.top, 18)
             .padding(.bottom, 14)
+            .task {
+                // Permission badges: re-check every second while the pane is up (each check is an XPC call; not per body).
+                while !Task.isCancelled {
+                    hasAX = Permissions.hasAccessibility; hasSR = Permissions.hasScreenRecording
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
+                }
+            }
 
             ScrollView(.vertical, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 16) {
@@ -66,13 +75,13 @@ struct SettingsPane: View {
                             row("双击 / ⏎ 后直接粘贴到刚才的应用".l) {
                                 HStack(spacing: 8) {
                                     if prefs.pasteOnDoubleClick {
-                                        Text(Permissions.hasAccessibility ? "已授权".l : "需要辅助功能权限".l)
+                                        Text(hasAX ? "已授权".l : "需要辅助功能权限".l)
                                             .font(.system(size: 11, weight: .semibold))
-                                            .foregroundStyle(Permissions.hasAccessibility ? Color.ink : Color(nsColor: Theme.warn))
+                                            .foregroundStyle(hasAX ? Color.ink : Color(nsColor: Theme.warn))
                                             .padding(.horizontal, 7).padding(.vertical, 2)
-                                            .background(Permissions.hasAccessibility ? Color.paperBlue : Color.clear, in: Capsule())
-                                            .overlay(Capsule().stroke((Permissions.hasAccessibility ? Color.clear : Color(nsColor: Theme.warn)).opacity(0.7), lineWidth: 1))
-                                        if !Permissions.hasAccessibility { pill("系统设置".l) { Permissions.requestAccessibility(); Permissions.openSettings("Privacy_Accessibility") } }
+                                            .background(hasAX ? Color.paperBlue : Color.clear, in: Capsule())
+                                            .overlay(Capsule().stroke((hasAX ? Color.clear : Color(nsColor: Theme.warn)).opacity(0.7), lineWidth: 1))
+                                        if !hasAX { pill("系统设置".l) { Permissions.requestAccessibility(); Permissions.openSettings("Privacy_Accessibility") } }
                                     }
                                     PaperToggle(isOn: $prefs.pasteOnDoubleClick)
                                 }
@@ -166,12 +175,12 @@ struct SettingsPane: View {
                             if let e = prefs.loginError { Text(e).font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.warn)).padding(.horizontal, 16) }
                             row("屏幕录制权限（截图、录屏需要）".l) {
                                 HStack(spacing: 8) {
-                                    Text(Permissions.hasScreenRecording ? "已授权".l : "未授权".l)
+                                    Text(hasSR ? "已授权".l : "未授权".l)
                                         .font(.system(size: 11, weight: .semibold))
-                                        .foregroundStyle(Permissions.hasScreenRecording ? Color.ink : Color(nsColor: Theme.warn))
+                                        .foregroundStyle(hasSR ? Color.ink : Color(nsColor: Theme.warn))
                                         .padding(.horizontal, 7).padding(.vertical, 2)
-                                        .background(Permissions.hasScreenRecording ? Color.paperBlue : Color.clear, in: Capsule())
-                                        .overlay(Capsule().stroke((Permissions.hasScreenRecording ? Color.clear : Color(nsColor: Theme.warn)).opacity(0.7), lineWidth: 1))
+                                        .background(hasSR ? Color.paperBlue : Color.clear, in: Capsule())
+                                        .overlay(Capsule().stroke((hasSR ? Color.clear : Color(nsColor: Theme.warn)).opacity(0.7), lineWidth: 1))
                                     pill("系统设置".l) { Permissions.openSettings("Privacy_ScreenCapture") }
                                 }
                             }

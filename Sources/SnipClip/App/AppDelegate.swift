@@ -25,6 +25,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         Retention.schedule()
         ClipboardMonitor.shared.start()
         ShelfPanelController.shared.prewarm()
+        NotificationCenter.default.addObserver(forName: .languageChanged, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.buildMainMenu() }
+        }
         if !Permissions.hasScreenRecording { _ = Permissions.requestScreenRecording() }
         if !Preferences.shared.didWelcome {
             Preferences.shared.didWelcome = true

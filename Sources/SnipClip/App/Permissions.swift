@@ -17,10 +17,14 @@ enum Permissions {
     // MARK: Accessibility (only for the optional "paste into the front app" step)
 
     static var hasAccessibility: Bool { AXIsProcessTrusted() }
+    private static var askedAccessibilityThisLaunch = false
 
-    /// Ask once via the system prompt (which opens Settings); returns the current state.
+    /// Ask once per launch via the system prompt (which opens Settings); afterwards just report the state.
     @discardableResult
     static func requestAccessibility() -> Bool {
+        if AXIsProcessTrusted() { return true }
+        guard !askedAccessibilityThisLaunch else { return false }
+        askedAccessibilityThisLaunch = true
         let opts = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
         return AXIsProcessTrustedWithOptions(opts)
     }

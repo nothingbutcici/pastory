@@ -3,7 +3,7 @@ import AppKit
 /// One place for the look: brown desk, cream paper, light-blue accent, ink type.
 enum Theme {
 
-    // Shelf (near-black, lavender accent)
+    // Legacy accent still used by the annotation palette's first swatch
     static let purple = NSColor(srgbRed: 0.71, green: 0.64, blue: 0.95, alpha: 1)       // #B5A3F2
     // Paper theme (shelf): dark brown ground, cream paper, one light-blue paper for the "current" card
     static let brown = NSColor(srgbRed: 0.17, green: 0.13, blue: 0.12, alpha: 1)        // #2B211E
@@ -18,15 +18,24 @@ enum Theme {
     static let onBrownMuted = NSColor(srgbRed: 0.68, green: 0.63, blue: 0.59, alpha: 1)
 
     /// Serif for the paper theme (Songti SC covers CJK and Latin).
+    nonisolated(unsafe) private static var fontCache: [String: NSFont] = [:]
+    private static func cachedFont(_ key: String, _ make: () -> NSFont) -> NSFont {
+        if let f = fontCache[key] { return f }
+        let f = make(); fontCache[key] = f; return f
+    }
     static func serif(size: CGFloat, bold: Bool = false) -> NSFont {
-        NSFont(name: bold ? "STSongti-SC-Bold" : "STSongti-SC-Regular", size: size) ?? .systemFont(ofSize: size, weight: bold ? .bold : .regular)
+        cachedFont("serif\(bold ? "b" : "")\(size)") {
+            NSFont(name: bold ? "STSongti-SC-Bold" : "STSongti-SC-Regular", size: size) ?? .systemFont(ofSize: size, weight: bold ? .bold : .regular)
+        }
     }
     /// Handwritten script: Caveat for Latin, falling back to 翩翩体 for CJK.
     static func script(size: CGFloat) -> NSFont {
         _ = brandRegistered
-        let cjk = NSFontDescriptor(fontAttributes: [.name: "HanziPenSC-W5"])
-        let d = NSFontDescriptor(fontAttributes: [.name: "Caveat-Regular", .cascadeList: [cjk]])
-        return NSFont(descriptor: d, size: size) ?? HandFont.font(size: size)
+        return cachedFont("script\(size)") {
+            let cjk = NSFontDescriptor(fontAttributes: [.name: "HanziPenSC-W5"])
+            let d = NSFontDescriptor(fontAttributes: [.name: "Caveat-Regular", .cascadeList: [cjk]])
+            return NSFont(descriptor: d, size: size) ?? HandFont.font(size: size)
+        }
     }
 
     /// Faint grain, tiled over paper and ground so nothing looks flat.
@@ -213,10 +222,4 @@ enum Theme {
         b.widthAnchor.constraint(equalToConstant: max(88, w.rounded(.up))).isActive = true
         return b
     }
-
-
-
-
-
-
 }

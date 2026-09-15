@@ -53,7 +53,13 @@ struct ShelfView: View {
         .onTapGesture { searchFocused = false; NSApp.keyWindow?.makeFirstResponder(nil) })
         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 14, topTrailingRadius: 14))
         .id(model.langTick)                 // language switch rebuilds the whole shelf
-        .onChange(of: model.focusSearch) { _, _ in searchFocused = true }
+        .onChange(of: model.focusSearch) { _, _ in
+            searchFocused = true
+            if !model.pendingQuery.isEmpty {
+                let typed = model.pendingQuery; model.pendingQuery = ""
+                DispatchQueue.main.async { model.query += typed }      // after focus, so the field's select-all does not eat it
+            }
+        }
         .onChange(of: model.openTick) { _, _ in searchFocused = false }
     }
 

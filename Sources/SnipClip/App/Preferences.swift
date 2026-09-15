@@ -121,7 +121,7 @@ final class Preferences {
     /// Double-click / ⏎ also sends ⌘V to the app you came from (needs Accessibility). On by default; falls back to copy-only.
     var pasteOnDoubleClick: Bool { get { d.object(forKey: "pasteOnDoubleClick") as? Bool ?? true } set { d.set(newValue, forKey: "pasteOnDoubleClick") } }
     /// "system" (follow macOS), "zh" or "en".
-    var language: String { get { d.string(forKey: "language") ?? "system" } set { d.set(newValue, forKey: "language") } }
+    var language: String { get { d.string(forKey: "language") ?? "system" } set { d.set(newValue, forKey: "language"); L.languageChanged() } }
     /// First launch on this Mac: the shelf opens once by itself, so a menu-bar-only app does not look like it failed to start.
     var didWelcome: Bool { get { d.bool(forKey: "didWelcome") } set { d.set(newValue, forKey: "didWelcome") } }
 

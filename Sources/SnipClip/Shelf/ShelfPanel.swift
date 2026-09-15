@@ -50,6 +50,7 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
 
     /// Build the panel and its SwiftUI tree at launch, so the first ⇧⌘V does not pay for it.
     func prewarm() {
+        watchAppSwitches()
         let p = panel ?? makePanel()
         panel = p
         p.setFrame(CGRect(x: 0, y: 0, width: 1200, height: 480), display: false)
@@ -62,7 +63,7 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
         if let front = NSWorkspace.shared.frontmostApplication, front != .current { previousApp = front }
         keepOpenOnResign = false
         // Decode the first row of thumbnails while the shelf slides in.
-        ClipStore.shared.items.prefix(10).forEach { ClipStore.shared.warmThumbnail($0) }
+        ClipStore.shared.items.prefix(10).filter { $0.kind == .image || $0.kind == .video }.forEach { ClipStore.shared.warmThumbnail($0) }
         // A click anywhere else closes the shelf even when it no longer holds the keyboard (after a copy).
         if outsideClickMonitor == nil {
             outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
@@ -151,8 +152,21 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
     /// After copying with a single click: the shelf stays, the keyboard goes back to the app you were in.
     func handBackFocus() {
         guard let p = panel, p.isVisible, let app = previousApp, !app.isTerminated else { return }
-        keepOpenOnResign = true
+        keepOpenOnResign = p.isKeyWindow          // only a real resign should be swallowed
         app.activate()
+    }
+
+    /// While the shelf floats without the keyboard (after a copy), switching to yet another app closes it,
+    /// the same way a click outside does.
+    private func watchAppSwitches() {
+        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] n in
+            MainActor.assumeIsolated {
+                guard let self, let p = self.panel, p.isVisible, !p.isKeyWindow, !self.holdOpen,
+                      let app = n.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                      app != .current, app != self.previousApp else { return }
+                self.hide()
+            }
+        }
     }
 
     // MARK: Keys (only while visible)
@@ -166,27 +180,38 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
         // "Typing" = any text input owns the keyboard (field editor, SwiftUI text view, NSTextField).
         let fr = panel?.firstResponder
         let typing = fr is NSText || fr is NSTextField || String(describing: type(of: fr as Any)).contains("Text")
+        let composing = (fr as? NSTextView)?.hasMarkedText() ?? false      // IME candidate window open: keys belong to it
         let cmd = event.modifierFlags.contains(.command)
-        switch Int(event.keyCode) {
+        let code = Int(event.keyCode)
+        // Settings page: there are no cards to act on; only ⎋ (back) and ⌘F (to the shelf's search) mean anything.
+        if model.showSettings {
+            if code == kVK_Escape { model.showSettings = false; return true }
+            if code == kVK_ANSI_F, cmd { model.showSettings = false; model.focusSearch += 1; return true }
+            return false
+        }
+        switch code {
         case kVK_Escape:
             if typing, !model.query.isEmpty { model.query = ""; return true }
-            if model.showSettings { model.showSettings = false; return true }
             hide(); return true
         case kVK_Return, kVK_ANSI_KeypadEnter:
-            if typing { return false }                 // ⏎ inside a text box stays in the text box
-            model.copySelected(); return true
+            if composing { return false }
+            model.copySelected(); return true          // also from the search box: ⏎ takes the highlighted result
         case kVK_LeftArrow where !typing: model.move(-1); return true
         case kVK_RightArrow where !typing: model.move(1); return true
+        case kVK_UpArrow where !composing: model.move(-1); return true      // from the search box too
+        case kVK_DownArrow where !composing: model.move(1); return true
         case kVK_ANSI_P where !typing || cmd: model.pinSelected(); return true
         case kVK_ANSI_S where !typing || cmd: model.exportSelected(); return true
         case kVK_Delete where !typing: model.deleteSelected(); return true
         case kVK_ANSI_F where cmd: model.focusSearch += 1; return true
         case kVK_Space where !typing: toggleQuickLook(); return true
         default:
-            // Just start typing: letters go straight into the search box.
+            // Just start typing: letters go straight into the search box. Function / navigation keys arrive as
+            // private-use scalars (U+F700…) and must not.
             if !typing, !cmd, !event.modifierFlags.contains(.control), !event.modifierFlags.contains(.option),
-               let chars = event.characters, !chars.isEmpty, chars.unicodeScalars.allSatisfy({ !CharacterSet.controlCharacters.contains($0) }) {
-                model.query += chars
+               let chars = event.characters, !chars.isEmpty,
+               chars.unicodeScalars.allSatisfy({ !CharacterSet.controlCharacters.contains($0) && $0.properties.generalCategory != .privateUse }) {
+                model.pendingQuery = chars
                 model.focusSearch += 1
                 return true
             }
@@ -269,6 +294,8 @@ final class ShelfModel {
         }
     }
     var focusSearch = 0
+    /// Characters typed while nothing was focused; the search field takes them once it has focus (so they are not selected-and-replaced).
+    var pendingQuery = ""
     /// Bumped when the language changes; the shelf view is keyed on it.
     var langTick = 0
     /// Bumped on every show(); the view uses it to drop keyboard focus so the caret does not sit in the search box.
@@ -293,6 +320,20 @@ final class ShelfModel {
         return c
     }
 
+    /// Store items in frozen shelf order, re-sorted only when the store or the snapshot changed.
+    private var orderedCache: (version: Int, snapshotID: Int, items: [ClipItem]) = (-1, -1, [])
+    private var snapshotID = 0
+    private func orderedItems() -> [ClipItem] {
+        let v = ClipStore.shared.version
+        if orderedCache.version == v, orderedCache.snapshotID == snapshotID { return orderedCache.items }
+        let sorted = ClipStore.shared.items.sorted { (orderSnapshot[$0.id] ?? Int.max) < (orderSnapshot[$1.id] ?? Int.max) }   // items array is already date-sorted
+        orderedCache = (v, snapshotID, sorted)
+        if searchBlobs.count > sorted.count + 64 {                      // forget blobs of deleted items
+            let live = Set(sorted.map(\.id)); searchBlobs = searchBlobs.filter { live.contains($0.key) }
+        }
+        return sorted
+    }
+
     /// Lower-cased searchable text per item, built once per (id, modifiedAt) instead of on every keystroke.
     private var searchBlobs: [String: (Date, String)] = [:]
     private func searchBlob(_ item: ClipItem) -> String {
@@ -304,7 +345,7 @@ final class ShelfModel {
 
     var items: [ClipItem] {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
-        let ordered = ClipStore.shared.items.sorted { (orderSnapshot[$0.id] ?? Int.max) < (orderSnapshot[$1.id] ?? Int.max) }   // items array is already date-sorted
+        let ordered = orderedItems()
         return ordered.filter { item in
             switch filter {
             case .all: break
@@ -321,6 +362,7 @@ final class ShelfModel {
     /// After bulk changes (import, remove-imported) the frozen order is stale: freeze the store's current order again.
     func refreshOrder() {
         orderSnapshot = Dictionary(uniqueKeysWithValues: ClipStore.shared.items.enumerated().map { ($1.id, $0) })
+        snapshotID += 1
     }
 
     func reset() {
@@ -330,6 +372,7 @@ final class ShelfModel {
         openTick += 1
         filter = .all
         orderSnapshot = Dictionary(uniqueKeysWithValues: ClipStore.shared.items.enumerated().map { ($1.id, $0) })
+        snapshotID += 1
         selectedID = ClipStore.shared.items.first?.id
     }
 

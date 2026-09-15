@@ -4,14 +4,24 @@ import Foundation
 /// when the app runs in English. Keys with a context ("tab") disambiguate words that translate differently.
 enum L {
     /// Resolved from Preferences ("system" / "zh" / "en"); SNIPCLIP_LANG overrides for offscreen renders.
+    /// Cached: a card body asks a dozen times per render. `Preferences.language` resets it.
     static var isEnglish: Bool {
-        if let env = ProcessInfo.processInfo.environment["SNIPCLIP_LANG"], !env.isEmpty { return env == "en" }
-        switch Preferences.shared.language {
-        case "zh": return false
-        case "en": return true
-        default: return !(Locale.preferredLanguages.first?.hasPrefix("zh") ?? false)
+        if let c = cached { return c }
+        let v: Bool
+        if let env = envOverride, !env.isEmpty { v = env == "en" }
+        else {
+            switch Preferences.shared.language {
+            case "zh": v = false
+            case "en": v = true
+            default: v = !(Locale.preferredLanguages.first?.hasPrefix("zh") ?? false)
+            }
         }
+        cached = v
+        return v
     }
+    nonisolated(unsafe) private static var cached: Bool?
+    private static let envOverride = ProcessInfo.processInfo.environment["SNIPCLIP_LANG"]
+    static func languageChanged() { cached = nil; NotificationCenter.default.post(name: .languageChanged, object: nil) }
 
     static let en: [String: String] = [
         // Capture chrome
@@ -99,3 +109,5 @@ extension String {
     /// Same, with a context prefix for words that need a different English in that spot.
     func l(_ context: String) -> String { L.isEnglish ? (L.en[context + "|" + self] ?? L.en[self] ?? self) : self }
 }
+
+extension Notification.Name { static let languageChanged = Notification.Name("pastory.languageChanged") }

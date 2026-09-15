@@ -294,6 +294,7 @@ enum Importer {
         default: return false
         }
     }
+    private static let iso = ISO8601DateFormatter()
     /// Seconds since 1970, since 2001 (Core Data), or milliseconds; ISO-8601 text.
     private static func asDate(_ v: Any) -> Date? {
         var n: Double?
@@ -301,7 +302,7 @@ enum Importer {
         case let d as Double: n = d
         case let i as Int64: n = Double(i)
         case let s as String:
-            if let d = ISO8601DateFormatter().date(from: s) { return d }
+            if let d = iso.date(from: s) { return d }
             n = Double(s)
         default: return nil
         }

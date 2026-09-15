@@ -70,7 +70,7 @@ struct ShortcutRecorder: View {
     @State private var sawModifiers = false
     @State private var sawKey = false
 
-    private static let names = ["capture": "截图".l, "shelf": "剪贴板".l, "search": "搜索剪贴板".l]
+    private static let names = ["capture": "截图", "shelf": "剪贴板", "search": "搜索剪贴板"]      // translated at use
 
     var body: some View {
         HStack(spacing: 8) {

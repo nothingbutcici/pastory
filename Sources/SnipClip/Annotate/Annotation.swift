@@ -3,8 +3,7 @@ import AppKit
 enum AnnotateTool: CaseIterable {
     case rect, ellipse, arrow, line, pen, text, mosaic
 
-    var tip: String { rawTip.l }
-    private var rawTip: String {
+    var tip: String {
         switch self {
         case .rect: return "矩形  R".l
         case .ellipse: return "椭圆  O".l

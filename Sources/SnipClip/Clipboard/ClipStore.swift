@@ -116,8 +116,12 @@ final class ClipStore {
     /// Set when a one-row write failed: the table no longer matches memory, so the next write rewrites the whole table.
     private var needsFullSave = false
 
+    /// Bumped on every successful write; views cache derived lists against it.
+    private(set) var version = 0
+
     private func write(_ op: (ClipDB) throws -> Void) -> Bool {
         guard !loadFailed, let db else { lastSaveFailed = true; return false }    // never write over a table we could not read
+        version += 1
         do {
             if needsFullSave { try db.saveAll(items); needsFullSave = false } else { try op(db) }
             let recovered = lastSaveFailed
@@ -293,6 +297,7 @@ final class ClipStore {
             try? td.write(to: thumbURL(items[i]), options: .atomic)
         }
         thumbCache[id] = nil
+        thumbMissing.remove(id)
         items[i].modifiedAt = Date()
         items[i].snippet = "\(cg.width)×\(cg.height)"
         items[i].pixelWidth = cg.width
@@ -473,6 +478,7 @@ final class ClipStore {
         let fm = FileManager.default
         for u in [payloadURL(item), rtfURL(item), thumbURL(item), shareDir.appendingPathComponent(item.id)] { try? fm.removeItem(at: u) }
         thumbCache[item.id] = nil
+        thumbMissing.remove(item.id)
     }
 
     // MARK: - Read
@@ -508,10 +514,14 @@ final class ClipStore {
 
     /// Self-tests wait on this before snapshotting the shelf.
     func isThumbnailCached(_ id: String) -> Bool { thumbCache[id] != nil }
+    /// Decoding was tried and there is no usable file (no poster, thumb write failed): show a glyph, do not retry.
+    private var thumbMissing = Set<String>()
+    func thumbnailMissing(_ id: String) -> Bool { thumbMissing.contains(id) }
+    private var thumbOrder: [String] = []
 
     /// Start decoding an item's thumbnail off the main thread; no-op when cached or already in flight.
     func warmThumbnail(_ item: ClipItem) {
-        guard thumbCache[item.id] == nil, !thumbLoading.contains(item.id) else { return }
+        guard item.kind == .image || item.kind == .video, thumbCache[item.id] == nil, !thumbLoading.contains(item.id), !thumbMissing.contains(item.id) else { return }
         thumbLoading.insert(item.id)
         let url = thumbURL(item), id = item.id
         Task.detached(priority: .userInitiated) {
@@ -519,9 +529,13 @@ final class ClipStore {
             await MainActor.run {
                 let store = ClipStore.shared
                 store.thumbLoading.remove(id)
-                guard let image = box.image else { return }
-                if store.thumbCache.count > 100 { store.thumbCache.removeAll() }      // ~2 MB decoded each; the shelf shows a handful
+                guard let image = box.image else { store.thumbMissing.insert(id); store.thumbTick += 1; return }
+                if store.thumbCache.count > 100 {                                    // ~2 MB decoded each: drop the oldest third, not everything on screen
+                    for old in store.thumbOrder.prefix(34) { store.thumbCache[old] = nil }
+                    store.thumbOrder.removeFirst(min(34, store.thumbOrder.count))
+                }
                 store.thumbCache[id] = image
+                store.thumbOrder.append(id)
                 store.thumbTick += 1
             }
         }

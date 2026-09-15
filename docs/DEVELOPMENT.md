@@ -141,6 +141,12 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
   语言 = 设置 › 语言（跟随系统 / 中文 / English，`Preferences.language`），切换时 `ShelfModel.langTick` 让货架整体重建，
   菜单栏菜单每次打开时重建；`SNIPCLIP_LANG=en` 可强制离屏渲染英文。新增文案：写中文字面量 + `.l`，再往表里加一行英文；
   `ClipStore.importSourceName`（"导入"）是存库的标记，永远不翻译，显示时走「已导入」。
+- **货架键盘（2026-09-16 第五轮审查后）**：设置页打开时只认 ⎋（返回）和 ⌘F，不会对看不见的卡片执行删除 / Pin / 复制；
+  搜索框里 ⏎ 直接复制高亮结果并收起、↑↓ 在结果间移动（IME 候选框打开时这些键交还给输入法）；导航 / 功能键（U+F700 私用区）不会打进搜索框；
+  首个字母先存进 `pendingQuery`，等搜索框拿到焦点后再追加，避免被全选覆盖。单击复制后货架"漂浮"期间切到第三个应用会自动收起
+  （`NSWorkspace.didActivateApplicationNotification`）。
+- **缓存**：`L.isEnglish`、`Theme.serif/script` 字体、货架排序后的列表（按 `ClipStore.version` + 快照号失效）、权限徽标（设置页 1 秒轮询一次，不在 body 里查）；
+  缩略图缓存超 100 张时只淘汰最老的三分之一；没有缩略图文件的条目记入 `thumbMissing`，显示占位图标，不再反复解码；辅助功能的系统提示每次启动只弹一次。
 - **货架细节**（2026-09-16）：面板打开、没有输入框聚焦时直接敲字母 = 开始搜索；删 Pin 住的卡（⌫、垃圾桶、右键）先弹确认，
   没 Pin 的直接删；五个筛选标签的计数一次遍历算完；搜索用每条缓存好的小写文本（按 id + modifiedAt 失效），不再每次按键全量 lowercased。
 - **双击 / ⏎ 直接粘贴**（2026-09-16，设置里可关，默认开）：`copyAndClose` 收起货架后重新激活之前的前台应用，确认它在前台后

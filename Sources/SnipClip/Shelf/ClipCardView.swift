@@ -141,7 +141,14 @@ struct ClipCardView: View {
                         .padding(.horizontal, 16).padding(.vertical, 14)
                 }
             } else {
-                Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)      // decoding; the picture drops in a frame later
+                Group {
+                    if ClipStore.shared.thumbnailMissing(item.id) {
+                        Image(systemName: item.kind == .video ? "film" : "photo").font(.largeTitle).foregroundStyle(Color.inkMuted.opacity(0.5))
+                    } else {
+                        Color.clear      // decoding; the picture drops in a frame later
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         case .files:
             VStack(alignment: .leading, spacing: 8) {
