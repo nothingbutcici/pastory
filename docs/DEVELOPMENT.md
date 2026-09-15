@@ -141,6 +141,9 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
   语言 = 设置 › 语言（跟随系统 / 中文 / English，`Preferences.language`），切换时 `ShelfModel.langTick` 让货架整体重建，
   菜单栏菜单每次打开时重建；`SNIPCLIP_LANG=en` 可强制离屏渲染英文。新增文案：写中文字面量 + `.l`，再往表里加一行英文；
   `ClipStore.importSourceName`（"导入"）是存库的标记，永远不翻译，显示时走「已导入」。
+- **双击 / ⏎ 直接粘贴**（2026-09-16，设置里可关，默认开）：`copyAndClose` 收起货架后重新激活之前的前台应用，确认它在前台后
+  用 CGEvent 发一次 ⌘V（`Permissions.sendPaste`）。这一步需要「辅助功能」权限：没有时第一次双击会弹系统提示，并退化为只复制并收起。
+  单击仍然只复制。分发包每次重签，权限要重新授（和屏幕录制一样）。这是唯一用到辅助功能的地方。
 - **截图存储格式**（2026-09-16，设置 › 剪贴板 › 本地数据库截图存储方式）：默认无损 PNG；可选 HEIC 质量 0.9（ImageIO 编码，
   保留原色彩空间，约为 PNG 的 1/3）。只影响新截图；`contentHash` 永远是原 PNG 的 hash，去重不受格式影响；
   `ClipStore.png(of:)` 对 HEIC 项解码后再包成 PNG 交给剪贴板 / 编辑器 / 导出（像素、色彩空间不变），Quick Look 直接看 HEIC 文件。

@@ -132,6 +132,22 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
         if !holdOpen { hide() }
     }
 
+    /// Double-click / ⏎: once the shelf is gone and the previous app has the keyboard again, press ⌘V for the user.
+    /// Needs Accessibility; without it (or with the setting off) this is a plain copy-and-close.
+    func pasteIntoPreviousApp() {
+        guard Preferences.shared.pasteOnDoubleClick, let app = previousApp, !app.isTerminated else { return }
+        guard Permissions.hasAccessibility else { Permissions.requestAccessibility(); return }
+        app.activate()
+        // The hide animation takes 0.18 s; give activation a moment, then confirm the target is actually in front.
+        var tries = 0
+        func attempt() {
+            tries += 1
+            if NSWorkspace.shared.frontmostApplication == app { Permissions.sendPaste(); return }
+            if tries < 8 { DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) { attempt() } }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { attempt() }
+    }
+
     /// After copying with a single click: the shelf stays, the keyboard goes back to the app you were in.
     func handBackFocus() {
         guard let p = panel, p.isVisible, let app = previousApp, !app.isTerminated else { return }
@@ -319,6 +335,7 @@ final class ShelfModel {
     func copyAndClose(_ item: ClipItem) {
         copy(item)
         ShelfPanelController.shared.hide()
+        ShelfPanelController.shared.pasteIntoPreviousApp()
     }
     func copySelected() { if let s = selected { copyAndClose(s) } }
     func previewSelected() { ShelfPanelController.shared.toggleQuickLook() }

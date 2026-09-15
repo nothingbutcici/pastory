@@ -31,7 +31,7 @@ Everything stays on your Mac. No account, no network, no telemetry.
 
 **Shelf**
 - Cards for text, links, images, files and recordings, with the source app and time. Search across text, titles and recognized text inside images.
-- Click = copy and stay, double-click or ⏎ = copy and close, Space = Quick Look.
+- Click = copy and stay, double-click or ⏎ = copy, close and paste straight into the app you came from (optional, needs Accessibility), Space = Quick Look.
 - Pin, give a card a handwritten title, edit text in place, re-annotate an image, save anything to disk.
 - Screenshots from other tools (WeChat, Feishu, CleanShot…) are recognized as images too, thumbnail and OCR included.
 - Copying something you copied before brings the old card back instead of making a twin.

@@ -14,6 +14,29 @@ enum Permissions {
         return CGRequestScreenCaptureAccess()
     }
 
+    // MARK: Accessibility (only for the optional "paste into the front app" step)
+
+    static var hasAccessibility: Bool { AXIsProcessTrusted() }
+
+    /// Ask once via the system prompt (which opens Settings); returns the current state.
+    @discardableResult
+    static func requestAccessibility() -> Bool {
+        let opts = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+        return AXIsProcessTrustedWithOptions(opts)
+    }
+
+    /// ⌘V into whatever is in front right now.
+    static func sendPaste() {
+        guard let src = CGEventSource(stateID: .combinedSessionState) else { return }
+        let v: CGKeyCode = 9      // kVK_ANSI_V
+        let down = CGEvent(keyboardEventSource: src, virtualKey: v, keyDown: true)
+        let up = CGEvent(keyboardEventSource: src, virtualKey: v, keyDown: false)
+        down?.flags = .maskCommand
+        up?.flags = .maskCommand
+        down?.post(tap: .cghidEventTap)
+        up?.post(tap: .cghidEventTap)
+    }
+
     static func openSettings(_ pane: String) {
         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?\(pane)")!)
     }

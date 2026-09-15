@@ -25,6 +25,7 @@ final class PrefsMirror {
     var ocrImages: Bool { didSet { Preferences.shared.ocrImages = ocrImages } }
     var paused: Bool { didSet { Preferences.shared.monitoringPaused = paused } }
     var imageStorage: String { get { access(keyPath: \.imageStorage); return Preferences.shared.imageStorage } set { withMutation(keyPath: \.imageStorage) { Preferences.shared.imageStorage = newValue } } }
+    var pasteOnDoubleClick: Bool { get { access(keyPath: \.pasteOnDoubleClick); return Preferences.shared.pasteOnDoubleClick } set { withMutation(keyPath: \.pasteOnDoubleClick) { Preferences.shared.pasteOnDoubleClick = newValue } } }
     var launchAtLogin: Bool {
         didSet {
             do {

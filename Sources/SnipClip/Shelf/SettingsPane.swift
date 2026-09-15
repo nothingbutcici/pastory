@@ -63,6 +63,20 @@ struct SettingsPane: View {
                             }
                             row("图片自动识别文字（可按文字搜图）".l) { PaperToggle(isOn: $prefs.ocrImages) }
                             row("暂停同步至剪贴板".l) { PaperToggle(isOn: $prefs.paused) }
+                            row("双击 / ⏎ 后直接粘贴到刚才的应用".l) {
+                                HStack(spacing: 8) {
+                                    if prefs.pasteOnDoubleClick {
+                                        Text(Permissions.hasAccessibility ? "已授权".l : "需要辅助功能权限".l)
+                                            .font(.system(size: 11, weight: .semibold))
+                                            .foregroundStyle(Permissions.hasAccessibility ? Color.ink : Color(nsColor: Theme.warn))
+                                            .padding(.horizontal, 7).padding(.vertical, 2)
+                                            .background(Permissions.hasAccessibility ? Color.paperBlue : Color.clear, in: Capsule())
+                                            .overlay(Capsule().stroke((Permissions.hasAccessibility ? Color.clear : Color(nsColor: Theme.warn)).opacity(0.7), lineWidth: 1))
+                                        if !Permissions.hasAccessibility { pill("系统设置".l) { Permissions.requestAccessibility(); Permissions.openSettings("Privacy_Accessibility") } }
+                                    }
+                                    PaperToggle(isOn: $prefs.pasteOnDoubleClick)
+                                }
+                            }
                             row("本地数据库截图存储方式".l) {
                                 HStack(spacing: 4) {
                                     ForEach([("png", "无损 PNG（默认）"), ("heic", "高质量 HEIC（约小 3 倍）")], id: \.0) { code, label in
@@ -79,9 +93,6 @@ struct SettingsPane: View {
                                 .padding(3)
                                 .overlay(Capsule().stroke(Color.ink.opacity(0.5), lineWidth: 1))
                             }
-                            Text("HEIC 是有损压缩，分辨率不变，界面截图看不出差别；截完立刻粘贴的那份始终是无损的，「保存到本地」也总是导出 PNG。只影响之后的新截图。".l)
-                                .font(.serif(12)).foregroundStyle(Color.inkMuted).fixedSize(horizontal: false, vertical: true)
-                                .padding(.horizontal, 16).padding(.top, -4).padding(.bottom, 8)
                             row("语言".l) {
                                 HStack(spacing: 4) {
                                     ForEach([("system", "跟随系统".l), ("zh", "中文".l), ("en", "English")], id: \.0) { code, label in

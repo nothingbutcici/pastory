@@ -118,6 +118,8 @@ final class Preferences {
     /// How new screenshots are stored: "png" (lossless, default) or "heic" (quality 0.9, about a third of the size).
     var imageStorage: String { get { d.string(forKey: "imageStorage") ?? "png" } set { d.set(newValue, forKey: "imageStorage") } }
     var storesHEIC: Bool { imageStorage == "heic" }
+    /// Double-click / ⏎ also sends ⌘V to the app you came from (needs Accessibility). On by default; falls back to copy-only.
+    var pasteOnDoubleClick: Bool { get { d.object(forKey: "pasteOnDoubleClick") as? Bool ?? true } set { d.set(newValue, forKey: "pasteOnDoubleClick") } }
     /// "system" (follow macOS), "zh" or "en".
     var language: String { get { d.string(forKey: "language") ?? "system" } set { d.set(newValue, forKey: "language") } }
     /// First launch on this Mac: the shelf opens once by itself, so a menu-bar-only app does not look like it failed to start.
