@@ -69,6 +69,9 @@ enum L {
         "未 Pin 内容保留时间": "Keep unpinned items for", "1 天": "1 day", "3 天": "3 days", "7 天": "7 days", "30 天": "30 days",
         "一年": "1 year", "永不删除": "Forever", "当日清理时间": "Cleanup time",
         "图片自动识别文字（可按文字搜图）": "OCR images automatically (search images by text)", "暂停同步至剪贴板": "Pause clipboard capture",
+        "本地数据库截图存储方式": "How screenshots are stored locally", "无损 PNG（默认）": "Lossless PNG (default)", "高质量 HEIC（约小 3 倍）": "High-quality HEIC (about 3× smaller)",
+        "HEIC 是有损压缩，分辨率不变，界面截图看不出差别；截完立刻粘贴的那份始终是无损的，「保存到本地」也总是导出 PNG。只影响之后的新截图。":
+            "HEIC is lossy at full resolution; UI screenshots look identical. The copy you paste right after capturing is always lossless, and “Save to Disk” always writes PNG. Applies to new screenshots only.",
         "语言": "Language", "跟随系统": "System", "中文": "中文",
         "从其他剪贴板工具导入（SQLite）": "Import from another clipboard app (SQLite)", "选择数据库…": "Choose Database…", "导入": "Import",
         "移除所有导入进来的条目（来源为「导入」）": "Remove everything that was imported", "移除": "Remove",

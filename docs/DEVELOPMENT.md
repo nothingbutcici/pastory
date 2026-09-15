@@ -141,6 +141,12 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
   语言 = 设置 › 语言（跟随系统 / 中文 / English，`Preferences.language`），切换时 `ShelfModel.langTick` 让货架整体重建，
   菜单栏菜单每次打开时重建；`SNIPCLIP_LANG=en` 可强制离屏渲染英文。新增文案：写中文字面量 + `.l`，再往表里加一行英文；
   `ClipStore.importSourceName`（"导入"）是存库的标记，永远不翻译，显示时走「已导入」。
+- **截图存储格式**（2026-09-16，设置 › 剪贴板 › 本地数据库截图存储方式）：默认无损 PNG；可选 HEIC 质量 0.9（ImageIO 编码，
+  保留原色彩空间，约为 PNG 的 1/3）。只影响新截图；`contentHash` 永远是原 PNG 的 hash，去重不受格式影响；
+  `ClipStore.png(of:)` 对 HEIC 项解码后再包成 PNG 交给剪贴板 / 编辑器 / 导出（像素、色彩空间不变），Quick Look 直接看 HEIC 文件。
+- **货架焦点**：单击卡片复制后 `handBackFocus()` 把前台应用重新激活，货架留在屏幕上但不再是 key window，⌘V 落到用户的应用里
+  （之前货架一直持有键盘，⌘V 无处可去，「粘不进 Claude Code」就是这个）；此时点货架外任意位置仍会关闭，靠全局鼠标监听
+  （鼠标事件的全局监听不需要辅助功能权限）。面板在启动时 `prewarm()` 预建，缩略图后台解码并在 `show()` 时预热前 10 张。
 - **为将来同步预留的两样东西**（2026-09-15）：每条有 `modifiedAt`（任何字段改动都更新；老行 = created_at，`ALTER TABLE` 自动补列），
   删除（手动或清理）在 `tombstones` 表留 `id + content_hash + deleted_at`，正文照删；`importEntries` 跳过墓碑里的 hash
   （在这台机器删过的东西不会被另一份 Pastory 库导回来），墓碑 30 天后在清理时顺带清掉。新复制同样内容仍是新条目，不受墓碑影响。

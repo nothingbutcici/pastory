@@ -140,8 +140,7 @@ struct ClipCardView: View {
                         .padding(.horizontal, 16).padding(.vertical, 14)
                 }
             } else {
-                Image(systemName: item.kind == .video ? "film" : "photo").font(.largeTitle).foregroundStyle(Color.inkMuted.opacity(0.5))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)      // decoding; the picture drops in a frame later
             }
         case .files:
             VStack(alignment: .leading, spacing: 8) {

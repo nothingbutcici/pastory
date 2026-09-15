@@ -93,6 +93,21 @@ enum Screenshotter {
         return data as Data
     }
 
+    /// HEIC at quality 0.9 with the image's own color space kept (ImageIO embeds the profile; sips would flatten it to sRGB).
+    static func heicData(_ image: CGImage, quality: Double = 0.9) -> Data? {
+        let data = NSMutableData()
+        guard let dest = CGImageDestinationCreateWithData(data, "public.heic" as CFString, 1, nil) else { return nil }
+        CGImageDestinationAddImage(dest, image, [kCGImageDestinationLossyCompressionQuality: quality] as CFDictionary)
+        guard CGImageDestinationFinalize(dest) else { return nil }
+        return data as Data
+    }
+
+    /// Bytes to keep on disk for a screenshot, per the storage setting: (data, extension).
+    static func storedImage(png: Data, cg: CGImage) -> (Data, String) {
+        if Preferences.shared.storesHEIC, let heic = heicData(cg) { return (heic, "heic") }
+        return (png, "png")
+    }
+
     static func tiffData(_ image: CGImage) -> Data? {
         let data = NSMutableData()
         guard let dest = CGImageDestinationCreateWithData(data, UTType.tiff.identifier as CFString, 1, nil) else { return nil }

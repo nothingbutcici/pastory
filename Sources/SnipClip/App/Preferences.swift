@@ -115,6 +115,9 @@ final class Preferences {
     }
     var monitoringPaused: Bool { get { d.bool(forKey: Key.monitoringPaused) } set { d.set(newValue, forKey: Key.monitoringPaused) } }
     var ocrImages: Bool { get { d.bool(forKey: Key.ocrImages) } set { d.set(newValue, forKey: Key.ocrImages) } }
+    /// How new screenshots are stored: "png" (lossless, default) or "heic" (quality 0.9, about a third of the size).
+    var imageStorage: String { get { d.string(forKey: "imageStorage") ?? "png" } set { d.set(newValue, forKey: "imageStorage") } }
+    var storesHEIC: Bool { imageStorage == "heic" }
     /// "system" (follow macOS), "zh" or "en".
     var language: String { get { d.string(forKey: "language") ?? "system" } set { d.set(newValue, forKey: "language") } }
     /// First launch on this Mac: the shelf opens once by itself, so a menu-bar-only app does not look like it failed to start.

@@ -205,12 +205,13 @@ final class ClipStore {
         let hash = stableHash(png)
         if let dup = dedupe(hash: hash, kinds: [.image]) { return dup }
         guard let cg = Screenshotter.image(fromPNG: png) else { return nil }
+        let (stored, ext) = Screenshotter.storedImage(png: png, cg: cg)      // hash stays that of the PNG, so dedupe works either way
         let item = ClipItem(id: UUID().uuidString, kind: .image, createdAt: Date(),
                             sourceBundleID: source.bundleID, sourceAppName: source.name,
                             snippet: "\(cg.width)×\(cg.height)", ocrText: ocrText, pinned: false,
-                            ext: "png", hasRTF: false, pixelWidth: cg.width, pixelHeight: cg.height,
-                            byteCount: png.count, duration: nil, title: nil, contentHash: hash)
-        do { try png.write(to: payloadURL(item), options: .atomic) } catch { return nil }
+                            ext: ext, hasRTF: false, pixelWidth: cg.width, pixelHeight: cg.height,
+                            byteCount: stored.count, duration: nil, title: nil, contentHash: hash)
+        do { try stored.write(to: payloadURL(item), options: .atomic) } catch { return nil }
         if let t = Screenshotter.thumbnail(cg, maxPixels: 900), let td = Screenshotter.pngData(t) {
             try? td.write(to: thumbURL(item), options: .atomic)
         }
@@ -283,7 +284,11 @@ final class ClipStore {
     func updateImage(_ id: String, png: Data) {
         guard let cg = Screenshotter.image(fromPNG: png) else { return }
         guard let i = items.firstIndex(where: { $0.id == id }) else { insertImage(png: png, source: CaptureCoordinator.source); return }
-        do { try png.write(to: payloadURL(items[i]), options: .atomic) } catch { return }
+        let (stored, ext) = Screenshotter.storedImage(png: png, cg: cg)
+        let old = items[i]
+        items[i].ext = ext
+        do { try stored.write(to: payloadURL(items[i]), options: .atomic) } catch { items[i].ext = old.ext; return }
+        if old.ext != ext { try? FileManager.default.removeItem(at: payloadURL(old)) }
         if let t = Screenshotter.thumbnail(cg, maxPixels: 900), let td = Screenshotter.pngData(t) {
             try? td.write(to: thumbURL(items[i]), options: .atomic)
         }
@@ -292,7 +297,7 @@ final class ClipStore {
         items[i].snippet = "\(cg.width)×\(cg.height)"
         items[i].pixelWidth = cg.width
         items[i].pixelHeight = cg.height
-        items[i].byteCount = png.count
+        items[i].byteCount = stored.count
         items[i].contentHash = stableHash(png)
         persist(items[i])
         if Preferences.shared.ocrImages {
@@ -362,12 +367,13 @@ final class ClipStore {
             case .image(let png):
                 let hash = stableHash(png)
                 guard seen.insert(hash).inserted, let cg = Screenshotter.image(fromPNG: png) else { continue }
+                let (stored, ext) = Screenshotter.storedImage(png: png, cg: cg)
                 let item = ClipItem(id: UUID().uuidString, kind: .image, createdAt: e.createdAt,
                                     sourceBundleID: source.bundleID, sourceAppName: source.name,
                                     snippet: "\(cg.width)×\(cg.height)", ocrText: nil, pinned: e.pinned,
-                                    ext: "png", hasRTF: false, pixelWidth: cg.width, pixelHeight: cg.height,
-                                    byteCount: png.count, duration: nil, title: e.title, contentHash: hash)
-                guard (try? png.write(to: payloadURL(item), options: .atomic)) != nil else { continue }
+                                    ext: ext, hasRTF: false, pixelWidth: cg.width, pixelHeight: cg.height,
+                                    byteCount: stored.count, duration: nil, title: e.title, contentHash: hash)
+                guard (try? stored.write(to: payloadURL(item), options: .atomic)) != nil else { continue }
                 if let t = Screenshotter.thumbnail(cg, maxPixels: 900), let td = Screenshotter.pngData(t) {
                     try? td.write(to: thumbURL(item), options: .atomic)
                 }
@@ -476,18 +482,53 @@ final class ClipStore {
         return try? String(contentsOf: payloadURL(item), encoding: .utf8)
     }
     func rtf(of item: ClipItem) -> Data? { item.hasRTF ? try? Data(contentsOf: rtfURL(item)) : nil }
-    func png(of item: ClipItem) -> Data? { item.kind == .image ? try? Data(contentsOf: payloadURL(item)) : nil }
+    /// PNG bytes of an image item, whatever is on disk (HEIC-stored items are decoded and re-wrapped losslessly, same pixels, same color space).
+    func png(of item: ClipItem) -> Data? {
+        guard item.kind == .image, let data = try? Data(contentsOf: payloadURL(item)) else { return nil }
+        if item.ext == "png" { return data }
+        return Screenshotter.image(fromPNG: data).flatMap(Screenshotter.pngData)
+    }
     func fileURLs(of item: ClipItem) -> [URL] {
         guard item.kind == .files, let data = try? Data(contentsOf: payloadURL(item)),
               let paths = try? JSONDecoder().decode([String].self, from: data) else { return [] }
         return paths.map { URL(fileURLWithPath: $0) }
     }
+    /// Bumped when a thumbnail finishes decoding; cards that asked for one re-render.
+    private(set) var thumbTick = 0
+    private var thumbLoading = Set<String>()
+
+    /// Cached thumbnail, or nil while it decodes in the background (the card shows a placeholder for a frame or two).
     func thumbnail(of item: ClipItem) -> NSImage? {
+        _ = thumbTick
         if let t = thumbCache[item.id] { return t }
-        guard item.kind == .image || item.kind == .video, let img = NSImage(contentsOf: thumbURL(item)) else { return nil }
-        if thumbCache.count > 100 { thumbCache.removeAll() }      // ~2 MB decoded each; the shelf only shows a handful at a time
-        thumbCache[item.id] = img
-        return img
+        guard item.kind == .image || item.kind == .video else { return nil }
+        warmThumbnail(item)
+        return nil
+    }
+
+    /// Self-tests wait on this before snapshotting the shelf.
+    func isThumbnailCached(_ id: String) -> Bool { thumbCache[id] != nil }
+
+    /// Start decoding an item's thumbnail off the main thread; no-op when cached or already in flight.
+    func warmThumbnail(_ item: ClipItem) {
+        guard thumbCache[item.id] == nil, !thumbLoading.contains(item.id) else { return }
+        thumbLoading.insert(item.id)
+        let url = thumbURL(item), id = item.id
+        Task.detached(priority: .userInitiated) {
+            var image: NSImage?
+            if let src = CGImageSourceCreateWithURL(url as CFURL, nil),
+               let cg = CGImageSourceCreateImageAtIndex(src, 0, [kCGImageSourceShouldCacheImmediately: true] as CFDictionary) {
+                image = NSImage(cgImage: cg, size: CGSize(width: cg.width, height: cg.height))
+            }
+            await MainActor.run {
+                let store = ClipStore.shared
+                store.thumbLoading.remove(id)
+                guard let image else { return }
+                if store.thumbCache.count > 100 { store.thumbCache.removeAll() }      // ~2 MB decoded each; the shelf shows a handful
+                store.thumbCache[id] = image
+                store.thumbTick += 1
+            }
+        }
     }
 
     // MARK: - Actions

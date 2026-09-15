@@ -12,6 +12,10 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
     let model = ShelfModel()
     /// True while a save dialog is up, so losing key status does not slide the shelf away.
     var holdOpen = false
+    /// The app that was in front when the shelf opened; a single-click copy hands the keyboard back to it so ⌘V lands there.
+    private var previousApp: NSRunningApplication?
+    private var keepOpenOnResign = false
+    private var outsideClickMonitor: Any?
 
     var isVisible: Bool { panel?.isVisible ?? false }
 
@@ -44,9 +48,30 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
         model.focusSearch += 1
     }
 
+    /// Build the panel and its SwiftUI tree at launch, so the first ⇧⌘V does not pay for it.
+    func prewarm() {
+        let p = panel ?? makePanel()
+        panel = p
+        p.setFrame(CGRect(x: 0, y: 0, width: 1200, height: 480), display: false)
+        p.contentView?.layoutSubtreeIfNeeded()
+    }
+
     func show() {
         let p = panel ?? makePanel()
         panel = p
+        if let front = NSWorkspace.shared.frontmostApplication, front != .current { previousApp = front }
+        keepOpenOnResign = false
+        // Decode the first row of thumbnails while the shelf slides in.
+        ClipStore.shared.items.prefix(10).forEach { ClipStore.shared.warmThumbnail($0) }
+        // A click anywhere else closes the shelf even when it no longer holds the keyboard (after a copy).
+        if outsideClickMonitor == nil {
+            outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self, let p = self.panel, p.isVisible, !self.holdOpen else { return }
+                    if !p.frame.contains(NSEvent.mouseLocation) { self.hide() }
+                }
+            }
+        }
         let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main ?? NSScreen.screens[0]
         let height = max(420, (screen.frame.height * 0.48).rounded())      // laptops need the extra rows of text
         let target = CGRect(x: screen.frame.minX, y: screen.frame.minY, width: screen.frame.width, height: height)
@@ -69,6 +94,8 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
     private static let slide: CGFloat = 28
 
     func hide() {
+        if let m = outsideClickMonitor { NSEvent.removeMonitor(m); outsideClickMonitor = nil }
+        keepOpenOnResign = false
         guard let p = panel, p.isVisible else { return }
         let size = p.frame.size
         NSAnimationContext.runAnimationGroup({ ctx in
@@ -100,7 +127,17 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
         return p
     }
 
-    func windowDidResignKey(_ notification: Notification) { if !holdOpen { hide() } }
+    func windowDidResignKey(_ notification: Notification) {
+        if keepOpenOnResign { keepOpenOnResign = false; return }
+        if !holdOpen { hide() }
+    }
+
+    /// After copying with a single click: the shelf stays, the keyboard goes back to the app you were in.
+    func handBackFocus() {
+        guard let p = panel, p.isVisible, let app = previousApp, !app.isTerminated else { return }
+        keepOpenOnResign = true
+        app.activate()
+    }
 
     // MARK: Keys (only while visible)
 
@@ -276,6 +313,7 @@ final class ShelfModel {
     func copy(_ item: ClipItem) {
         ClipStore.shared.copyToPasteboard(item)
         selectedID = item.id
+        ShelfPanelController.shared.handBackFocus()
     }
     /// ⏎ / double-click: copy and put the shelf away.
     func copyAndClose(_ item: ClipItem) {

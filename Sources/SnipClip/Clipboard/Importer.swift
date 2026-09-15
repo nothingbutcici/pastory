@@ -99,7 +99,7 @@ enum Importer {
             case "text", "url":
                 if let s = String(data: data, encoding: .utf8) { out.append(.init(payload: .text(s), createdAt: date, pinned: pinned, title: title)) }
             case "image":
-                out.append(.init(payload: .image(data), createdAt: date, pinned: pinned, title: title))
+                if let png = Screenshotter.pngData(fromImageBytes: data) { out.append(.init(payload: .image(png), createdAt: date, pinned: pinned, title: title)) }
             default: continue     // file lists point at the other machine's paths; recordings are not carried over
             }
         }

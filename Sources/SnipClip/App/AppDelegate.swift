@@ -24,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         Retention.schedule()
         ClipboardMonitor.shared.start()
+        ShelfPanelController.shared.prewarm()
         if !Permissions.hasScreenRecording { _ = Permissions.requestScreenRecording() }
         if !Preferences.shared.didWelcome {
             Preferences.shared.didWelcome = true

@@ -24,6 +24,7 @@ final class PrefsMirror {
     var exportDir: String { didSet { Preferences.shared.customExportDir = exportDir.isEmpty ? nil : exportDir } }
     var ocrImages: Bool { didSet { Preferences.shared.ocrImages = ocrImages } }
     var paused: Bool { didSet { Preferences.shared.monitoringPaused = paused } }
+    var imageStorage: String { get { access(keyPath: \.imageStorage); return Preferences.shared.imageStorage } set { withMutation(keyPath: \.imageStorage) { Preferences.shared.imageStorage = newValue } } }
     var launchAtLogin: Bool {
         didSet {
             do {

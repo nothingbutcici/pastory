@@ -15,7 +15,7 @@ enum SelfTest {
         let cmd = args[i + 1]
         let rest = Array(args[(i + 2)...])
         // Anything that writes to a store must run inside SNIPCLIP_STORE. Never against the user's data.
-        let mutating: Set<String> = ["clipboard", "retention", "shelf", "settings", "editors", "import", "ingest", "tombstone"]
+        let mutating: Set<String> = ["clipboard", "retention", "shelf", "settings", "editors", "import", "ingest", "tombstone", "heic"]
         if mutating.contains(cmd) {
             let env = ProcessInfo.processInfo.environment["SNIPCLIP_STORE"] ?? ""
             // Nothing under Application Support counts as a sandbox, whatever the folder is called.
@@ -89,6 +89,7 @@ enum SelfTest {
                 ok = (urls?.count ?? 0) == 1
             case "ingest": ok = ingest()
             case "tombstone": ok = tombstone()
+            case "heic": ok = heic()
             case "openpanel":
                 // How long until the system open panel is actually on screen (first show in this process)?
                 let t0 = Date()
@@ -362,6 +363,12 @@ enum SelfTest {
         await seedStore()
         let model = ShelfPanelController.shared.model
         model.reset()
+        // Thumbnails decode in the background; give them a moment so the render shows pictures, not placeholders.
+        let store = ClipStore.shared
+        let pictures = store.items.filter { $0.kind == .image || $0.kind == .video }
+        pictures.forEach { store.warmThumbnail($0) }
+        var waited = 0.0
+        while waited < 3, pictures.contains(where: { !store.isThumbnailCached($0.id) }) { try? await Task.sleep(nanoseconds: 50_000_000); waited += 0.05 }
         let host = NSHostingView(rootView: ShelfView(model: model))
         host.frame = CGRect(x: 0, y: 0, width: 1600, height: 450)
         // Needs a window for materials + layout to resolve.
@@ -511,4 +518,41 @@ extension SelfTest {
         return added == 0 && !back && fresh
     }
     typealias Source = ClipStore.Source
+}
+
+// MARK: - HEIC storage
+
+extension SelfTest {
+    /// With the HEIC setting on, a stored screenshot is smaller, keeps its pixel size and color space,
+    /// and comes back out as PNG for the pasteboard / export path.
+    @MainActor static func heic() -> Bool {
+        let store = ClipStore.shared
+        store.removeAll { _ in true }
+        // A P3 picture with gradients, so the compression has something to do and the profile matters.
+        let w = 1200, h = 800
+        guard let space = CGColorSpace(name: CGColorSpace.displayP3),
+              let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0, space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+        for x in stride(from: 0, to: w, by: 4) {
+            ctx.setFillColor(CGColor(colorSpace: space, components: [CGFloat(x) / CGFloat(w), 0.4, 1 - CGFloat(x) / CGFloat(w), 1])!)
+            ctx.fill(CGRect(x: x, y: 0, width: 4, height: h))
+        }
+        guard let cg = ctx.makeImage(), let png = Screenshotter.pngData(cg) else { return false }
+        var ok = true
+        func check(_ name: String, _ cond: Bool) { print("\(cond ? "ok  " : "FAIL") \(name)"); if !cond { ok = false } }
+        Preferences.shared.imageStorage = "heic"
+        guard let item = store.insertImage(png: png, source: Source(bundleID: "test", name: "Test")) else { return false }
+        check("stored as heic", item.ext == "heic")
+        let onDisk = (try? Data(contentsOf: store.payloadURL(item)))?.count ?? 0
+        check("heic smaller than png (\(onDisk / 1024)K vs \(png.count / 1024)K)", onDisk > 0 && onDisk < png.count / 2)
+        let back = store.png(of: item)
+        let cgBack = back.flatMap(Screenshotter.image(fromPNG:))
+        check("png(of:) yields PNG at the same size", back?.starts(with: [0x89, 0x50, 0x4E, 0x47]) == true && cgBack?.width == w && cgBack?.height == h)
+        check("color space kept (\(cgBack?.colorSpace?.name as String? ?? "nil"))", cgBack?.colorSpace?.name == space.name)
+        check("hash is the PNG's, so the same picture dedupes", store.insertImage(png: png, source: Source(bundleID: "test", name: "Test"))?.id == item.id)
+        Preferences.shared.imageStorage = "png"
+        guard let plain = store.insertImage(png: Screenshotter.pngData(Screenshotter.thumbnail(cg, maxPixels: 300)!)!, source: Source(bundleID: "test", name: "Test")) else { return false }
+        check("back to png for new items", plain.ext == "png")
+        store.removeAll { _ in true }
+        return ok
+    }
 }

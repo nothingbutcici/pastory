@@ -35,7 +35,12 @@ enum Exporter {
             do {
                 let tmp = url.deletingLastPathComponent().appendingPathComponent(".\(url.lastPathComponent).pastory-tmp")
                 try? fm.removeItem(at: tmp)
-                try fm.copyItem(at: store.payloadURL(item), to: tmp)
+                if item.kind == .image, item.ext != "png" {
+                    guard let png = store.png(of: item) else { throw CocoaError(.fileReadCorruptFile) }
+                    try png.write(to: tmp)                       // saved files are always PNG, whatever the shelf keeps
+                } else {
+                    try fm.copyItem(at: store.payloadURL(item), to: tmp)
+                }
                 _ = try fm.replaceItemAt(url, withItemAt: tmp)      // swap only once the copy fully succeeded
                 remember(url.deletingLastPathComponent())
                 NSWorkspace.shared.activateFileViewerSelecting([url])
