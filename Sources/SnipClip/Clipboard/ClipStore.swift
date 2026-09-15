@@ -515,15 +515,11 @@ final class ClipStore {
         thumbLoading.insert(item.id)
         let url = thumbURL(item), id = item.id
         Task.detached(priority: .userInitiated) {
-            var image: NSImage?
-            if let src = CGImageSourceCreateWithURL(url as CFURL, nil),
-               let cg = CGImageSourceCreateImageAtIndex(src, 0, [kCGImageSourceShouldCacheImmediately: true] as CFDictionary) {
-                image = NSImage(cgImage: cg, size: CGSize(width: cg.width, height: cg.height))
-            }
+            let box = DecodedImage(url: url)
             await MainActor.run {
                 let store = ClipStore.shared
                 store.thumbLoading.remove(id)
-                guard let image else { return }
+                guard let image = box.image else { return }
                 if store.thumbCache.count > 100 { store.thumbCache.removeAll() }      // ~2 MB decoded each; the shelf shows a handful
                 store.thumbCache[id] = image
                 store.thumbTick += 1
@@ -552,5 +548,15 @@ final class ClipStore {
             }
         }
         bump(item.id)
+    }
+}
+
+/// Decoded off the main thread, handed over once; NSImage itself is not Sendable, so the hand-off is explicit.
+private struct DecodedImage: @unchecked Sendable {
+    let image: NSImage?
+    init(url: URL) {
+        guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let cg = CGImageSourceCreateImageAtIndex(src, 0, [kCGImageSourceShouldCacheImmediately: true] as CFDictionary) else { image = nil; return }
+        image = NSImage(cgImage: cg, size: CGSize(width: cg.width, height: cg.height))
     }
 }
