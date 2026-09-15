@@ -41,9 +41,19 @@ final class SelectionOverlayController {
     func present(snapshot: ShareableSnapshot, mode: PickMode, completion: @escaping (CaptureTarget?) -> Void) {
         if isPresenting || !overlays.isEmpty { release() }
         isPresenting = true
-        // Esc must work even when macOS refuses to give us keyboard focus.
+        // While picking, the overlay is NOT the key window: taking key focus from the front app closes its menus,
+        // drop-downs and popovers before we can photograph them. Keys come in through system-wide hooks instead
+        // (unbound the moment the annotator takes over).
         HotKeyCenter.shared.bindRaw(keyCode: 53, modifiers: 0, name: "picker.esc") {
             MainActor.assumeIsolated { CaptureCoordinator.shared.cancel() }
+        }
+        HotKeyCenter.shared.bindRaw(keyCode: 49, modifiers: 0, name: "picker.space") {
+            MainActor.assumeIsolated { SelectionOverlayController.shared.toggleMode() }
+        }
+        for (code, name) in [(3, "picker.f"), (36, "picker.return"), (76, "picker.enter")] {
+            HotKeyCenter.shared.bindRaw(keyCode: UInt32(code), modifiers: 0, name: name) {
+                MainActor.assumeIsolated { SelectionOverlayController.shared.pickWholeScreen() }
+            }
         }
         self.completion = completion
         self.mode = mode
@@ -60,12 +70,19 @@ final class SelectionOverlayController {
         // Never activate: the app in front keeps its popovers and menus open, and they end up in the picture.
         overlays.forEach { $0.orderFrontRegardless() }
         let mouse = NSEvent.mouseLocation
-        let key = overlays.first { $0.screenRef.frame.contains(mouse) } ?? overlays.first
-        key?.makeKeyAndOrderFront(nil)
-        key?.makeFirstResponder(key?.overlayView)
         if mode == .window { updateHover(at: mouse) }
+        NSCursor.crosshair.set()
         refreshAll()
     }
+
+    /// F / ⏎ during picking: the whole display under the pointer.
+    func pickWholeScreen() {
+        guard isPresenting, let w = overlays.first(where: { $0.screenRef.frame.contains(NSEvent.mouseLocation) }) ?? overlays.first else { return }
+        finish(.display(w.display), viewRect: w.overlayView.bounds, on: w)
+    }
+
+    private static let pickerHooks = ["picker.esc", "picker.space", "picker.f", "picker.return", "picker.enter"]
+    private func unbindPickerHooks() { Self.pickerHooks.forEach { HotKeyCenter.shared.unbind($0) } }
 
     func toggleMode() {
         mode = mode == .region ? .window : .region
@@ -117,9 +134,10 @@ final class SelectionOverlayController {
         annotator = canvas
         toolbar = bar
         topBar = top
-        // From here the canvas owns ⎋ (deselect, leave the text box, then cancel); the system-wide hook would eat it.
-        HotKeyCenter.shared.unbind("picker.esc")
+        // The picture is taken; from here the canvas owns the keyboard (⎋ deselects, leaves the text box, then cancels).
+        unbindPickerHooks()
         layoutChrome()
+        NSCursor.arrow.set()
         win.makeKeyAndOrderFront(nil)
         win.makeFirstResponder(canvas)
     }
@@ -184,7 +202,8 @@ final class SelectionOverlayController {
         isPresenting = false
         completion = nil
         cropProvider = nil
-        HotKeyCenter.shared.unbind("picker.esc")
+        unbindPickerHooks()
+        NSCursor.arrow.set()
         annotator?.removeFromSuperview()
         toolbar?.subBar.removeFromSuperview()
         toolbar?.removeFromSuperview()
@@ -260,7 +279,7 @@ final class OverlayView: NSView {
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         if let tracking { removeTrackingArea(tracking) }
-        let t = NSTrackingArea(rect: bounds, options: [.mouseMoved, .activeAlways, .inVisibleRect], owner: self)
+        let t = NSTrackingArea(rect: bounds, options: [.mouseMoved, .mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self)
         addTrackingArea(t)
         tracking = t
     }
@@ -360,8 +379,6 @@ final class OverlayView: NSView {
             resizing = (i, r)
             return
         }
-        window?.makeKeyAndOrderFront(nil)
-        window?.makeFirstResponder(self)
         guard controller?.mode == .region else {
             controller?.updateHover(at: NSEvent.mouseLocation)
             return
@@ -426,8 +443,10 @@ final class OverlayView: NSView {
 
     override func mouseMoved(with event: NSEvent) {
         guard !held else { return }
+        NSCursor.crosshair.set()          // cursor rects need a key window; while picking we deliberately are not one
         if controller?.mode == .window { controller?.updateHover(at: NSEvent.mouseLocation) }
     }
+    override func mouseEntered(with event: NSEvent) { if !held { NSCursor.crosshair.set() } }
 
     override func keyDown(with event: NSEvent) {
         guard !held else { super.keyDown(with: event); return }
