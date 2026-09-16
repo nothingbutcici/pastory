@@ -141,6 +141,14 @@ enum SelfTest {
                 ok = (urls?.count ?? 0) == 1
             case "ingest": ok = ingest()
             case "tombstone": ok = tombstone()
+            case "l10n":
+                // The table is a list of pairs on purpose: a duplicate must be a test failure, never a launch crash.
+                var seen: [String: Int] = [:]
+                for (k, _) in L.pairs { seen[k, default: 0] += 1 }
+                let dups = seen.filter { $0.value > 1 }.map(\.key)
+                print("\(dups.isEmpty ? "ok  " : "FAIL") no duplicate keys \(dups)")
+                print("ok   \(L.pairs.count) entries, \(L.en.count) unique")
+                ok = dups.isEmpty
             case "updater":
                 let fixture = """
                 {"tag_name":"v1.2","html_url":"https://github.com/nothingbutcici/pastory/releases/tag/v1.2","body":"- faster shelf\\n- HEIC option",

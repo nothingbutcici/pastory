@@ -11,7 +11,7 @@ func stableHash(_ data: Data) -> Int {
 /// ~/Library/Application Support/Pastory/
 ///   pastory.sqlite   the index (SQLite, WAL); an old index.json is imported once and renamed
 ///   items/<id>.<ext> payload (txt / png / json list of paths); <id>.rtf alongside when rich text
-///   thumbs/<id>.png  shelf thumbnail for images
+///   thumbs/<id>.heic shelf thumbnail for images and recordings (older stores: .png)
 @MainActor
 @Observable
 final class ClipStore {
@@ -348,11 +348,47 @@ final class ClipStore {
         var title: String?
     }
 
+    /// Everything about an entry that can be computed away from the main thread: bytes to write, thumbnail, hash.
+    struct PreparedEntry: @unchecked Sendable {
+        var kind: ClipKind; var payload: Data; var ext: String; var thumb: Data?
+        var snippet: String; var pixelWidth: Int?; var pixelHeight: Int?; var hash: Int
+        var createdAt: Date; var pinned: Bool; var title: String?
+    }
+
+    /// Hashing, decoding, HEIC re-encoding and thumbnails for a whole batch — run this off the main actor.
+    nonisolated static func prepareImport(_ entries: [ImportEntry], storeHEIC: Bool) -> [PreparedEntry] {
+        var out: [PreparedEntry] = []
+        for e in entries {
+            switch e.payload {
+            case .text(let text):
+                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                let data = Data(text.utf8)
+                guard !trimmed.isEmpty, data.count <= maxTextBytes else { continue }
+                out.append(.init(kind: ClipItem.isURLText(text) ? .url : .text, payload: data, ext: "txt", thumb: nil,
+                                 snippet: ClipItem.snippet(ofText: text), pixelWidth: nil, pixelHeight: nil, hash: stableHash(data),
+                                 createdAt: e.createdAt, pinned: e.pinned, title: e.title))
+            case .image(let png):
+                guard let cg = Screenshotter.image(fromPNG: png) else { continue }
+                let heic = storeHEIC ? Screenshotter.heicData(cg) : nil
+                let thumb = Screenshotter.thumbnail(cg, maxPixels: 900).flatMap { Screenshotter.heicData($0, quality: 0.8) ?? Screenshotter.pngData($0) }
+                out.append(.init(kind: .image, payload: heic ?? png, ext: heic == nil ? "png" : "heic", thumb: thumb,
+                                 snippet: "\(cg.width)×\(cg.height)", pixelWidth: cg.width, pixelHeight: cg.height, hash: stableHash(png),
+                                 createdAt: e.createdAt, pinned: e.pinned, title: e.title))
+            }
+        }
+        return out
+    }
+
     /// Bulk insert from another store. Skips anything whose payload is already here (or repeated in the batch)
     /// and saves once. Imported history always sorts behind everything Pastory captured itself: the batch keeps its
     /// own internal order, shifted back so its newest entry is older than our oldest item. Returns how many were added.
     func importEntries(_ entries: [ImportEntry]) -> Int {
-        var entries = entries.sorted { $0.createdAt > $1.createdAt }
+        commitImport(Self.prepareImport(entries, storeHEIC: Preferences.shared.storesHEIC))
+    }
+
+    /// Main-actor half of an import: write files, build items, save once.
+    func commitImport(_ prepared: [PreparedEntry]) -> Int {
+        var entries = prepared.sorted { $0.createdAt > $1.createdAt }
         if let oldestOwn = items.map(\.createdAt).min(), let newestImport = entries.first?.createdAt {
             let shift = newestImport.timeIntervalSince(oldestOwn) + 1
             if shift > 0 { for i in entries.indices { entries[i].createdAt.addTimeInterval(-shift) } }
@@ -361,36 +397,15 @@ final class ClipStore {
         let source = Source(bundleID: nil, name: Self.importSourceName)
         var added: [ClipItem] = []
         for e in entries {
-            switch e.payload {
-            case .text(let text):
-                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                let data = Data(text.utf8)
-                guard !trimmed.isEmpty, data.count <= Self.maxTextBytes else { continue }
-                let hash = stableHash(data)
-                guard seen.insert(hash).inserted else { continue }
-                let kind: ClipKind = ClipItem.isURLText(text) ? .url : .text
-                let item = ClipItem(id: UUID().uuidString, kind: kind, createdAt: e.createdAt,
-                                    sourceBundleID: source.bundleID, sourceAppName: source.name,
-                                    snippet: ClipItem.snippet(ofText: text), ocrText: nil, pinned: e.pinned,
-                                    ext: "txt", hasRTF: false, pixelWidth: nil, pixelHeight: nil,
-                                    byteCount: data.count, duration: nil, title: e.title, contentHash: hash)
-                guard (try? data.write(to: payloadURL(item), options: .atomic)) != nil else { continue }
-                added.append(item)
-            case .image(let png):
-                let hash = stableHash(png)
-                guard seen.insert(hash).inserted, let cg = Screenshotter.image(fromPNG: png) else { continue }
-                let (stored, ext) = Screenshotter.storedImage(png: png, cg: cg)
-                let item = ClipItem(id: UUID().uuidString, kind: .image, createdAt: e.createdAt,
-                                    sourceBundleID: source.bundleID, sourceAppName: source.name,
-                                    snippet: "\(cg.width)×\(cg.height)", ocrText: nil, pinned: e.pinned,
-                                    ext: ext, hasRTF: false, pixelWidth: cg.width, pixelHeight: cg.height,
-                                    byteCount: stored.count, duration: nil, title: e.title, contentHash: hash)
-                guard (try? stored.write(to: payloadURL(item), options: .atomic)) != nil else { continue }
-                if let t = Screenshotter.thumbnail(cg, maxPixels: 900), let td = thumbData(t) {
-                    try? td.write(to: thumbURL(item), options: .atomic)
-                }
-                added.append(item)
-            }
+            guard seen.insert(e.hash).inserted else { continue }
+            let item = ClipItem(id: UUID().uuidString, kind: e.kind, createdAt: e.createdAt,
+                                sourceBundleID: source.bundleID, sourceAppName: source.name,
+                                snippet: e.snippet, ocrText: nil, pinned: e.pinned,
+                                ext: e.ext, hasRTF: false, pixelWidth: e.pixelWidth, pixelHeight: e.pixelHeight,
+                                byteCount: e.payload.count, duration: nil, title: e.title, contentHash: e.hash)
+            guard (try? e.payload.write(to: payloadURL(item), options: .atomic)) != nil else { continue }
+            if let t = e.thumb { try? t.write(to: thumbURL(item), options: .atomic) }
+            added.append(item)
         }
         guard !added.isEmpty else { return 0 }
         items = (items + added).sorted { $0.createdAt > $1.createdAt }

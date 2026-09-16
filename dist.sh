@@ -42,7 +42,7 @@ Pastory 首次打开说明
   xattr -dr com.apple.quarantine /Applications/Pastory.app
   open /Applications/Pastory.app
 
-所有内容只存在本机 ~/Library/Application Support/Pastory/，不联网、不上传。
+所有内容只存在本机 ~/Library/Application Support/Pastory/，除每天一次检查更新外不联网、不上传。
 界面语言跟随系统（中文 / English），也可以在剪贴板面板 › 设置 › 语言 里改。
 
 ---------------------------------------------------------------- English
@@ -53,12 +53,12 @@ Requires macOS 15 (Sequoia) or later; Intel and Apple silicon.
 1. Unzip and drag Pastory.app into Applications.
 2. Double-click it. The app is notarized by Apple; at most macOS asks once whether to open an app
    downloaded from the internet — click Open.
-3. Pastory has no main window: look for the handwritten P in the menu bar. The clipboard shelf opens by itself on first launch.
+3. Pastory has no main window: look for the handwritten P in the menu bar. The clipboard panel opens by itself on first launch.
 4. The first screenshot asks for Screen Recording permission: turn Pastory on, then relaunch it.
-5. Default shortcuts: ⌥⌘S screenshot / record, ⇧⌘V clipboard shelf. Change them in the shelf › Settings.
+5. Default shortcuts: ⌥⌘S screenshot / record, ⇧⌘V clipboard shelf. Change them in Settings.
    Language follows the system (中文 / English) and can be switched in Settings › Language.
 
-Everything stays in ~/Library/Application Support/Pastory/ on this Mac. No network, no upload.
+Everything stays in ~/Library/Application Support/Pastory/ on this Mac. No network apart from a daily update check, no upload.
 Still won't open? In Terminal:  xattr -dr com.apple.quarantine /Applications/Pastory.app && open /Applications/Pastory.app
 TXT
 if [ -z "${NOTARIZED:-}" ]; then

@@ -308,37 +308,39 @@ struct SettingsPane: View {
         let picked: URL? = ShelfPanelController.shared.withDialog {
             let panel = NSOpenPanel()
             panel.canChooseDirectories = true; panel.canChooseFiles = true; panel.prompt = "扫描".l
-            panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support")
             panel.message = "选另一个剪贴板工具的数据库文件或它的数据文件夹，或另一台机器的 Pastory 文件夹".l
             return panel.runModal() == .OK ? panel.url : nil
         }
         guard let picked else { return }
         importNote = "扫描中…".l
-        Task.detached(priority: .userInitiated) {
-            let result = Result { try Importer.scan(picked) }
-            await MainActor.run {
-                switch result {
-                case .failure(let e):
-                    importNote = e.localizedDescription
-                case .success(let scan):
-                    // Imported history is older than anything here, so a finite retention would sweep it at the next cleanup.
-                    let cleans = !Preferences.shared.neverCleans
-                    let choice = ShelfPanelController.shared.withDialog { () -> Int in
-                        let a = NSAlert()
-                        a.messageText = String(format: "找到 %d 条文本、%d 张图片".l, scan.texts, scan.images)
-                        a.informativeText = String(format: "来自 %@。已经在 Pastory 里的内容会自动跳过，Pin 会保留；导入的内容排在 Pastory 自己记录的后面。".l, picked.lastPathComponent)
-                            + (cleans ? String(format: "\n\n当前保留期是 %d 天，而这些内容都比保留期老：导入会同时把保留期改为「永不删除」，否则它们马上就会被清掉。".l, Preferences.shared.retentionDays) : "")
-                        a.addButton(withTitle: cleans ? "导入并改为永不删除".l : "导入".l)
-                        a.addButton(withTitle: "取消".l)
-                        return a.runModal() == .alertFirstButtonReturn ? 1 : 0
-                    }
-                    guard choice != 0 else { importNote = nil; return }
-                    if cleans { prefs.retentionDays = 0 }
-                    let n = ClipStore.shared.importEntries(scan.entries)
-                    model.refreshOrder()
-                    importNote = n == 0 ? "没有新内容（都已存在）".l : String(format: "已导入 %d 条".l, n)
-                }
+        Task { @MainActor in
+            let result = await Task.detached(priority: .userInitiated) { Result { try Importer.scan(picked) } }.value
+            let scan: Importer.Scan
+            switch result {
+            case .failure(let e): importNote = e.localizedDescription; return
+            case .success(let s): scan = s
             }
+            // Imported history is older than anything here, so a finite retention would sweep it at the next cleanup.
+            let cleans = !Preferences.shared.neverCleans
+            let go = ShelfPanelController.shared.withDialog { () -> Bool in
+                let a = NSAlert()
+                a.messageText = String(format: "找到 %d 条文本、%d 张图片".l, scan.texts, scan.images)
+                a.informativeText = String(format: "来自 %@。已经在 Pastory 里的内容会自动跳过，Pin 会保留；导入的内容排在 Pastory 自己记录的后面。".l, picked.lastPathComponent)
+                    + (cleans ? String(format: "\n\n当前保留期是 %d 天，而这些内容都比保留期老：导入会同时把保留期改为「永不删除」，否则它们马上就会被清掉。".l, Preferences.shared.retentionDays) : "")
+                a.addButton(withTitle: cleans ? "导入并改为永不删除".l : "导入".l)
+                a.addButton(withTitle: "取消".l)
+                return a.runModal() == .alertFirstButtonReturn
+            }
+            guard go else { importNote = nil; return }
+            if cleans { prefs.retentionDays = 0 }
+            importNote = "导入中…".l
+            // Hashing, decoding and HEIC re-encoding happen off the main thread; only the file writes and the index touch it.
+            let storeHEIC = Preferences.shared.storesHEIC
+            let entries = scan.entries
+            let prepared = await Task.detached(priority: .userInitiated) { ClipStore.prepareImport(entries, storeHEIC: storeHEIC) }.value
+            let n = ClipStore.shared.commitImport(prepared)
+            model.refreshOrder()
+            importNote = n == 0 ? "没有新内容（都已存在）".l : String(format: "已导入 %d 条".l, n)
         }
     }
 

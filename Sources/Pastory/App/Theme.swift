@@ -95,7 +95,6 @@ enum Theme {
 
     /// Product logo (Resources/Logo.png). Falls back to the source tree so self-tests find it too.
     static let logo: NSImage? = resource("Logo.png")
-    /// The mascot on the shelf sidebar.
     /// The one piece of stationery: a pink pushpin on the card that is currently on the clipboard.
     static let pushpin: NSImage? = resource("Pushpin.png")
     /// Brand typeface (Ysabeau Office, OFL) bundled in Resources/Fonts; registered for this process on first use.

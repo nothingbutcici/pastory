@@ -30,7 +30,7 @@ Pastory gives the clipboard a long-term memory: text, links, images, screenshots
 - Give important items a title so you can spot them at a glance.
 - Click to copy. Double-click to paste directly into the app you were using.
 
-Everything stays on your Mac. No account, no network access. Your data is 100% yours.
+Everything stays on your Mac. No account, and no network access apart from a daily update check. Your data is 100% yours.
 
 <br>
 

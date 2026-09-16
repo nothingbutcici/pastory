@@ -182,11 +182,5 @@ final class TitleField: NSTextView {
         attrs[.foregroundColor] = Theme.inkMuted.withAlphaComponent(0.7)
         let origin = textContainerOrigin
         ("+ 加个标题".l as NSString).draw(in: CGRect(x: origin.x, y: origin.y, width: bounds.width, height: Self.lineHeight), withAttributes: attrs)
-        // Offscreen renders cannot show a blinking caret; PASTORY_DEBUG_CARET paints where it would be, at its real height.
-        if ProcessInfo.processInfo.environment["PASTORY_DEBUG_CARET"] != nil, let lm = layoutManager {
-            let r = lm.extraLineFragmentRect
-            Theme.paperBlueDeep.setFill()
-            CGRect(x: origin.x + r.minX, y: origin.y + r.minY, width: 2, height: r.height == 0 ? Self.lineHeight : r.height).fill()
-        }
     }
 }

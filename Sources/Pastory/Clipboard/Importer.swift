@@ -13,11 +13,12 @@ enum Importer {
     }
 
     enum Failure: LocalizedError {
-        case notSQLite, empty
+        case notSQLite, empty, tooBroad
         var errorDescription: String? {
             switch self {
             case .notSQLite: return "这不是 SQLite 数据库文件".l
             case .empty: return "没有找到能导入的文本或图片".l
+            case .tooBroad: return "请选择某个剪贴板工具自己的数据文件夹，而不是整个资源库".l
             }
         }
     }
@@ -29,9 +30,16 @@ enum Importer {
         guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue else { return try scanFile(url) }
         let own = url.appendingPathComponent("pastory.sqlite")
         if FileManager.default.fileExists(atPath: own.path) { return try scanFile(own) }
+        // A whole Library / Application Support / home folder holds every app's databases; that is never what anyone means.
+        let path = url.standardizedFileURL.path
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let tooBroad = [home, home + "/Library", home + "/Library/Application Support", home + "/Library/Containers", home + "/Library/Group Containers", "/Applications", "/Users", "/"]
+        if tooBroad.contains(path) { throw Failure.tooBroad }
+        let dbs = sqliteFiles(under: url)
+        if dbs.count > 6 { throw Failure.tooBroad }
         var merged = Scan()
         var lastError: Error = Failure.notSQLite
-        for f in sqliteFiles(under: url) {
+        for f in dbs {
             do {
                 let s = try scanFile(f)
                 merged.entries += s.entries

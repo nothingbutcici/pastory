@@ -200,8 +200,8 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
         case kVK_RightArrow where !typing: model.move(1); return true
         case kVK_UpArrow where !composing: model.move(-1); return true      // from the search box too
         case kVK_DownArrow where !composing: model.move(1); return true
-        case kVK_ANSI_P where !typing || cmd: model.pinSelected(); return true
-        case kVK_ANSI_S where !typing || cmd: model.exportSelected(); return true
+        case kVK_ANSI_P where cmd: model.pinSelected(); return true          // ⌘P: letters alone start a search
+        case kVK_ANSI_S where cmd: model.exportSelected(); return true
         case kVK_Delete where !typing: model.deleteSelected(); return true
         case kVK_ANSI_F where cmd: model.focusSearch += 1; return true
         case kVK_Space where !typing: toggleQuickLook(); return true
@@ -338,7 +338,8 @@ final class ShelfModel {
     private var searchBlobs: [String: (Date, String)] = [:]
     private func searchBlob(_ item: ClipItem) -> String {
         if let hit = searchBlobs[item.id], hit.0 == item.modifiedAt { return hit.1 }
-        let blob = [item.snippet, item.ocrText ?? "", item.sourceAppName ?? "", item.title ?? ""].joined(separator: "\n").lowercased()
+        let body = (item.kind == .text || item.kind == .url) ? (ClipStore.shared.text(of: item) ?? item.snippet) : item.snippet   // the preview is cut at 400 chars; search the whole text
+        let blob = [body, item.ocrText ?? "", item.sourceAppName ?? "", item.title ?? ""].joined(separator: "\n").lowercased()
         searchBlobs[item.id] = (item.modifiedAt, blob)
         return blob
     }

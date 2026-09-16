@@ -245,7 +245,7 @@ struct ShelfView: View {
     @ViewBuilder
     private func menu(for item: ClipItem) -> some View {
         Button("复制".l) { model.copy(item) }
-        Button("复制并关闭".l) { model.copyAndClose(item) }
+        Button("复制并关闭".l) { model.copyAndClose(item, paste: false) }
         Button(item.title == nil ? "命名…".l : "重命名…".l) { model.selectedID = item.id; model.renamingID = item.id }
         if item.title != nil { Button("去掉标题".l) { ClipStore.shared.setTitle(nil, for: item.id) } }
         if item.kind == .text || item.kind == .url || item.kind == .image {

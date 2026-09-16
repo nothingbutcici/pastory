@@ -56,7 +56,7 @@ struct ClipCardView: View {
                 .frame(width: 22, height: 22)
                 Text(sourceTitle).font(.serif(16)).foregroundStyle(Color.ink).lineLimit(1)
                 Spacer()
-                Text(item.createdAt, style: .time).font(.serif(14)).foregroundStyle(Color.ink.opacity(0.75))
+                Text(Self.when(item.createdAt)).font(.serif(14)).foregroundStyle(Color.ink.opacity(0.75))
             }
             .padding(.horizontal, 18).padding(.top, hasPin ? 34 : 14).padding(.bottom, 8)
             Rectangle().fill(Color.ink.opacity(0.7)).frame(height: 1).padding(.horizontal, 18)
@@ -282,6 +282,11 @@ struct ClipCardView: View {
         if item.sourceAppName == ClipStore.importSourceName { return "已导入".l }
         return item.sourceAppName ?? item.kind.label
     }
+    /// Today: 18:44 · earlier: 9/14 18:44 (retention can keep cards for a year).
+    private static let timeOnly: DateFormatter = { let f = DateFormatter(); f.dateFormat = "HH:mm"; return f }()
+    private static let dayTime: DateFormatter = { let f = DateFormatter(); f.dateFormat = "M/d HH:mm"; return f }()
+    static func when(_ d: Date) -> String { Calendar.current.isDateInToday(d) ? timeOnly.string(from: d) : dayTime.string(from: d) }
+
     private var kindLabel: String {
         switch item.kind {
         case .image: return "图片".l

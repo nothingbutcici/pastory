@@ -209,7 +209,10 @@ final class RecordingSession {
                     }
                     fileURL = g
                 } catch {
-                    fail(error); return
+                    // The MP4 is untouched: let them pick it instead of throwing the recording away.
+                    try? FileManager.default.removeItem(at: g)
+                    preview?.setIdle(String(format: "GIF 转换失败：%@，可以改选 MP4".l, error.localizedDescription))
+                    return
                 }
             }
             let poster = await GIFEncoder.poster(movie: src)

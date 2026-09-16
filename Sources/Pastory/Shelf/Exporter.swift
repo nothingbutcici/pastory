@@ -20,7 +20,7 @@ enum Exporter {
             panel.canCreateDirectories = true
             panel.isExtensionHidden = false
             if item.kind == .image {
-                panel.nameFieldStringValue = "Snip \(stamp).png"
+                panel.nameFieldStringValue = "Pastory \(stamp).png"
                 panel.allowedContentTypes = [.png]
             } else if item.kind == .video {
                 panel.nameFieldStringValue = "Rec \(stamp).\(item.ext)"

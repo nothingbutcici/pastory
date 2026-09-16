@@ -72,7 +72,9 @@ final class Updater {
         req.setValue("Pastory/\(currentVersion)", forHTTPHeaderField: "User-Agent")
         req.timeoutInterval = 15
         let (data, resp) = try await URLSession.shared.data(for: req)
-        guard (resp as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
+        let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+        if code == 404 { throw NSError(domain: "Pastory.Update", code: 404, userInfo: [NSLocalizedDescriptionKey: "暂无发布版本".l]) }
+        guard code == 200 else { throw URLError(.badServerResponse) }
         return try parse(data)
     }
 

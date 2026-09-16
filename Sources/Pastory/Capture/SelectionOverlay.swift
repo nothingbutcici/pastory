@@ -5,7 +5,7 @@ import ScreenCaptureKit
 enum PickMode { case region, window }
 
 /// Full-screen picker: drag a region, tap a window, F for the whole display.
-/// After a pick the mask stays up, the frame grows lime handles (drag to resize; the canvas re-crops),
+/// After a pick the mask stays up, the frame grows paper handles (drag to resize; the canvas re-crops),
 /// and the brand bar + annotator appear.
 @MainActor
 final class SelectionOverlayController {

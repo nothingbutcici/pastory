@@ -81,7 +81,6 @@ final class Preferences {
         static let cleanupHour = "cleanupHour"
         static let exportDir = "exportDir"
         static let monitoringPaused = "monitoringPaused"
-        static let ocrImages = "ocrImages"
     }
 
     private init() {
@@ -92,7 +91,6 @@ final class Preferences {
             Key.retentionDays: 1,
             Key.cleanupHour: 4,
             Key.monitoringPaused: false,
-            Key.ocrImages: true
         ])
     }
 

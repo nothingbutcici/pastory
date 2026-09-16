@@ -1,6 +1,6 @@
 import AppKit
 
-/// Two-layer toolbar, Feishu-style, dark with a lime active state.
+/// Two-layer toolbar, Feishu-style, on the brown desk with a light-blue active state.
 /// Main bar:  ▢ ○ ╱ ↗ ✎ A ▦ │ 识别文字 │ ↶ │ ✕ · [✓ 复制]
 /// Sub bar:   appears under the active tool (or the selected element's tool) with sizes · colors.
 final class AnnotateToolbar: NSView {

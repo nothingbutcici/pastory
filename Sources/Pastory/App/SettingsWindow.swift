@@ -4,7 +4,7 @@ import Observation
 import ServiceManagement
 import SwiftUI
 
-/// Settings live inside the shelf now; this shim keeps the old call sites working.
+/// Settings live inside the shelf; this opens the shelf on its settings page.
 @MainActor
 final class SettingsWindowController {
     static let shared = SettingsWindowController()

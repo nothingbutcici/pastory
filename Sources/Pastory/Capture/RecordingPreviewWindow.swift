@@ -121,6 +121,11 @@ final class RecordingPreviewWindow: NSObject, NSWindowDelegate {
         info.stringValue = text
         buttons.forEach { $0.isEnabled = false; $0.alphaValue = 0.4 }
     }
+    /// Back to choosing (e.g. the GIF conversion failed); the recording is still there.
+    func setIdle(_ text: String = "") {
+        info.stringValue = text
+        buttons.forEach { $0.isEnabled = true; $0.alphaValue = 1 }
+    }
 
     func close() {
         decided = true

@@ -8,7 +8,8 @@ VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resour
 NOTES="${1:-}"
 [ -n "$NOTES" ] || { echo "usage: ./release.sh <notes-file.md>"; exit 2; }
 ./dist.sh
-git tag -a "v$VERSION" -m "Pastory $VERSION" 2>/dev/null || true
+if git rev-parse "v$VERSION" >/dev/null 2>&1; then echo "tag v$VERSION already exists — bump CFBundleShortVersionString first"; exit 2; fi
+git tag -a "v$VERSION" -m "Pastory $VERSION"
 git push origin "v$VERSION"
 gh release create "v$VERSION" "dist/Pastory-$VERSION.zip" --title "Pastory $VERSION" --notes-file "$NOTES"
 echo "→ https://github.com/nothingbutcici/pastory/releases/tag/v$VERSION"

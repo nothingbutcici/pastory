@@ -29,7 +29,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NotificationCenter.default.addObserver(forName: .languageChanged, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.buildMainMenu() }
         }
-        if !Permissions.hasScreenRecording { _ = Permissions.requestScreenRecording() }
         if !Preferences.shared.didWelcome {
             Preferences.shared.didWelcome = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { ShelfPanelController.shared.show() }
@@ -37,7 +36,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func statusClicked() {
-        if NSApp.currentEvent?.type == .rightMouseUp {
+        // Right click, or control-click as everywhere else on the Mac, opens the menu.
+        let e = NSApp.currentEvent
+        if e?.type == .rightMouseUp || (e?.type == .leftMouseUp && e?.modifierFlags.contains(.control) == true) {
             statusItem.menu = menu
             statusItem.button?.performClick(nil)
             statusItem.menu = nil
