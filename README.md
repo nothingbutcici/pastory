@@ -13,24 +13,26 @@
 <br>
 
 <p align="center">
-  <img src="docs/images/shelf-zh.png" alt="Pastory 剪贴板" width="920">
+  <img src="docs/images/hero-zh.png" alt="Pastory 剪贴板" width="920">
 </p>
 
 <br>
 
-你电脑上什么都有历史记录。只有剪贴板除外，它只记得最后一次。
+<p align="center">你电脑上什么都有历史记录。只有剪贴板除外，它只记得最后一次。</p>
 
-你每天按几十次 ⌘C。其中一大半，是过去已经复制过的东西。
+<p align="center">你每天按几十次 ⌘C。其中一大半，是过去已经复制过的东西。</p>
 
-于是那些高频使用的内容：好用的 prompt、发现的宝藏链接、截过的图、客户地址、发票抬头……都在「下一次复制」的时候瞬间消失。
+<p align="center">于是那些高频使用的内容：好用的 prompt、发现的宝藏链接、截过的图、客户地址、发票抬头……<br>都在「下一次复制」的时候瞬间消失。</p>
 
-Pastory 给剪贴板开了个长期记忆的外挂：复制过的文字、链接、图片、截图、录屏，都在一个面板里集中管理和调用。
+<p align="center">Pastory 给剪贴板开了个长期记忆的外挂：<br>复制过的文字、链接、图片、截图、录屏，都在一个面板里集中管理和调用。</p>
 
-- 常用内容 Pin 起来，就算设了定时清理，也不会被删。
-- 重要内容起个标题，一眼就能认出。
-- 单击立即复制，双击直接贴进外部输入框。
+<p align="center">
+常用内容 Pin 起来，就算设了定时清理，也不会被删。<br>
+重要内容起个标题，一眼就能认出。<br>
+单击立即复制，双击直接贴进外部输入框。
+</p>
 
-所有东西都在你自己的电脑上。没有账号，除每天一次检查更新外不联网，隐私安全 100% 在你手里。
+<p align="center">所有东西都在你自己的电脑上。没有账号，除每天一次检查更新外不联网，隐私安全 100% 在你手里。</p>
 
 <br>
 
@@ -40,6 +42,9 @@ macOS 15 或更新，Intel 和 Apple 芯片都可以。
 
 1. 下载 [最新版 zip](../../releases/latest)，解压，把 `Pastory.app` 拖进「应用程序」。
 2. 打开它。菜单栏右上角出现手写的 **P**，第一次会自动弹出剪贴板面板。（已过 Apple 公证，请放心“食用”）
+
+   <img src="docs/images/menubar-zh.png" alt="菜单栏里的 P" width="313">
+
 3. 第一次截图时，按提示打开「屏幕录制」权限，然后重新打开 Pastory。
 
 快捷键、自动清理时间、截图存储格式等均可在「设置」中根据偏好自定义。
@@ -58,7 +63,9 @@ macOS 15 或更新，Intel 和 Apple 芯片都可以。
 
 所有复制行为（含截图），都收拢在同一个地方，等待回顾、二次使用，甚至是编辑。
 
-高阶用法：如果你来回复制的内容信息密度很高，甚至可以让 Agent 定期读你的 Pastory 数据库，帮你整理成可以 review 的 md 知识库！
+**高阶用法**：如果你来回复制的内容信息密度很高，甚至可以让 Agent 定期读你的 Pastory 数据库，帮你整理成可以 review 的 md 知识库！
+
+<img src="docs/images/clipboard-history.jpg" alt="剪贴板历史" width="600">
 
 ### 截图（额外私心加的小功能）
 
@@ -73,6 +80,8 @@ macOS 15 或更新，Intel 和 Apple 芯片都可以。
 另外，两个产品虽然都有基础的标注能力，只是样式都不太「雅」。我很在意标注时字体、文本框好不好看（时刻需要为自己提供情绪价值）。
 
 所以 Pastory 把这些能力都合在一起了！
+
+<img src="docs/images/capture-annotations.jpg" alt="截图之后，随时标注" width="600">
 
 <br>
 
@@ -90,9 +99,17 @@ macOS 15 或更新，Intel 和 Apple 芯片都可以。
 - **支持二次编辑：** 剪贴板文本、图片均提供二次编辑能力；调整后，新内容会替换原 copy 内容，留在剪贴板中，方便下次使用。
 - **其他软件截图：** 微信、飞书、系统截图，只要进了剪贴板，就有一张卡，一样能搜、能 Pin、能标注。
 
-### 截图 & 录屏
+<p>
+  <img src="docs/images/clipboard-editing.jpg" alt="已复制内容，接着改改" width="49%">
+  <img src="docs/images/clipboard-history.jpg" alt="所有复制历史，都在这里" width="49%">
+</p>
+<p>
+  <img src="docs/images/clipboard-settings.jpg" alt="设置" width="32.5%">
+  <img src="docs/images/clipboard-title.jpg" alt="加个标题" width="32.5%">
+  <img src="docs/images/text-recognition.jpg" alt="图片里的字，识别提取文本" width="32.5%">
+</p>
 
-<p align="center"><img src="docs/images/capture-zh.png" alt="截图与标注" width="920"></p>
+### 截图 & 录屏
 
 根据设置好的快捷键，进行截图、录屏等相关操作。
 
@@ -103,6 +120,11 @@ macOS 15 或更新，Intel 和 Apple 芯片都可以。
 **识别文字：** 底层是 Apple 自带的本地 OCR，识别出来的文字也会跟着图一起存进剪贴板，方便后续使用。
 
 **录屏：** 支持 MP4 / GIF，录制后选择对应格式即可。
+
+<p>
+  <img src="docs/images/capture-annotations.jpg" alt="截图之后，随时标注" width="49%">
+  <img src="docs/images/recording-formats.jpg" alt="屏幕录制，按格式复制" width="49%">
+</p>
 
 <br>
 
