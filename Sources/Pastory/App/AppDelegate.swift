@@ -5,6 +5,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
     private let menu = NSMenu()
 
+    /// Launchpad / Dock icon clicked while already running: a menu-bar app has no window to bring up, so open the shelf.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        ShelfPanelController.shared.show()
+        return false
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         buildMainMenu()
         if SelfTest.handleCommandLine() { return }
