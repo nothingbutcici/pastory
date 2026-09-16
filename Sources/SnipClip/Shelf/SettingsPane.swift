@@ -50,7 +50,7 @@ struct SettingsPane: View {
                             row(String(format: "当前版本 %@".l, Updater.currentVersion)) {
                                 HStack(spacing: 8) {
                                     if let updateNote { Text(updateNote).font(.system(size: 12)).foregroundStyle(Color.inkMuted).lineLimit(1) }
-                                    pill(checkingUpdate ? "检查中…".l : "检查更新".l, disabled: checkingUpdate) {
+                                    pill(checkingUpdate ? "检查中…".l : "手动检查更新".l, disabled: checkingUpdate) {
                                         checkingUpdate = true
                                         Task { @MainActor in
                                             let outcome = await Updater.shared.check(interactive: true, quiet: true)
@@ -120,23 +120,17 @@ struct SettingsPane: View {
                             row("双击直接粘贴到刚才的应用".l) {
                                 HStack(spacing: 8) {
                                     if prefs.pasteOnDoubleClick {
-                                        Text(hasAX ? "已授权".l : "需要辅助功能权限".l)
-                                            .font(.system(size: 11, weight: .semibold))
-                                            .foregroundStyle(hasAX ? Color.ink : Color(nsColor: Theme.warn))
-                                            .padding(.horizontal, 7).padding(.vertical, 2)
-                                            .background(hasAX ? Color.paperBlue : Color.clear, in: Capsule())
-                                            .overlay(Capsule().stroke((hasAX ? Color.clear : Color(nsColor: Theme.warn)).opacity(0.7), lineWidth: 1))
-                                        if !hasAX { pill("系统设置".l) { Permissions.requestAccessibility(); Permissions.openSettings("Privacy_Accessibility") } }
+                                        tag(hasAX ? "辅助功能已授权".l : "需要辅助功能权限".l, on: hasAX)
+                                        if !hasAX { pill("去授权".l) { Permissions.requestAccessibility(); Permissions.openSettings("Privacy_Accessibility") } }
                                     }
                                     PaperToggle(isOn: $prefs.pasteOnDoubleClick)
                                 }
                             }
                         }
                         section("截图与录屏".l) {
-                            row("图片自动识别文字（可按文字搜图）".l) { PaperToggle(isOn: $prefs.ocrImages) }
                             row("本地数据库截图存储方式".l) {
                                 HStack(spacing: 4) {
-                                    ForEach([("heic", "高质量 HEIC（默认，约小 3 倍）"), ("png", "无损 PNG")], id: \.0) { code, label in
+                                    ForEach([("heic", "高质量 HEIC（约小 3 倍）"), ("png", "无损 PNG")], id: \.0) { code, label in
                                         let on = prefs.imageStorage == code
                                         Button { prefs.imageStorage = code } label: {
                                             Text(label.l).font(.system(size: 12.5, weight: on ? .semibold : .medium))
@@ -152,7 +146,7 @@ struct SettingsPane: View {
                             }
                             row("录屏编码".l) {
                                 HStack(spacing: 4) {
-                                    ForEach([(false, "H.264（到处能放）"), (true, "HEVC（再小一半，Windows 可能放不了）")], id: \.0) { hevc, label in
+                                    ForEach([(false, "H.264（所有设备都能播放）"), (true, "HEVC（体积小一半，老设备和部分 Windows 打不开）")], id: \.0) { hevc, label in
                                         let on = prefs.recordHEVC == hevc
                                         Button { prefs.recordHEVC = hevc } label: {
                                             Text(label.l).font(.system(size: 12.5, weight: on ? .semibold : .medium))
@@ -170,17 +164,14 @@ struct SettingsPane: View {
                         section("位置".l) {
                             row("「保存到本地」默认打开的文件夹".l) {
                                 HStack(spacing: 8) {
-                                    Text(prefs.exportDir.isEmpty ? "~/Downloads" : (prefs.exportDir as NSString).abbreviatingWithTildeInPath)
-                                        .font(.system(size: 12)).foregroundStyle(Color.inkMuted).lineLimit(1).truncationMode(.middle).frame(maxWidth: 220, alignment: .trailing)
-                                    if !prefs.exportDir.isEmpty { pill("默认".l) { prefs.exportDir = "" } }
+                                    Text((Preferences.shared.exportDirectory().path as NSString).abbreviatingWithTildeInPath)
+                                        .font(.system(size: 12)).foregroundStyle(Color.inkMuted).lineLimit(1).truncationMode(.middle).frame(maxWidth: 260, alignment: .trailing)
                                     pill("选择…".l) { chooseFolder() }
                                 }
                             }
                             row("剪贴板内容临时存放位置".l) {
                                 HStack(spacing: 8) {
-                                    Text("SQLite").font(.system(size: 11, weight: .semibold)).foregroundStyle(Color.ink)
-                                        .padding(.horizontal, 7).padding(.vertical, 2)
-                                        .overlay(Capsule().stroke(Color.ink.opacity(0.6), lineWidth: 1))
+                                    tag("SQLite", on: false)
                                     Text((ClipStore.shared.root.appendingPathComponent("pastory.sqlite").path as NSString).abbreviatingWithTildeInPath)
                                         .font(.system(size: 12)).foregroundStyle(Color.inkMuted).lineLimit(1).truncationMode(.middle).frame(maxWidth: 340, alignment: .trailing)
                                         .textSelection(.enabled)
@@ -217,16 +208,11 @@ struct SettingsPane: View {
                                 .padding(3)
                                 .overlay(Capsule().stroke(Color.ink.opacity(0.5), lineWidth: 1))
                             }
-                            if let e = prefs.loginError { Text(e).font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.warn)).padding(.horizontal, 16) }
+                            if let e = prefs.loginError { Text(e).font(.system(size: 12)).foregroundStyle(Color.inkMuted).padding(.horizontal, 16) }
                             row("屏幕录制权限（截图、录屏需要）".l) {
                                 HStack(spacing: 8) {
-                                    Text(hasSR ? "已授权".l : "未授权".l)
-                                        .font(.system(size: 11, weight: .semibold))
-                                        .foregroundStyle(hasSR ? Color.ink : Color(nsColor: Theme.warn))
-                                        .padding(.horizontal, 7).padding(.vertical, 2)
-                                        .background(hasSR ? Color.paperBlue : Color.clear, in: Capsule())
-                                        .overlay(Capsule().stroke((hasSR ? Color.clear : Color(nsColor: Theme.warn)).opacity(0.7), lineWidth: 1))
-                                    pill("系统设置".l) { Permissions.openSettings("Privacy_ScreenCapture") }
+                                    tag(hasSR ? "已授权".l : "未授权".l, on: hasSR)
+                                    if !hasSR { pill("去授权".l) { Permissions.openSettings("Privacy_ScreenCapture") } }
                                 }
                             }
                         }
@@ -259,6 +245,14 @@ struct SettingsPane: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 9)
+    }
+
+    /// Status tag: small serif, ink; filled blue when the state is "on", plain outline otherwise. Never a warning colour.
+    private func tag(_ text: String, on: Bool) -> some View {
+        Text(text).font(.serif(12)).foregroundStyle(Color.ink)
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .background(on ? Color.paperBlue : Color.clear, in: Capsule())
+            .overlay(Capsule().stroke(Color.ink.opacity(on ? 0.25 : 0.5), lineWidth: 1))
     }
 
     private func pill(_ title: String, disabled: Bool = false, _ action: @escaping () -> Void) -> some View {

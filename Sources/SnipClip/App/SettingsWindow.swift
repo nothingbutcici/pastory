@@ -22,7 +22,6 @@ final class PrefsMirror {
     var retentionDays: Int { didSet { Preferences.shared.retentionDays = retentionDays; Task { @MainActor in Retention.sweep(); Retention.reschedule() } } }
     var cleanupHour: Int { didSet { Preferences.shared.cleanupHour = cleanupHour; Task { @MainActor in Retention.reschedule() } } }
     var exportDir: String { didSet { Preferences.shared.customExportDir = exportDir.isEmpty ? nil : exportDir } }
-    var ocrImages: Bool { didSet { Preferences.shared.ocrImages = ocrImages } }
     var paused: Bool { didSet { Preferences.shared.monitoringPaused = paused } }
     var imageStorage: String { get { access(keyPath: \.imageStorage); return Preferences.shared.imageStorage } set { withMutation(keyPath: \.imageStorage) { Preferences.shared.imageStorage = newValue } } }
     var pasteOnDoubleClick: Bool { get { access(keyPath: \.pasteOnDoubleClick); return Preferences.shared.pasteOnDoubleClick } set { withMutation(keyPath: \.pasteOnDoubleClick) { Preferences.shared.pasteOnDoubleClick = newValue } } }
@@ -43,7 +42,7 @@ final class PrefsMirror {
     init() {
         let p = Preferences.shared
         retentionDays = p.retentionDays; cleanupHour = p.cleanupHour; exportDir = p.customExportDir ?? ""
-        ocrImages = p.ocrImages; paused = p.monitoringPaused
+        paused = p.monitoringPaused
         launchAtLogin = SMAppService.mainApp.status == .enabled
     }
 }
@@ -100,7 +99,7 @@ struct ShortcutRecorder: View {
             }
             .padding(.leading, 12).padding(.trailing, shortcut.isSet && !capturing ? 8 : 12).padding(.vertical, 7)
             .background(capturing ? Color.paperBlue : Color.clear, in: Capsule())
-            .overlay(Capsule().stroke(taken ? Color(nsColor: Theme.warn) : Color.ink.opacity(0.6), lineWidth: 1))
+            .overlay(Capsule().stroke(Color.ink.opacity(0.6), lineWidth: 1))
         }
         .onAppear { shortcut = Preferences.shared.shortcut(key); refreshTaken() }
         .onDisappear { stop(nil) }

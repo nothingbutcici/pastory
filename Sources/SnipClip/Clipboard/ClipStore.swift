@@ -227,7 +227,7 @@ final class ClipStore {
             try? td.write(to: thumbURL(item), options: .atomic)
         }
         prepend(item)
-        if ocrText == nil, Preferences.shared.ocrImages {
+        if ocrText == nil {
             let id = item.id, expected = hash
             Task.detached(priority: .utility) {
                 let text = try? OCR.recognize(cg)
@@ -312,7 +312,7 @@ final class ClipStore {
         items[i].byteCount = stored.count
         items[i].contentHash = stableHash(png)
         persist(items[i])
-        if Preferences.shared.ocrImages {
+        do {
             let expected = stableHash(png)
             Task.detached(priority: .utility) {
                 let text = try? OCR.recognize(cg)

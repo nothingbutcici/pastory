@@ -114,7 +114,6 @@ final class Preferences {
         set { d.set(min(23, max(0, newValue)), forKey: Key.cleanupHour) }
     }
     var monitoringPaused: Bool { get { d.bool(forKey: Key.monitoringPaused) } set { d.set(newValue, forKey: Key.monitoringPaused) } }
-    var ocrImages: Bool { get { d.bool(forKey: Key.ocrImages) } set { d.set(newValue, forKey: Key.ocrImages) } }
     /// How new screenshots are stored: "heic" (quality 0.9, about a third of the size, default) or "png" (lossless).
     var imageStorage: String { get { d.string(forKey: "imageStorage") ?? "heic" } set { d.set(newValue, forKey: "imageStorage") } }
     var storesHEIC: Bool { imageStorage == "heic" }
