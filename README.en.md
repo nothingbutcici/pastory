@@ -13,7 +13,7 @@
 <br>
 
 <p align="center">
-  <img src="docs/images/hero-zh.png" alt="The Pastory clipboard" width="920">
+  <img src="docs/images/hero-en.png" alt="The Pastory clipboard" width="920">
 </p>
 
 <br>
@@ -65,7 +65,7 @@ Every copy, screenshots included, is collected in one place, ready to be revisit
 
 **Power move:** if the things you copy are information-dense, have an agent read your Pastory database periodically and turn it into a reviewable Markdown knowledge base.
 
-<img src="docs/images/clipboard-history.jpg" alt="Clipboard history" width="600">
+<img src="docs/images/clipboard-history-en.jpg" alt="Clipboard history" width="600">
 
 ### Screenshots (a small indulgence)
 
@@ -81,7 +81,7 @@ Both can annotate, but neither looks nice doing it. I care about how the font an
 
 So Pastory brings all of that together.
 
-<img src="docs/images/capture-annotations.jpg" alt="Annotate right after capturing" width="600">
+<img src="docs/images/capture-annotations-en.jpg" alt="Annotate right after capturing" width="600">
 
 <br>
 
@@ -100,13 +100,13 @@ Open it with a shortcut of your choice or from the menu bar icon. Everything you
 - **Screenshots from other apps:** WeChat, Feishu, the built-in macOS screenshot — anything that reaches the clipboard gets a card, and can be searched, pinned, and annotated like everything else.
 
 <p>
-  <img src="docs/images/clipboard-history.jpg" alt="All your copy history, in one place" width="49%">
-  <img src="docs/images/clipboard-editing.jpg" alt="Edit what you copied" width="49%">
+  <img src="docs/images/clipboard-history-en.jpg" alt="All your copy history, in one place" width="49%">
+  <img src="docs/images/clipboard-editing-en.jpg" alt="Edit what you copied" width="49%">
 </p>
 <p>
-  <img src="docs/images/clipboard-settings.jpg" alt="Settings" width="32.5%">
-  <img src="docs/images/clipboard-title.jpg" alt="Give it a title" width="32.5%">
-  <img src="docs/images/text-recognition.jpg" alt="Text recognition" width="32.5%">
+  <img src="docs/images/clipboard-settings-en.jpg" alt="Settings" width="32.5%">
+  <img src="docs/images/clipboard-title-en.jpg" alt="Give it a title" width="32.5%">
+  <img src="docs/images/text-recognition-en.jpg" alt="Text recognition" width="32.5%">
 </p>
 
 ### Screenshot & recording
@@ -122,8 +122,8 @@ Colors are captured in the display's own color space, so nothing shifts.
 **Recording:** MP4 / GIF. Pick the format after recording.
 
 <p>
-  <img src="docs/images/capture-annotations.jpg" alt="Annotate right after capturing" width="49%">
-  <img src="docs/images/recording-formats.jpg" alt="Recording formats" width="49%">
+  <img src="docs/images/capture-annotations-en.jpg" alt="Annotate right after capturing" width="49%">
+  <img src="docs/images/recording-formats-en.jpg" alt="Recording formats" width="49%">
 </p>
 
 <br>
