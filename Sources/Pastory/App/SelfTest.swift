@@ -17,7 +17,7 @@ enum SelfTest {
         // Anything that writes to a store must run inside PASTORY_STORE. Never against the user's data.
         let mutating: Set<String> = ["clipboard", "retention", "shelf", "settings", "editors", "import", "ingest", "tombstone", "heic"]
         if mutating.contains(cmd) {
-            let env = ProcessInfo.processInfo.environment["PASTORY_STORE"] ?? ""
+            let env = Sandbox.store ?? ""
             // Nothing under Application Support counts as a sandbox, whatever the folder is called.
             let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].resolvingSymlinksInPath().path
             let target = URL(fileURLWithPath: env).resolvingSymlinksInPath().path

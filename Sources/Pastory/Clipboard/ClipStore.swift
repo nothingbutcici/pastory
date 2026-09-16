@@ -29,7 +29,7 @@ final class ClipStore {
     /// The real location — unless PASTORY_STORE is set, in which case that sandbox is "default" too,
     /// so self-tests (relocate back to default included) can never touch the user's data.
     static var defaultRoot: URL {
-        if let env = ProcessInfo.processInfo.environment["PASTORY_STORE"], !env.isEmpty {
+        if let env = Sandbox.store {
             return URL(fileURLWithPath: env, isDirectory: true)
         }
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]

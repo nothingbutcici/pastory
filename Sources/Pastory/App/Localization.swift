@@ -20,7 +20,7 @@ enum L {
         return v
     }
     nonisolated(unsafe) private static var cached: Bool?
-    private static let envOverride = ProcessInfo.processInfo.environment["PASTORY_LANG"]
+    private static let envOverride = Sandbox.language
     static func languageChanged() { cached = nil; NotificationCenter.default.post(name: .languageChanged, object: nil) }
 
     /// Source strings → English. A plain array of pairs: a duplicate here must never be a launch crash

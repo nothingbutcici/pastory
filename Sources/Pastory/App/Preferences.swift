@@ -65,8 +65,7 @@ final class Preferences {
     static let shared = Preferences()
     /// Self-tests (PASTORY_STORE set) get a throwaway suite so they never touch the user's real preferences.
     private let d: UserDefaults = {
-        if let env = ProcessInfo.processInfo.environment["PASTORY_STORE"], !env.isEmpty,
-           let suite = UserDefaults(suiteName: "com.cici.snipclip.selftest") {
+        if Sandbox.store != nil, let suite = UserDefaults(suiteName: "com.cici.snipclip.selftest") {
             suite.removePersistentDomain(forName: "com.cici.snipclip.selftest")
             return suite
         }
