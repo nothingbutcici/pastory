@@ -7,6 +7,8 @@ struct SettingsPane: View {
     @State private var cleared = false
     @State private var importNote: String?
     @State private var storeSize: String?
+    @State private var updateNote: String?
+    @State private var checkingUpdate = false
     @State private var hasAX = Permissions.hasAccessibility
     @State private var hasSR = Permissions.hasScreenRecording
 
@@ -44,6 +46,27 @@ struct SettingsPane: View {
             ScrollView(.vertical, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 16) {
                     VStack(spacing: 16) {
+                        section("版本更新".l) {
+                            row(String(format: "当前版本 %@".l, Updater.currentVersion)) {
+                                HStack(spacing: 8) {
+                                    if let updateNote { Text(updateNote).font(.system(size: 12)).foregroundStyle(Color.inkMuted).lineLimit(1) }
+                                    pill(checkingUpdate ? "检查中…".l : "检查更新".l, disabled: checkingUpdate) {
+                                        checkingUpdate = true
+                                        Task { @MainActor in
+                                            let outcome = await Updater.shared.check(interactive: true, quiet: true)
+                                            switch outcome {
+                                            case .upToDate: updateNote = "已是最新版本".l
+                                            case .available(let v): updateNote = String(format: "有新版本 %@".l, v)
+                                            case .failed(let msg): updateNote = String(format: "检查失败：%@".l, msg)
+                                            case .skipped: break
+                                            }
+                                            checkingUpdate = false
+                                        }
+                                    }
+                                }
+                            }
+                            row("每天自动检查一次（app 唯一的联网请求，不带任何标识）".l) { PaperToggle(isOn: $prefs.checkForUpdates) }
+                        }
                         section("快捷键".l) {
                             row("截图".l) { ShortcutRecorder(key: Preferences.Key.hotkeyCapture) }
                             row("显示 / 隐藏剪贴板".l) { ShortcutRecorder(key: Preferences.Key.hotkeyShelf) }
@@ -172,12 +195,6 @@ struct SettingsPane: View {
                         }
                         section("系统".l) {
                             row("登录时启动".l) { PaperToggle(isOn: $prefs.launchAtLogin) }
-                            row(String(format: "版本 %@ · 每天自动检查更新".l, Updater.currentVersion)) {
-                                HStack(spacing: 8) {
-                                    pill("检查更新".l) { Task { @MainActor in await Updater.shared.check(interactive: true) } }
-                                    PaperToggle(isOn: $prefs.checkForUpdates)
-                                }
-                            }
                             if let e = prefs.loginError { Text(e).font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.warn)).padding(.horizontal, 16) }
                             row("屏幕录制权限（截图、录屏需要）".l) {
                                 HStack(spacing: 8) {

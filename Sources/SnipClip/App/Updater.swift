@@ -19,6 +19,8 @@ final class Updater {
     private var timer: Timer?
     private var busy = false
 
+    enum Outcome { case upToDate, available(String), failed(String), skipped }
+
     /// Current version, from the bundle.
     static var currentVersion: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0" }
 
@@ -35,12 +37,14 @@ final class Updater {
         }
     }
 
-    /// `interactive`: the user asked (menu / settings) — always report, including "already latest" and errors.
-    func check(interactive: Bool) async {
-        guard !busy else { return }
+    /// `interactive`: the user asked (menu / settings). `quiet`: the caller shows the outcome itself (settings pane),
+    /// so no "up to date" / "failed" alert — the offer dialog for a new version always appears.
+    @discardableResult
+    func check(interactive: Bool, quiet: Bool = false) async -> Outcome {
+        guard !busy else { return .skipped }
         if !interactive {
-            guard Preferences.shared.checkForUpdates else { return }
-            if let last = Preferences.shared.lastUpdateCheck, Date().timeIntervalSince(last) < 20 * 3600 { return }
+            guard Preferences.shared.checkForUpdates else { return .skipped }
+            if let last = Preferences.shared.lastUpdateCheck, Date().timeIntervalSince(last) < 20 * 3600 { return .skipped }
         }
         busy = true
         defer { busy = false }
@@ -48,13 +52,15 @@ final class Updater {
         do {
             let release = try await Self.fetchLatest()
             guard Self.isNewer(release.version, than: Self.currentVersion) else {
-                if interactive { info("已经是最新版本".l, String(format: "Pastory %@".l, Self.currentVersion)) }
-                return
+                if interactive, !quiet { info("已经是最新版本".l, String(format: "Pastory %@".l, Self.currentVersion)) }
+                return .upToDate
             }
-            if !interactive, Preferences.shared.skippedVersion == release.version { return }
+            if !interactive, Preferences.shared.skippedVersion == release.version { return .skipped }
             offer(release)
+            return .available(release.version)
         } catch {
-            if interactive { info("检查更新失败".l, error.localizedDescription) }
+            if interactive, !quiet { info("检查更新失败".l, error.localizedDescription) }
+            return .failed(error.localizedDescription)
         }
     }
 
