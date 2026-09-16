@@ -66,7 +66,7 @@ final class RecordingPreviewWindow: NSObject, NSWindowDelegate {
         info.textColor = Theme.onBrownMuted
         info.lineBreakMode = .byTruncatingTail
         let discard = Theme.paperButton("丢弃".l, onGround: true, target: self, action: #selector(discardTapped))
-        let gif = Theme.paperButton(duration > 30 ? "复制为 GIF（会很大）".l : "复制为 GIF".l, onGround: true, target: self, action: #selector(gifTapped))
+        let gif = Theme.paperButton(duration > 20 ? "复制为 GIF（会糊，建议 MP4）".l : "复制为 GIF".l, onGround: true, target: self, action: #selector(gifTapped))
         let mp4 = Theme.paperButton("复制为 MP4".l, primary: true, target: self, action: #selector(mp4Tapped))
         mp4.keyEquivalent = "\r"
         buttons = [discard, gif, mp4]

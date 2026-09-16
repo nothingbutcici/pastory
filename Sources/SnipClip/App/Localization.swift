@@ -53,7 +53,7 @@ enum L {
         "已被 Pastory 的「%@」占用，换一个": "Already used by Pastory's “%@”, pick another",
         "已设置。注意：所有应用里的 %@ 都会变成这个功能": "Set. Note: %@ in every app now triggers this.",
         // Recording
-        "录屏预览": "Recording Preview", "丢弃": "Discard", "复制为 GIF（会很大）": "Copy as GIF (large)", "复制为 GIF": "Copy as GIF",
+        "录屏预览": "Recording Preview", "丢弃": "Discard", "复制为 GIF": "Copy as GIF",
         "复制为 MP4": "Copy as MP4", "保存中…": "Saving…", "录屏失败": "Recording failed", "■ 停止": "■ Stop",
         "正在转 GIF…": "Converting to GIF…", "正在转 GIF… %d%%": "Converting to GIF… %d%%",
         // Items
@@ -87,6 +87,9 @@ enum L {
         "已经是最新版本": "You're up to date", "Pastory %@": "Pastory %@", "检查更新失败": "Update check failed",
         "Pastory %@ 可以更新了（当前 %@）": "Pastory %@ is available (you have %@)", "下载并安装": "Download and Install", "打开下载页": "Open Download Page",
         "稍后": "Later", "跳过这个版本": "Skip This Version", "自动更新没有成功": "The update could not be installed", "可以手动从下载页更新。": "You can update by hand from the download page.",
+        "录屏清晰度": "Recording resolution", "原生（Retina，约 40 MB/分钟）": "Native (Retina, ~40 MB/min)", "标准（约 12 MB/分钟）": "Standard (~12 MB/min)",
+        "录屏编码": "Recording codec", "H.264（到处能放）": "H.264 (plays everywhere)", "HEVC（再小一半，Windows 可能放不了）": "HEVC (half the size; Windows may not play it)",
+        "复制为 GIF（会糊，建议 MP4）": "Copy as GIF (blurry at this length; MP4 is better)",
         "语言": "Language", "跟随系统": "System", "中文": "中文",
         "从其他剪贴板工具导入（SQLite）": "Import from another clipboard app (SQLite)", "选择数据库…": "Choose Database…", "导入": "Import",
         "移除所有导入进来的条目（来源为「导入」）": "Remove everything that was imported", "移除": "Remove",

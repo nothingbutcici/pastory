@@ -81,6 +81,39 @@ enum SelfTest {
                 } catch { print("import failed: \(error.localizedDescription)"); ok = false }
             case "retention": ok = retention()
             case "gif": ok = await gif()
+            case "writer":
+                // Feed 60 synthetic Retina-sized frames through the recorder's writer (H.264 and HEVC): settings valid,
+                // file plays back with the right duration, bitrate lands where the formula says.
+                var okAll = true
+                for hevc in [false, true] {
+                    let url = FileManager.default.temporaryDirectory.appendingPathComponent("pastory-writer-\(hevc ? "hevc" : "h264").mp4")
+                    try? FileManager.default.removeItem(at: url)
+                    do {
+                        let (w, inp, ad) = try ScreenRecorder.makeWriter(url: url, width: 3200, height: 1640, hevc: hevc)
+                        w.startSession(atSourceTime: .zero)
+                        for i in 0..<60 {
+                            var pb: CVPixelBuffer?
+                            CVPixelBufferPoolCreatePixelBuffer(nil, ad.pixelBufferPool!, &pb)
+                            guard let pb else { throw NSError(domain: "t", code: 1) }
+                            CVPixelBufferLockBaseAddress(pb, [])
+                            if let base = CVPixelBufferGetBaseAddress(pb) {
+                                let n = CVPixelBufferGetBytesPerRow(pb) * CVPixelBufferGetHeight(pb)
+                                memset(base, Int32(40 + i * 3), n)          // slowly changing flat frame, like a UI
+                            }
+                            CVPixelBufferUnlockBaseAddress(pb, [])
+                            while !inp.isReadyForMoreMediaData { try? await Task.sleep(nanoseconds: 5_000_000) }
+                            _ = ad.append(pb, withPresentationTime: CMTime(value: CMTimeValue(i), timescale: ScreenRecorder.fps))
+                        }
+                        inp.markAsFinished()
+                        await w.finishWriting()
+                        let dur = await GIFEncoder.duration(movie: url)
+                        let bytes = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? 0
+                        let good = w.status == .completed && abs(dur - 2.0) < 0.2 && bytes > 0
+                        print("\(good ? "ok  " : "FAIL") \(hevc ? "hevc" : "h264"): status=\(w.status.rawValue) duration=\(String(format: "%.2f", dur))s size=\(bytes / 1024)K target=\(ScreenRecorder.bitrate(width: 3200, height: 1640, hevc: hevc) / 1000)kbps")
+                        okAll = okAll && good
+                    } catch { print("FAIL \(hevc ? "hevc" : "h264"): \(error)"); okAll = false }
+                }
+                ok = okAll
             case "pbfiles":
                 PasteboardWriter.writeFiles([URL(fileURLWithPath: rest.first ?? SelfTest.sampleFile.path)], itemID: "test")
                 print((NSPasteboard.general.types ?? []).map(\.rawValue).joined(separator: "\n"))

@@ -27,6 +27,8 @@ final class PrefsMirror {
     var imageStorage: String { get { access(keyPath: \.imageStorage); return Preferences.shared.imageStorage } set { withMutation(keyPath: \.imageStorage) { Preferences.shared.imageStorage = newValue } } }
     var pasteOnDoubleClick: Bool { get { access(keyPath: \.pasteOnDoubleClick); return Preferences.shared.pasteOnDoubleClick } set { withMutation(keyPath: \.pasteOnDoubleClick) { Preferences.shared.pasteOnDoubleClick = newValue } } }
     var checkForUpdates: Bool { get { access(keyPath: \.checkForUpdates); return Preferences.shared.checkForUpdates } set { withMutation(keyPath: \.checkForUpdates) { Preferences.shared.checkForUpdates = newValue } } }
+    var recordNativeScale: Bool { get { access(keyPath: \.recordNativeScale); return Preferences.shared.recordNativeScale } set { withMutation(keyPath: \.recordNativeScale) { Preferences.shared.recordNativeScale = newValue } } }
+    var recordHEVC: Bool { get { access(keyPath: \.recordHEVC); return Preferences.shared.recordHEVC } set { withMutation(keyPath: \.recordHEVC) { Preferences.shared.recordHEVC = newValue } } }
     var launchAtLogin: Bool {
         didSet {
             do {

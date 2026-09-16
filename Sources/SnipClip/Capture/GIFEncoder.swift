@@ -3,10 +3,14 @@ import CoreImage
 import ImageIO
 import UniformTypeIdentifiers
 
-/// MP4 → GIF with a size budget: start from the recording's pixels (long edge ≤ 1280, 10 fps) and
-/// scale down / drop frames until the estimate fits ~8 MB. Short clips stay sharp, long ones stay sendable.
+/// MP4 → GIF with a size budget that grows with length: start from the recording's pixels (long edge ≤ 1280, 10 fps)
+/// and scale down / drop frames until the estimate fits. Short clips stay sharp, long ones stay sendable.
 enum GIFEncoder {
-    static let budgetBytes: Double = 8 * 1024 * 1024
+    /// ≤10 s: 6 MB · ≤30 s: 10 MB · ≤60 s: 15 MB · longer: 20 MB (chat apps start refusing GIFs around there anyway).
+    static func budget(for duration: Double) -> Double {
+        let mb: Double = duration <= 10 ? 6 : duration <= 30 ? 10 : duration <= 60 ? 15 : 20
+        return mb * 1024 * 1024
+    }
     static let bytesPerPixelFrame: Double = 0.15      // optimistic; a second pass corrects if the file overshoots
     static let maxEdge: CGFloat = 1280
     static let minEdge: CGFloat = 640
@@ -14,6 +18,7 @@ enum GIFEncoder {
     struct Plan { var size: CGSize; var fps: Double }
 
     static func plan(natural: CGSize, duration: Double, shrink: Double = 1) -> Plan {
+        let budgetBytes = budget(for: duration)
         var k = min(1, maxEdge / max(natural.width, natural.height)) * shrink
         var fps = 10.0
         func estimate() -> Double { duration * fps * Double(natural.width * k) * Double(natural.height * k) * bytesPerPixelFrame }
@@ -31,6 +36,7 @@ enum GIFEncoder {
     static func encode(movie: URL, to out: URL, progress: ((Double) -> Void)? = nil) async throws {
         try await encodePass(movie: movie, to: out, shrink: 1, progress: progress)
         let bytes = Double((try? FileManager.default.attributesOfItem(atPath: out.path)[.size] as? Int) ?? 0)
+        let budgetBytes = budget(for: await duration(movie: movie))
         if bytes > budgetBytes * 1.25 {
             let shrink = max(0.4, sqrt(budgetBytes / bytes))
             try await encodePass(movie: movie, to: out, shrink: shrink, progress: progress)
