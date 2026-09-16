@@ -58,6 +58,9 @@ enum SelfTest {
                 if let t = ClipStore.shared.items.first(where: { $0.kind == .text }), let v = TextEditorWindow.debugView(t) {
                     okAll = snapshot(v, to: URL(fileURLWithPath: out).deletingPathExtension().appendingPathExtension("text.png").path) && okAll
                 }
+                if let t = ClipStore.shared.items.first(where: { $0.kind == .text && $0.title == nil }), let v = TextEditorWindow.debugView(t) {
+                    okAll = snapshot(v, to: URL(fileURLWithPath: out).deletingPathExtension().appendingPathExtension("text-untitled.png").path) && okAll
+                }
                 if let im = ClipStore.shared.items.first(where: { $0.kind == .image }), let v = ImageEditorWindow.debugView(im) {
                     okAll = snapshot(v, to: URL(fileURLWithPath: out).deletingPathExtension().appendingPathExtension("image.png").path) && okAll
                 }

@@ -66,7 +66,7 @@ final class TextEditorWindow: NSObject, NSWindowDelegate {
 
         titleField.stringValue = item.title ?? ""
         titleField.placeholderAttributedString = NSAttributedString(string: "+ 加个标题".l, attributes: [
-            .foregroundColor: Theme.inkMuted.withAlphaComponent(0.7), .font: Theme.script(size: 20)])
+            .foregroundColor: Theme.inkMuted.withAlphaComponent(0.7), .font: Theme.script(size: 22)])      // same font as the field, so caret and placeholder line up
         titleField.font = Theme.script(size: 22)
         titleField.textColor = Theme.ink
         titleField.isBordered = false
@@ -92,9 +92,9 @@ final class TextEditorWindow: NSObject, NSWindowDelegate {
         NSLayoutConstraint.activate([
             titleField.leadingAnchor.constraint(equalTo: titleWrap.leadingAnchor, constant: 12),
             titleField.trailingAnchor.constraint(equalTo: titleWrap.trailingAnchor, constant: -12),
-            titleField.centerYAnchor.constraint(equalTo: titleWrap.centerYAnchor, constant: 2),
-            titleField.heightAnchor.constraint(equalToConstant: 32),
-            titleWrap.heightAnchor.constraint(equalToConstant: 48),
+            titleField.centerYAnchor.constraint(equalTo: titleWrap.centerYAnchor),
+            titleField.heightAnchor.constraint(equalToConstant: (Theme.script(size: 22).ascender - Theme.script(size: 22).descender + 4).rounded(.up)),
+            titleWrap.heightAnchor.constraint(equalToConstant: 52),
         ])
         for v in [titleWrap, scroll, count, buttons] { v.translatesAutoresizingMaskIntoConstraints = false; content.addSubview(v) }
         NSLayoutConstraint.activate([
