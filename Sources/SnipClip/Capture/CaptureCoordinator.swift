@@ -16,6 +16,44 @@ final class CaptureCoordinator: AnnotateDelegate {
 
     private init() {}
 
+    /// A picture taken before any overlay existed (timed capture); `picked` uses it instead of capturing again.
+    private var preCaptured: CGImage?
+
+    /// Menus and drop-downs close the moment any picker window appears — every tool has this problem, which is why
+    /// they all offer a timer. After `seconds`, photograph the whole display under the pointer with nothing of ours
+    /// on screen, then open the annotator on it; the frame handles crop it down.
+    func startTimed(seconds: Double = 5) {
+        guard !isBusy, recording == nil, Permissions.ensureScreenRecording() else { return }
+        isBusy = true
+        generation += 1
+        let gen = generation
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            guard gen == generation else { return }
+            do {
+                let snap = try await ShareableSnapshot.fetch()
+                guard gen == generation else { return }
+                let mouse = NSEvent.mouseLocation
+                guard let screen = NSScreen.screens.first(where: { $0.frame.contains(mouse) }) ?? NSScreen.main,
+                      let display = snap.display(for: screen) else { finish(); return }
+                let image = try await Screenshotter.captureDisplay(display, excluding: [], backingScale: screen.backingScaleFactor, colorSpaceName: screen.colorSpace?.cgColorSpace?.name)
+                guard gen == generation else { return }
+                NSSound(named: "Tink")?.play()
+                preCaptured = image
+                snapshot = snap
+                ocrToken = UUID()
+                ShelfPanelController.shared.holdOpen = true
+                isBusy = false          // present() below flips it back through the normal path
+                SelectionOverlayController.shared.present(snapshot: snap, mode: .region) { [weak self] target in self?.picked(target) }
+                isBusy = true
+                SelectionOverlayController.shared.pickWholeScreen()
+            } catch {
+                NSSound.beep()
+                finish()
+            }
+        }
+    }
+
     func start(mode: PickMode = .region) {
         if let recording, recording.isRecording { recording.stop(); return }   // hotkey again = stop recording
         if recording != nil { NSSound.beep(); return }      // preview / encoding is up: decide there first, nothing gets thrown away
@@ -53,7 +91,9 @@ final class CaptureCoordinator: AnnotateDelegate {
         Task { @MainActor in
             do {
                 let colorSpaceName = screen?.colorSpace?.cgColorSpace?.name
-                let image = try await Screenshotter.captureDisplay(display, excluding: Set(overlay.ownWindowIDs), backingScale: screen?.backingScaleFactor, colorSpaceName: colorSpaceName)
+                let image: CGImage
+                if let ready = preCaptured { image = ready; preCaptured = nil }
+                else { image = try await Screenshotter.captureDisplay(display, excluding: Set(overlay.ownWindowIDs), backingScale: screen?.backingScaleFactor, colorSpaceName: colorSpaceName) }
                 guard gen == generation else { return }      // a newer capture owns the overlay now
                 fullImage = image
                 fullScale = CGFloat(image.width) / (screen?.frame.width ?? CGFloat(image.width))
@@ -121,6 +161,7 @@ final class CaptureCoordinator: AnnotateDelegate {
     private func finish(keepOCRPanel: Bool = false) {
         if let recording { recording.cancel(); return }   // teardown calls back into finish()
         fullImage = nil
+        preCaptured = nil
         ShelfPanelController.shared.holdOpen = false
         if !keepOCRPanel { OCRPanelController.shared.close() }
         SelectionOverlayController.shared.release()

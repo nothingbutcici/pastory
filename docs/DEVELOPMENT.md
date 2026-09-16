@@ -196,6 +196,9 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
 - **截图中再按截图键 = 重新框选**，不是退出；打开着的「识别文字」面板会留在原地（这样才能截它），
   完成时只带上属于这次截图的识别文本（OCR 面板带 token）。⎋ 仍是取消。
 - **卡片标题**：输入框无论怎么离开（⏎、✓、点别处、切到别的卡、⎋）都算保存，删空即去掉标题；草稿没变就不写盘。
+- **延时截屏**（2026-09-16，菜单栏 › 5 秒后截整屏）：打开着的菜单 / 下拉是模态跟踪状态，任何取屏工具的选择层一出现它就会收起
+  （macOS 自带的 ⇧⌘5、CleanShot、Xnip 都为此提供定时截屏）。`CaptureCoordinator.startTimed` 等 5 秒，在没有任何自家窗口的情况下
+  直接拍下鼠标所在的整块显示器（`preCaptured`），再打开标注器让用户用手柄裁小。
 - **取屏浮层不激活自己、框选期间也不做 key window**（2026-09-16）：遮罩是 `.nonactivatingPanel`，`canBecomeMain = false`，
   层级 `CGShieldingWindowLevel()`（别的录屏工具的悬浮条在 screenSaver 之上，之前会盖住我们的选区），
   而且在拍下图片之前不 `makeKey`（抢走 key 会让前台应用的下拉菜单 / popover 立刻收起，之前 Codex 的设置弹窗、会议软件的麦克风下拉就是这样丢的）。
