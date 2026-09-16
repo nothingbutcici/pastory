@@ -42,7 +42,10 @@ for f in AppIcon.icns Logo.png Pushpin.png MenuIcon.png MenuIcon@2x.png; do
     [ -f "Resources/$f" ] && cp "Resources/$f" "$APP/Contents/Resources/$f"
 done
 
-if ! codesign --force --sign "$SIGN_ID" --entitlements Resources/SnipClip.entitlements "$APP" 2>/dev/null; then
-    codesign --force --sign "$SIGN_ID" "$APP"
+# A Developer ID identity gets the hardened runtime + secure timestamp that notarization requires.
+SIGN_FLAGS=()
+case "$SIGN_ID" in "Developer ID Application"*) SIGN_FLAGS=(--options runtime --timestamp);; esac
+if ! codesign --force --sign "$SIGN_ID" ${SIGN_FLAGS[@]+"${SIGN_FLAGS[@]}"} --entitlements Resources/SnipClip.entitlements "$APP" 2>/dev/null; then
+    codesign --force --sign "$SIGN_ID" ${SIGN_FLAGS[@]+"${SIGN_FLAGS[@]}"} "$APP"
 fi
 echo "→ $APP (signed: $SIGN_ID)"
