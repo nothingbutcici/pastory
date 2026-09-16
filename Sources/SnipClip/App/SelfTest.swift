@@ -85,11 +85,22 @@ enum SelfTest {
                 // Feed 60 synthetic Retina-sized frames through the recorder's writer (H.264 and HEVC): settings valid,
                 // file plays back with the right duration, bitrate lands where the formula says.
                 var okAll = true
-                for hevc in [false, true] {
-                    let url = FileManager.default.temporaryDirectory.appendingPathComponent("pastory-writer-\(hevc ? "hevc" : "h264").mp4")
+                // UI-like content: a page of "text" (fine random pattern) that scrolls 12 px per frame, on a flat ground.
+                let W = 3200, H = 1640
+                var page = [UInt8](repeating: 0, count: W * (H + 800) * 4)
+                var g = Seeded(7)
+                for row in 0..<(H + 800) where row % 28 < 16 {                       // text lines with leading
+                    for x in stride(from: 120, to: W - 120, by: 1) where (x / 9) % 3 != 2 {   // glyph cells with gaps
+                        let v: UInt8 = (g.next() % 5 == 0) ? 30 : 235                  // dark strokes on light paper
+                        let o = (row * W + x) * 4
+                        page[o] = v; page[o + 1] = v; page[o + 2] = v; page[o + 3] = 255
+                    }
+                }
+                for (hevc, cq, still) in [(false, true, false), (true, true, false), (false, false, false), (false, true, true)] {
+                    let url = FileManager.default.temporaryDirectory.appendingPathComponent("pastory-writer-\(hevc ? "hevc" : "h264")-\(cq ? "cq" : "abr").mp4")
                     try? FileManager.default.removeItem(at: url)
                     do {
-                        let (w, inp, ad) = try ScreenRecorder.makeWriter(url: url, width: 3200, height: 1640, hevc: hevc)
+                        let (w, inp, ad) = try ScreenRecorder.makeWriter(url: url, width: W, height: H, hevc: hevc, constantQuality: cq)
                         w.startSession(atSourceTime: .zero)
                         for i in 0..<60 {
                             var pb: CVPixelBuffer?
@@ -97,8 +108,13 @@ enum SelfTest {
                             guard let pb else { throw NSError(domain: "t", code: 1) }
                             CVPixelBufferLockBaseAddress(pb, [])
                             if let base = CVPixelBufferGetBaseAddress(pb) {
-                                let n = CVPixelBufferGetBytesPerRow(pb) * CVPixelBufferGetHeight(pb)
-                                memset(base, Int32(40 + i * 3), n)          // slowly changing flat frame, like a UI
+                                let stride = CVPixelBufferGetBytesPerRow(pb)
+                                let offset = ((still ? i / 15 : i) * 12) * W * 4      // scroll every frame, or a nudge every half second
+                                for row in 0..<H {
+                                    page.withUnsafeBytes { src in
+                                        memcpy(base + row * stride, src.baseAddress! + offset + row * W * 4, W * 4)
+                                    }
+                                }
                             }
                             CVPixelBufferUnlockBaseAddress(pb, [])
                             while !inp.isReadyForMoreMediaData { try? await Task.sleep(nanoseconds: 5_000_000) }
@@ -109,7 +125,7 @@ enum SelfTest {
                         let dur = await GIFEncoder.duration(movie: url)
                         let bytes = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? 0
                         let good = w.status == .completed && abs(dur - 2.0) < 0.2 && bytes > 0
-                        print("\(good ? "ok  " : "FAIL") \(hevc ? "hevc" : "h264"): status=\(w.status.rawValue) duration=\(String(format: "%.2f", dur))s size=\(bytes / 1024)K target=\(ScreenRecorder.bitrate(width: 3200, height: 1640, hevc: hevc) / 1000)kbps")
+                        print("\(good ? "ok  " : "FAIL") \(hevc ? "hevc" : "h264") \(cq ? "quality \(ScreenRecorder.quality)" : "abr \(ScreenRecorder.bitrate(width: W, height: H, hevc: hevc) / 1000)kbps"): duration=\(String(format: "%.2f", dur))s size=\(bytes / 1024)K ≈ \(bytes * 8 / 2 / 1000) kbps \(still ? "mostly still" : "while scrolling")")
                         okAll = okAll && good
                     } catch { print("FAIL \(hevc ? "hevc" : "h264"): \(error)"); okAll = false }
                 }

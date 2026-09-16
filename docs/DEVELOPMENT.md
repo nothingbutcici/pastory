@@ -158,8 +158,8 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
 - **双击 / ⏎ 直接粘贴**（2026-09-16，设置里可关，默认开）：`copyAndClose` 收起货架后重新激活之前的前台应用，确认它在前台后
   用 CGEvent 发一次 ⌘V（`Permissions.sendPaste`）。这一步需要「辅助功能」权限：没有时第一次双击会弹系统提示，并退化为只复制并收起。
   单击仍然只复制。分发包每次重签，权限要重新授（和屏幕录制一样）。这是唯一用到辅助功能的地方。
-- **录屏管线**（2026-09-16 改）：SCStream 的帧直接进我们自己的 `AVAssetWriter`，码率录的时候就定（`ScreenRecorder.bitrate`：
-  H.264 每像素每帧 0.035 bit，HEVC 0.022，夹在 1.5–14 Mbps；3200×1640 @ 30 fps 约 5.5 Mbps ≈ 40 MB/分钟），停止即得，没有第二遍。
+- **录屏管线**（2026-09-16 改）：SCStream 的帧直接进我们自己的 `AVAssetWriter`，编码用硬件编码器的**恒定质量**模式（`AVVideoQualityKey` 0.72，2026-09-17 改：固定码率下滚动文字发糊），静止画面几乎不占体积，
+  动起来花多少算多少；编码器不接受质量模式时退回平均码率（每像素每帧 H.264 0.07 / HEVC 0.045 bit，2.5–24 Mbps）。停止即得，没有第二遍。
   只收 `.complete` 帧；SCK 画面不变就不发帧，所以停止时把最后一帧按当前时刻再补一次，静止的结尾不会被截掉。
   设置 › 剪贴板：录屏清晰度 原生（Retina）/ 标准（1 像素/点，约 12 MB/分钟）、编码 H.264 / HEVC。
   GIF 上限按时长阶梯：≤10 s 6 MB、≤30 s 10 MB、≤60 s 15 MB、更长 20 MB；超过 20 s 的按钮文案改为「会糊，建议 MP4」。
@@ -190,6 +190,7 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
   完成时只带上属于这次截图的识别文本（OCR 面板带 token）。⎋ 仍是取消。
 - **卡片标题**：输入框无论怎么离开（⏎、✓、点别处、切到别的卡、⎋）都算保存，删空即去掉标题；草稿没变就不写盘。
 - **取屏浮层不激活自己、框选期间也不做 key window**（2026-09-16）：遮罩是 `.nonactivatingPanel`，`canBecomeMain = false`，
+  层级 `CGShieldingWindowLevel()`（别的录屏工具的悬浮条在 screenSaver 之上，之前会盖住我们的选区），
   而且在拍下图片之前不 `makeKey`（抢走 key 会让前台应用的下拉菜单 / popover 立刻收起，之前 Codex 的设置弹窗、会议软件的麦克风下拉就是这样丢的）。
   框选阶段的键盘全靠系统级钩子：⎋ 取消、空格切窗口模式、F / ⏎ 整屏；十字光标靠 mouseMoved 手动设置（cursor rect 只对 key window 生效）。
   截到图、标注器出现后才 `makeKey`，钩子同时解绑。第一下按压就开始框选（`acceptsFirstMouse`）。

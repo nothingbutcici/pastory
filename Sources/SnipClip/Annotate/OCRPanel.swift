@@ -67,7 +67,7 @@ final class OCRPanelController: NSObject, NSWindowDelegate {
         p.titlebarAppearsTransparent = true
         p.appearance = NSAppearance(named: .darkAqua)
         p.backgroundColor = Theme.brown
-        p.level = NSWindow.Level(rawValue: NSWindow.Level.screenSaver.rawValue + 1)
+        p.level = NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()) + 1)      // just above the picker
         p.isReleasedWhenClosed = false
         p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         p.delegate = self

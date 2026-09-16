@@ -18,11 +18,15 @@ final class ScreenRecorder: NSObject, SCStreamDelegate, SCStreamOutput {
 
     static let fps: Int32 = 30
 
-    /// Bits per pixel per frame for screen content: 0.035 keeps text crisp and lands a 3200×1640 @ 30 fps clip near 5.5 Mbps.
+    /// Constant-quality target for the hardware encoder (0…1). Text stays crisp; still frames cost almost nothing,
+    /// motion costs what it costs. 0.72 is roughly x264 CRF 20 territory for UI footage.
+    static let quality: Float = 0.72
+
+    /// Fallback when the encoder refuses quality mode: bits per pixel per frame, 0.07 (≈ 11 Mbps for 3200×1640 @ 30).
     static func bitrate(width: Int, height: Int, hevc: Bool) -> Int {
-        let bpp = hevc ? 0.022 : 0.035
+        let bpp = hevc ? 0.045 : 0.07
         let bps = Double(width * height) * Double(fps) * bpp
-        return Int(min(max(bps, 1_500_000), 14_000_000))
+        return Int(min(max(bps, 2_500_000), 24_000_000))
     }
 
     func start(target: CaptureTarget, excluding windows: [SCWindow], backingScale: CGFloat?, outputURL: URL) async throws {
@@ -66,14 +70,15 @@ final class ScreenRecorder: NSObject, SCStreamDelegate, SCStreamOutput {
     }
 
     /// Writer + input + adaptor, already started. Shared with the self-test so a bad settings key shows up there, not on ■.
-    static func makeWriter(url: URL, width: Int, height: Int, hevc: Bool) throws -> (AVAssetWriter, AVAssetWriterInput, AVAssetWriterInputPixelBufferAdaptor) {
+    static func makeWriter(url: URL, width: Int, height: Int, hevc: Bool, constantQuality: Bool = true) throws -> (AVAssetWriter, AVAssetWriterInput, AVAssetWriterInputPixelBufferAdaptor) {
         let w = try AVAssetWriter(outputURL: url, fileType: .mp4)
         var compression: [String: Any] = [
-            AVVideoAverageBitRateKey: bitrate(width: width, height: height, hevc: hevc),
             AVVideoExpectedSourceFrameRateKey: fps,
             AVVideoMaxKeyFrameIntervalKey: fps * 2,
             AVVideoAllowFrameReorderingKey: false,
         ]
+        if constantQuality { compression[AVVideoQualityKey] = quality }
+        else { compression[AVVideoAverageBitRateKey] = bitrate(width: width, height: height, hevc: hevc) }
         if !hevc { compression[AVVideoProfileLevelKey] = AVVideoProfileLevelH264HighAutoLevel }
         let settings: [String: Any] = [
             AVVideoCodecKey: hevc ? AVVideoCodecType.hevc : AVVideoCodecType.h264,
@@ -82,7 +87,10 @@ final class ScreenRecorder: NSObject, SCStreamDelegate, SCStreamOutput {
         ]
         let inp = AVAssetWriterInput(mediaType: .video, outputSettings: settings)
         inp.expectsMediaDataInRealTime = true
-        guard w.canAdd(inp) else { throw NSError(domain: "Pastory.Recorder", code: 1, userInfo: [NSLocalizedDescriptionKey: "cannot add video input"]) }
+        guard w.canAdd(inp) else {
+            if constantQuality { return try makeWriter(url: url, width: width, height: height, hevc: hevc, constantQuality: false) }
+            throw NSError(domain: "Pastory.Recorder", code: 1, userInfo: [NSLocalizedDescriptionKey: "cannot add video input"])
+        }
         w.add(inp)
         let ad = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: inp, sourcePixelBufferAttributes: [
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,

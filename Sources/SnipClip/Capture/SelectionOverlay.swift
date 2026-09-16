@@ -232,7 +232,7 @@ final class OverlayWindow: NSPanel {
         isOpaque = false
         backgroundColor = .clear
         hasShadow = false
-        level = .screenSaver
+        level = NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()))      // above other tools' floating bars (they use screenSaver+)
         acceptsMouseMovedEvents = true
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         contentView = overlayView
