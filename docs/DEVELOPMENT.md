@@ -141,6 +141,11 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
   语言 = 设置 › 语言（跟随系统 / 中文 / English，`Preferences.language`），切换时 `ShelfModel.langTick` 让货架整体重建，
   菜单栏菜单每次打开时重建；`SNIPCLIP_LANG=en` 可强制离屏渲染英文。新增文案：写中文字面量 + `.l`，再往表里加一行英文；
   `ClipStore.importSourceName`（"导入"）是存库的标记，永远不翻译，显示时走「已导入」。
+- **签名与公证**（2026-09-16 起）：Developer ID Application 证书 `jie su (M558WUQ3G8)` 在登录钥匙串（CSR 用 openssl 生成，
+  私钥已入钥匙串；Apple 的 Developer ID G2 中间证书也已导入）。公证凭据是 App Store Connect API 密钥，`xcrun notarytool
+  store-credentials "pastory-notary"` 存在钥匙串里，仓库里没有任何密钥。`build.sh` 自动优先用这张证书（hardened runtime + 时间戳），
+  `dist.sh` 出包后 `notarytool submit --wait` → `stapler staple` → 重新 zip，末尾 `spctl` 应显示 `source=Notarized Developer ID`。
+  首次公证等了约 50 分钟，之后通常几分钟。没有证书的机器上两个脚本自动退回 ad-hoc，首次打开说明也跟着换成「仍要打开」版本。
 - **更新**（2026-09-16，`App/Updater.swift`）：启动 30 秒后、之后每 24 小时，向 `api.github.com/repos/nothingbutcici/pastory/releases/latest`
   取最新 release（这是 app 唯一的网络请求，不带任何标识；设置 › 系统 可关，菜单和设置里都有「检查更新」）。tag 必须是 `v<版本>`，
   资产是 `.zip`。比当前 `CFBundleShortVersionString` 新就弹窗：下载并安装 / 稍后 / 跳过这个版本。

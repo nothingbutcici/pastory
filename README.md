@@ -113,7 +113,7 @@ All three global shortcuts can be changed in Settings; Pastory refuses a combina
 Requires macOS 15 (Sequoia) or later, Intel or Apple silicon.
 
 1. Download `Pastory-<version>.zip` from [Releases](../../releases), unzip, drag `Pastory.app` into Applications.
-2. Open it. Until the app is notarized, macOS will say it cannot verify the developer: click Done, then System Settings › Privacy & Security › **Open Anyway** (once).
+2. Open it. Releases are signed and notarized by Apple; at most macOS asks once whether to open an app downloaded from the internet.
 3. Pastory has no main window: look for the handwritten **P** in the menu bar. The shelf opens by itself the first time.
 4. The first screenshot asks for **Screen Recording** permission; turn Pastory on and relaunch it.
 5. Optional: **Accessibility** lets double-click paste into the app you came from. Without it, double-click copies and closes.

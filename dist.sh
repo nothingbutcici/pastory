@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Builds a shareable zip: dist/Pastory-<version>.zip
-# Signed ad-hoc on purpose: the local dev certificate is not trusted on anyone else's Mac anyway.
-# Without an Apple Developer ID + notarization, recipients must approve the app once (see dist/首次打开.txt).
+# Builds the shareable zip: dist/Pastory-<version>.zip — Developer ID signed, notarized and stapled when the
+# identity + keychain profile exist (see docs/DEVELOPMENT.md → 签名与公证); ad-hoc otherwise.
 set -euo pipefail
 cd "$(dirname "$0")"
 # Signing: a "Developer ID Application" identity in the keychain is used automatically (hardened runtime,

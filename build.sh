@@ -5,10 +5,14 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 CONFIG="${CONFIG:-release}"
-# Prefer the local self-signed identity (tools/make-signing-cert.sh); ad-hoc otherwise.
+# Prefer the Developer ID identity (same signature as the shipped app, so permissions carry over between a local
+# build and a release), then the local self-signed one (tools/make-signing-cert.sh); ad-hoc otherwise.
 if [ -z "${SIGN_ID:-}" ]; then
-    IDS="$(security find-identity -v -p codesigning 2>/dev/null)"
-    if echo "$IDS" | grep -q '"Snip Clip Dev"'; then
+    IDS="$(security find-identity -v -p codesigning 2>/dev/null || true)"
+    DEV="$(echo "$IDS" | grep -o '"Developer ID Application: [^"]*"' | head -1 | tr -d '"' || true)"
+    if [ -n "$DEV" ]; then
+        SIGN_ID="$DEV"
+    elif echo "$IDS" | grep -q '"Snip Clip Dev"'; then
         SIGN_ID="Snip Clip Dev"
     elif echo "$IDS" | grep -q '"CC Record Dev"'; then
         SIGN_ID="CC Record Dev"      # same machine, same purpose: reuse instead of a second cert
