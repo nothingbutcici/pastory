@@ -14,8 +14,6 @@ if [ -z "${SIGN_ID:-}" ]; then
         SIGN_ID="$DEV"
     elif echo "$IDS" | grep -q '"Pastory Dev"'; then
         SIGN_ID="Pastory Dev"
-    elif echo "$IDS" | grep -q '"CC Record Dev"'; then
-        SIGN_ID="CC Record Dev"      # same machine, same purpose: reuse instead of a second cert
     else
         SIGN_ID="-"
     fi

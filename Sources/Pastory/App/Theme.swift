@@ -98,9 +98,12 @@ enum Theme {
     /// The one piece of stationery: a pink pushpin on the card that is currently on the clipboard.
     static let pushpin: NSImage? = resource("Pushpin.png")
     /// Brand typeface (Ysabeau Office, OFL) bundled in Resources/Fonts; registered for this process on first use.
+    /// `swift run` / self-tests: the executable sits in .build/<config>/, three levels under the package root.
+    /// Derived at run time so no build-machine path is compiled into the binary.
+    private static let devResources: URL = Bundle.main.executableURL!.deletingLastPathComponent().deletingLastPathComponent()
+        .deletingLastPathComponent().appendingPathComponent("Resources", isDirectory: true)
     private static let brandRegistered: Bool = {
-        let dev = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .deletingLastPathComponent().appendingPathComponent("Resources/Fonts")
+        let dev = devResources.appendingPathComponent("Fonts")
         var any = false
         for name in ["YsabeauOffice.ttf", "Caveat.ttf"] {
             for dir in [Bundle.main.resourceURL?.appendingPathComponent("Fonts"), dev].compactMap({ $0 }) {
@@ -127,9 +130,7 @@ enum Theme {
 
     private static func resource(_ name: String) -> NSImage? {
         if let url = Bundle.main.resourceURL?.appendingPathComponent(name), let img = NSImage(contentsOf: url) { return img }
-        let dev = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .deletingLastPathComponent().appendingPathComponent("Resources/\(name)")
-        return NSImage(contentsOf: dev)
+        return NSImage(contentsOf: devResources.appendingPathComponent(name))
     }
 
     // MARK: Paper (AppKit side). The SwiftUI shelf paints the same tokens; these are for the capture bars and windows.

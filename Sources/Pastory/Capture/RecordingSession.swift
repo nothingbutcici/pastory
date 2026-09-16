@@ -39,6 +39,11 @@ final class RecordingSession {
                 }
                 let scale = NSScreen.screens.first { $0.frame.intersects(regionScreenRect) }?.backingScaleFactor
                 try await recorder.start(target: target, excluding: own, backingScale: scale, outputURL: tmpURL)
+                if cancelled {            // 「丢弃」came while the stream was starting: stop it now, nothing to keep
+                    await recorder.stop()
+                    try? FileManager.default.removeItem(at: tmpURL)
+                    return
+                }
                 isRecording = true
                 started = Date()
                 let t = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in MainActor.assumeIsolated { self?.tick() } }
@@ -46,7 +51,7 @@ final class RecordingSession {
                 timer = t
                 tick()
             } catch {
-                fail(error)
+                if !cancelled { fail(error) }
             }
         }
     }
@@ -72,8 +77,10 @@ final class RecordingSession {
         }
     }
 
+    private var cancelled = false
     func cancel() {
         guard !(stopping && isRecording) else { return }     // stop() is mid-flight; its continuation must not be raced
+        cancelled = true
         timer?.invalidate()
         Task { @MainActor in
             if isRecording { await recorder.stop() }

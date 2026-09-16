@@ -116,7 +116,7 @@ struct SettingsPane: View {
                     }
                     VStack(spacing: 16) {
                         section("剪贴板".l) {
-                            row("暂停同步至剪贴板".l) { PaperToggle(isOn: $prefs.paused) }
+                            row("暂停记录剪贴板".l) { PaperToggle(isOn: $prefs.paused) }
                             row("双击直接粘贴到刚才的应用".l) {
                                 HStack(spacing: 8) {
                                     if prefs.pasteOnDoubleClick {

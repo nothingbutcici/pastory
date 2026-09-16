@@ -6,7 +6,7 @@ import SwiftUI
 /// Set PASTORY_STORE=<dir> to keep test items out of the real store.
 enum SelfTest {
     /// A file that exists in any checkout, for the file-list tests.
-    static let sampleFile = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+    static let sampleFile = Bundle.main.executableURL!.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("Package.swift")
         .deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("Package.swift")
     @MainActor
     static func handleCommandLine() -> Bool {
@@ -15,7 +15,7 @@ enum SelfTest {
         let cmd = args[i + 1]
         let rest = Array(args[(i + 2)...])
         // Anything that writes to a store must run inside PASTORY_STORE. Never against the user's data.
-        let mutating: Set<String> = ["clipboard", "retention", "shelf", "settings", "editors", "import", "ingest", "tombstone", "heic"]
+        let mutating: Set<String> = ["clipboard", "retention", "shelf", "settings", "editors", "import", "ingest", "tombstone", "heic", "pbfiles"]
         if mutating.contains(cmd) {
             let env = Sandbox.store ?? ""
             // Nothing under Application Support counts as a sandbox, whatever the folder is called.
@@ -411,8 +411,8 @@ enum SelfTest {
             store.insertVideo(tempFile: mov, poster: poster, duration: 8, source: CaptureCoordinator.source)
         }
         let src = ClipStore.Source(bundleID: "com.apple.Safari", name: "Safari")
-        store.insertText("会议纪要 9/11\n1. VM 首发时间定 8/5\n2. Big @ 主打功能演示要重录\n3. 达人投放链接统一走 ?tc=", rtf: nil, source: ClipStore.Source(bundleID: "com.apple.Notes", name: "备忘录"))
-        store.insertText("https://github.com/nothingbutcici/session-library/pull/12", rtf: nil, source: src)
+        store.insertText("会议纪要 9/11\n1. 下周三发布\n2. 演示视频重录\n3. 链接统一加追踪参数", rtf: nil, source: ClipStore.Source(bundleID: "com.apple.Notes", name: "备忘录"))
+        store.insertText("https://github.com/nothingbutcici/pastory", rtf: nil, source: src)
         if let img = renderSample(), let png = Screenshotter.pngData(img) {
             store.insertImage(png: png, source: CaptureCoordinator.source, ocrText: "Pastory 是一个截图工具")
         }

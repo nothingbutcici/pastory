@@ -62,7 +62,6 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
     }
 
     var canUndo: Bool { !annotations.isEmpty }
-    var hasSelection: Bool { selectedID != nil }
     private var selectedIndex: Int? { selectedID.flatMap { id in annotations.firstIndex { $0.id == id } } }
     var selected: Annotation? { selectedIndex.map { annotations[$0] } }
     /// What the sub-bar should describe: the selected element, else the active tool.

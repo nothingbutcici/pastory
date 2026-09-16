@@ -97,7 +97,8 @@ enum Importer {
     private static func pastory(_ db: OpaquePointer, itemsDir: URL) throws -> [ClipStore.ImportEntry] {
         var out: [ClipStore.ImportEntry] = []
         for row in try query(db, "SELECT id, kind, created_at, pinned, ext, title FROM items ORDER BY created_at DESC") {
-            guard let id = row["id"] as? String, let kind = row["kind"] as? String, let ext = row["ext"] as? String else { continue }
+            guard let id = row["id"] as? String, let kind = row["kind"] as? String, let ext = row["ext"] as? String,
+                  !id.contains("/"), !id.contains(".."), !ext.contains("/"), !ext.contains("..") else { continue }   // stay inside items/
             let url = itemsDir.appendingPathComponent("\(id).\(ext)")
             guard let data = try? Data(contentsOf: url) else { continue }
             let date = Date(timeIntervalSince1970: (row["created_at"] as? Double) ?? Date().timeIntervalSince1970)

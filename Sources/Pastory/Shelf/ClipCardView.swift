@@ -103,7 +103,7 @@ struct ClipCardView: View {
                 .help("点击重命名".l)
         } else {
             HStack(spacing: 0) {
-                if selected { Text("+ add title").font(.script(26)).foregroundStyle(Color.inkMuted.opacity(0.8)) }
+                if selected { Text("+ 加个标题".l).font(.script(26)).foregroundStyle(Color.inkMuted.opacity(0.8)) }
                 Spacer(minLength: 0)
             }
             .frame(height: 34)

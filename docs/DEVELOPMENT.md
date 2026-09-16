@@ -9,10 +9,10 @@ macOS 菜单栏工具，截图 + 剪贴板货架合一。截图直接进剪贴�
 ## 目录约定
 
 ```
-README.md            本文件：约定、构建、自测、存储格式
+docs/DEVELOPMENT.md  本文件：约定、构建、自测、存储格式；根目录 README.md / README.en.md 是给用户看的介绍
 Package.swift        SwiftPM，macOS 15+，只用 Apple 框架，无第三方依赖
 build.sh             swift build → build/Pastory.app → codesign（Developer ID，其次自签名证书「Pastory Dev」，否则 ad-hoc）
-Resources/           Info.plist、entitlements、AppIcon.icns
+Resources/           Info.plist、entitlements、AppIcon.icns、Logo / MenuIcon / Pushpin 图、Fonts/（Caveat、Ysabeau Office 及各自的 OFL）
 Sources/Pastory/
   App/               入口、菜单栏、全局快捷键、权限、偏好、设置窗口
   Capture/           ScreenCaptureKit 取图、框选覆盖层、坐标换算、区域录屏（SCRecordingOutput → mp4，可转 GIF）
@@ -25,7 +25,7 @@ build/               构建产物，不进 git
 
 - 新文件放进对应子目录，一个类型一个文件。
 - 临时产物（测试截图、抽样图片）走会话 scratchpad，不进项目目录。
-- 可复用的取屏 / 快捷键 / 权限代码从 `../cc record` 复制过来改，不做跨项目引用。
+- 取屏 / 快捷键 / 权限代码与作者的另一个录屏项目同源，但各自一份，不做跨项目引用。
 
 ## 存储
 
@@ -35,7 +35,7 @@ build/               构建产物，不进 git
 | --- | --- |
 | `pastory.sqlite` | 索引（SQLite，WAL）：id、kind(text/url/image/files/video)、创建时间、来源 app、预览片段、OCR 文本、是否 Pin、标题、内容哈希。旧版 `index.json` 首次启动导入后改名 `index.migrated.<yyyyMMdd-HHmmss>.json` |
 | `items/<id>.txt` | 文本 / 链接正文；富文本另存 `<id>.rtf` |
-| `items/<id>.png` | 图片原图，带显示器色彩描述文件，不重编码 |
+| `items/<id>.heic` / `.png` | 图片原图（默认高质量 HEIC，设置可改无损 PNG），带显示器色彩描述文件 |
 | `items/<id>.json` | 文件条目：路径列表 |
 | `items/<id>.mp4` / `.gif` | 录屏本体 |
 | `thumbs/<id>.heic`（旧库里是 .png） | 货架缩略图（长边 900 px） |
@@ -60,9 +60,9 @@ build/               构建产物，不进 git
 open "build/Pastory.app"
 ```
 
-签名顺序：钥匙串里有「Pastory Dev」用它；没有就复用 cc record 的「CC Record Dev」（同一台机器、同一用途，
-不必再生成一张）；都没有才 ad-hoc（每次重编译都要重新勾屏幕录制权限）。要单独一张证书就跑
-`./tools/make-signing-cert.sh`。只需要 Command Line Tools，不需要完整 Xcode。
+签名顺序：钥匙串里有「Developer ID Application」证书优先（与发布包同一签名，权限互通）；其次自签名的「Pastory Dev」；
+都没有才 ad-hoc（每次重编译都要重新勾屏幕录制权限）。要一张自签证书就跑 `./tools/make-signing-cert.sh`。
+只需要 Command Line Tools，不需要完整 Xcode。
 
 ## 分享给别人
 
@@ -70,9 +70,10 @@ open "build/Pastory.app"
 ./dist.sh        # 产出 dist/Pastory-<版本>.zip 和 dist/首次打开.txt，一起发给对方
 ```
 
-分发包用 ad-hoc 签名（本机自签证书在别人机器上不被信任）。没有 Apple 开发者账号和公证，
-对方第一次打开要在「隐私与安全性」里点「仍要打开」一次，说明写在 `首次打开.txt` 里。
-版本号改 `Resources/Info.plist` 的 CFBundleShortVersionString。app 图标 `Resources/AppIcon.icns` 由 Logo.png 生成。
+有 Developer ID 证书和公证 profile 的机器上出的是 universal（arm64 + x86_64）、已公证盖章的包，对方双击即开；
+没有证书的机器自动退回 ad-hoc，`首次打开.txt` 会换成「仍要打开」版本（细节见下文「签名与公证」）。
+正式发布走 `./release.sh <notes.md>`：先改 `Resources/Info.plist` 的 CFBundleShortVersionString 并提交，脚本打 tag、推 tag、建 GitHub Release 并上传 zip。
+app 图标 `Resources/AppIcon.icns` 由 Logo.png 生成。
 
 ## 自测
 
@@ -88,7 +89,12 @@ PASTORY_STORE=/tmp/x "$BIN" --selftest shelf <out.png>     # 离屏渲染货架�
 "$BIN" --selftest preview <out.png>    # 离屏渲染录屏预览窗（视频区离屏是黑的，看布局用）
 PASTORY_STORE=/tmp/x "$BIN" --selftest settings <out.png>   # 离屏渲染货架的设置页
 PASTORY_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本编辑窗 <out>.text.png 与图片编辑窗 <out>.image.png
+PASTORY_STORE=/tmp/x "$BIN" --selftest ocrpanel <out.png>  # 离屏渲染识别文字面板
+PASTORY_STORE=/tmp/x "$BIN" --selftest heic | ingest | tombstone | writer | updater | l10n   # 存储格式 / 入库规则 / 墓碑 / 编码码率 / 更新器 / 词表去重
+PASTORY_STORE=/tmp/x "$BIN" --selftest import <db>         # 用一个外来 SQLite 验证导入
 ```
+`PASTORY_STORE` / `PASTORY_LANG` 只在命令行带 `--selftest` 时生效（`App/Sandbox.swift`），正常启动一律忽略，
+所以壳里残留的变量不会把 app 指到沙箱。
 
 后三个不需要屏幕录制权限，改 UI 后先看这两张图。
 
@@ -108,9 +114,8 @@ PASTORY_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本�
   选中态是浅蓝纸，选区框 / 手柄 / 元素选中框用浅蓝和米纸；按钮统一 `Theme.paperButton`。深色浮岛那套代码已全部删除。
   截图浮层的条（顶栏 / 工具条 / 子条 / 尺寸角标 / 录屏控制条）2026-09-12 晚再改成和货架一样的深棕磨砂 `Theme.drawDesk`，
   米字 + 浅蓝选中；标注调色盘 = 紫 + #E9631A / #C56F8C / #A9C2E0 / #59382C / #1E151C / #EBEBDF（用户 2026-09-12 晚定）。
-  logo 用品牌稿 `Project/codex相关/pastory clipboard concepts/brand/signature-assets/Pastory Logo/`：
-  `Resources/Logo.png` 与 `AppIcon.icns` 由 `pastory-app-icon-hd.png` 圆角化生成（1024 画布放 824 圆角方，半径 22.37%），
-  `Resources/MenuIcon(@2x).png` 直接取自 `PastoryMenuBar.imageset`（template，build.sh 会拷进包）。面包人素材已移出仓库（2026-09-16）。
+  logo 来自作者的品牌稿（不在仓库）：`Resources/Logo.png` 与 `AppIcon.icns` 由原始图标圆角化生成（1024 画布放 824 圆角方，半径 22.37%），
+  `Resources/MenuIcon(@2x).png` 是菜单栏 template 图（build.sh 会拷进包）。
   品牌字体 Ysabeau Office（OFL，`Resources/Fonts/`，启动时按进程注册）只用在「Pastory」字样。
   截图 / 录屏只排除取景遮罩自己的窗口，货架开着时也能被截进去。
 - 框选完成后屏幕顶部出品牌条：logo · Pastory · [截屏 │ 录屏] · ✕，默认截屏；点录屏进录制流程。
@@ -131,7 +136,7 @@ PASTORY_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本�
   只有 ⌘/⇧ 加单键（如 ⌘A）允许设置，但保存后提示「所有应用里的 ⌘A 都会变成这个功能」（2026-09-12 改，之前是直接拒绝）。
 - **外部截图工具的图**（微信 / 飞书 / CleanShot 把位图和一个图片文件 URL 一起放上剪贴板——Finder 复制文件不带位图，所以这一组合只会是截图工具；
   或只放一个临时目录里的图片文件）按图片入库（缩略图 + OCR），不是「文件」；Finder 里复制文件（没有位图）仍是文件条目。规则在 `ClipboardMonitor.ingest`，
-  `--selftest ingest` 用私有剪贴板验证五种组合。卡片缩略图长边 1200px。
+  `--selftest ingest` 用私有剪贴板验证五种组合。卡片缩略图长边 900px。
 - **取图像素比**以 `NSScreen.backingScaleFactor` 为准（`Screenshotter.pixelScale`，和 `pointPixelScale` 取大），
   截图和录屏都用它；`pointPixelScale` 在部分显示器上返回过 1，导致存下来的图只有一半分辨率。
 - **「移除所有导入进来的条目」是唯一会连 Pin 一起删的操作**：手动、有确认框、只针对来源为「导入」的条目；自动清理仍然永远不碰 Pin。
@@ -141,7 +146,7 @@ PASTORY_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本�
   语言 = 设置 › 语言（跟随系统 / 中文 / English，`Preferences.language`），切换时 `ShelfModel.langTick` 让货架整体重建，
   菜单栏菜单每次打开时重建；`PASTORY_LANG=en` 可强制离屏渲染英文。新增文案：写中文字面量 + `.l`，再往表里加一行英文；
   `ClipStore.importSourceName`（"导入"）是存库的标记，永远不翻译，显示时走「已导入」。
-- **签名与公证**（2026-09-16 起）：Developer ID Application 证书 `jie su (M558WUQ3G8)` 在登录钥匙串（CSR 用 openssl 生成，
+- **签名与公证**（2026-09-16 起）：作者的 Developer ID Application 证书在登录钥匙串（CSR 用 openssl 生成，
   私钥已入钥匙串；Apple 的 Developer ID G2 中间证书也已导入）。公证凭据是 App Store Connect API 密钥，`xcrun notarytool
   store-credentials "pastory-notary"` 存在钥匙串里，仓库里没有任何密钥。`build.sh` 自动优先用这张证书（hardened runtime + 时间戳），
   `dist.sh` 出包后 `notarytool submit --wait` → `stapler staple` → 重新 zip，末尾 `spctl` 应显示 `source=Notarized Developer ID`。
@@ -228,13 +233,13 @@ PASTORY_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本�
   侧栏底部「Pin 后一直保留」和「设置」两行，设置在面板右半区内展开（`Shelf/SettingsPane`），不弹窗；
   顶部胶囊筛选 全部 / Pin / 图片 / 录屏 / 文本 + 搜索 + ✕，深色卡片配米色内容纸面（app 图标、时间、内容、
   「已复制」标记 = 此刻剪贴板里的那条、说明行、编辑或预览 / Pin / 保存（仅图片、录屏）/ 删除），底部滚动条带左右箭头。左 = 最新。
-  单击卡片 = 复制并停留（绿标签跳过去就是反馈）；⏎ 或双击 = 复制并收起。
+  单击卡片 = 复制并停留（「已复制」胶囊 + 粉色钉子就是反馈）；⏎ = 复制并收起；双击 = 复制、收起并粘贴到刚才的应用（需辅助功能权限，可在设置关）。
   每条记录可以起标题（右键「命名…」在卡片头部下方就地输入，点已有标题可改，文本编辑窗顶部也有标题栏）；
   标题加粗显示在来源行下面，来源 app 名不变，搜索也匹配标题。
   铅笔键：文本 / 链接进自己的编辑窗（`Shelf/TextEditorWindow`，⌘⏎ 保存并复制），图片进标注编辑器
   （`Shelf/ImageEditorWindow`，复用截图的画布和工具条，✓ 保存）；保存都是回写同一条记录并复制，Pin 状态不变。
   录屏和文件卡片是眼睛键，走 Quick Look。
-  ← → 选，⏎ 复制并收起，空格 Quick Look 预览，P 固定，S 保存到本地（弹对话框选位置），⌫ 删除，⌘F 搜索，⎋ 关闭。
+  ← → ↑ ↓ 选，⏎ 复制并收起，空格 Quick Look 预览，⌘P 固定，⌘S 保存到本地（弹对话框选位置），⌫ 删除，⌘F 搜索，直接打字即搜索，⎋ 关闭。
   过滤：全部 / 固定 / 图片 / 录屏 / 文本。
   卡片底栏常驻固定 / 保存 / 删除三个按钮，右键有完整菜单。
 - **录屏**：选区上方的「录屏」。点了之后遮罩撤掉、选区外围留一圈紫框、下方一个小条（计时 / 停止 / 丢弃），
@@ -244,13 +249,13 @@ PASTORY_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本�
   预览窗保存后显示实际大小。GIF 以图片数据进剪贴板（微信 / 飞书 ⌘V 贴出来是动图），MP4 以文件进剪贴板，
   文件名是可读的 `Rec 2026-09-11 16.10.23.mp4`（存储里 `share/` 下的硬链接）。
   文件上剪贴板用 Finder 同款写法（NSURL 对象 + NSFilenamesPboardType），只写 public.file-url 微信会当纯文本贴出路径。
-  不做鼠标高亮、缩放、剪辑，那是 cc record 的事。
-- 菜单栏图标：左键开关货架，右键菜单（截图 / 暂停记录 / 打开存储文件夹 / 设置 / 退出）。
+  不做鼠标高亮、缩放、剪辑。
+- 菜单栏图标：左键开关货架，右键菜单（截图 / 显示·隐藏剪贴板 / 搜索剪贴板 / 暂停记录剪贴板 / 打开存储文件夹 / 检查更新… / 设置… / 退出）。
 - 设置分区：版本更新 / 快捷键 / 清理 / 导入 / 剪贴板 / 截图与录屏 / 位置 / 系统（语言在系统里）。图片 OCR 永远开着，没有开关。
 
 ## 权限
 
-屏幕录制（截图必需）。辅助功能：可选，只用于「双击 / ⏎ 后直接粘贴」那一次 ⌘V；不授权则退化为只复制并收起。
+屏幕录制（截图必需）。辅助功能：可选，只用于「双击后直接粘贴」那一次 ⌘V；不授权则退化为只复制并收起。
 丢权限时 `tccutil reset ScreenCapture com.cici.snipclip` 后重新启动。
 
 ## 已知边界

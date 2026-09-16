@@ -83,6 +83,10 @@ final class Updater {
         let version = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
         let assets = j["assets"] as? [[String: Any]] ?? []
         let zip = assets.first { ($0["name"] as? String)?.hasSuffix(".zip") == true }.flatMap { ($0["browser_download_url"] as? String).flatMap(URL.init) }
+            .flatMap { u -> URL? in       // only ever fetch an installer over https from GitHub's own hosts
+                guard u.scheme == "https", let h = u.host, h == "github.com" || h.hasSuffix(".github.com") || h.hasSuffix(".githubusercontent.com") else { return nil }
+                return u
+            }
         let page = (j["html_url"] as? String).flatMap(URL.init) ?? releasesPage
         return Release(version: version, notes: (j["body"] as? String) ?? "", zipURL: zip, page: page)
     }
@@ -161,9 +165,11 @@ final class Updater {
             try run("/usr/bin/ditto", ["-x", "-k", zipFile.path, work.path])
             let newApp = work.appendingPathComponent("Pastory.app")
             guard fm.fileExists(atPath: newApp.path) else { throw URLError(.cannotDecodeContentData) }
-            // Same team as the running copy, and a valid signature, or we do not touch anything.
-            try run("/usr/bin/codesign", ["--verify", "--deep", "--strict", newApp.path])
-            guard let mine = Self.teamIdentifier(of: Bundle.main.bundleURL), Self.teamIdentifier(of: newApp) == mine else { throw URLError(.secureConnectionFailed) }
+            // Same team as the running copy, chained to Apple's Developer ID root, and a valid signature — or we do not touch anything.
+            guard let mine = Self.teamIdentifier(of: Bundle.main.bundleURL) else { throw URLError(.secureConnectionFailed) }
+            try run("/usr/bin/codesign", ["--verify", "--deep", "--strict",
+                                          "-R=anchor apple generic and certificate leaf[subject.OU] = \"\(mine)\"", newApp.path])
+            guard Self.teamIdentifier(of: newApp) == mine else { throw URLError(.secureConnectionFailed) }
             let target = Bundle.main.bundleURL
             _ = try fm.replaceItemAt(target, withItemAt: newApp, backupItemName: nil, options: [])
             try? fm.removeItem(at: work)
