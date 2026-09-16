@@ -13,24 +13,26 @@
 <br>
 
 <p align="center">
-  <img src="docs/images/shelf-en.png" alt="The Pastory clipboard" width="920">
+  <img src="docs/images/hero-zh.png" alt="The Pastory clipboard" width="920">
 </p>
 
 <br>
 
-Everything on your computer keeps a history. Everything except the clipboard, which only remembers the last thing.
+<p align="center">Everything on your computer keeps a history. Everything except the clipboard, which only remembers the last thing.</p>
 
-You press ⌘C dozens of times a day. More than half of those are things you have copied before.
+<p align="center">You press ⌘C dozens of times a day. More than half of those are things you have copied before.</p>
 
-So the things you use most often — the prompt that works, that link you found, a screenshot, a client's address, your invoice details — disappear the moment you copy the next thing.
+<p align="center">So the things you use most often — the prompt that works, that link you found, a screenshot, a client's address, your invoice details —<br>disappear the moment you copy the next thing.</p>
 
-Pastory gives the clipboard a long-term memory: text, links, images, screenshots, and recordings you copy all live in one panel where you can manage and reuse them.
+<p align="center">Pastory gives the clipboard a long-term memory:<br>text, links, images, screenshots, and recordings you copy all live in one panel where you can manage and reuse them.</p>
 
-- Pin what you use often. Pinned items are never removed, even with automatic cleanup on.
-- Give important items a title so you can spot them at a glance.
-- Click to copy. Double-click to paste directly into the app you were using.
+<p align="center">
+Pin what you use often. Pinned items are never removed, even with automatic cleanup on.<br>
+Give important items a title so you can spot them at a glance.<br>
+Click to copy. Double-click to paste directly into the app you were using.
+</p>
 
-Everything stays on your Mac. No account, and no network access apart from a daily update check. Your data is 100% yours.
+<p align="center">Everything stays on your Mac. No account, and no network access apart from a daily update check. Your data is 100% yours.</p>
 
 <br>
 
@@ -40,6 +42,9 @@ Requires macOS 15 or later. Runs on Intel and Apple silicon.
 
 1. Download the [latest release](../../releases/latest), unzip it, and drag `Pastory.app` into Applications.
 2. Open it. A handwritten **P** appears in the menu bar, and the clipboard panel opens once on first launch. (Notarized by Apple.)
+
+   <img src="docs/images/menubar-zh.png" alt="The P in the menu bar" width="313">
+
 3. The first time you take a screenshot, allow **Screen Recording** when prompted, then reopen Pastory.
 
 Shortcuts, cleanup schedule, screenshot storage format, and more can be changed in Settings.
@@ -58,7 +63,9 @@ So I built this little app.
 
 Every copy, screenshots included, is collected in one place, ready to be revisited, reused, or edited.
 
-Power move: if the things you copy are information-dense, have an agent read your Pastory database periodically and turn it into a reviewable Markdown knowledge base.
+**Power move:** if the things you copy are information-dense, have an agent read your Pastory database periodically and turn it into a reviewable Markdown knowledge base.
+
+<img src="docs/images/clipboard-history.jpg" alt="Clipboard history" width="600">
 
 ### Screenshots (a small indulgence)
 
@@ -73,6 +80,8 @@ Which shortcut to press was something I had to think about every single time.
 Both can annotate, but neither looks nice doing it. I care about how the font and the text box look while I annotate (I need my small joys).
 
 So Pastory brings all of that together.
+
+<img src="docs/images/capture-annotations.jpg" alt="Annotate right after capturing" width="600">
 
 <br>
 
@@ -90,9 +99,17 @@ Open it with a shortcut of your choice or from the menu bar icon. Everything you
 - **Edit in place:** text and images can be edited. The result replaces the original on the same card, ready for next time.
 - **Screenshots from other apps:** WeChat, Feishu, the built-in macOS screenshot — anything that reaches the clipboard gets a card, and can be searched, pinned, and annotated like everything else.
 
-### Screenshot & recording
+<p>
+  <img src="docs/images/clipboard-editing.jpg" alt="Edit what you copied" width="49%">
+  <img src="docs/images/clipboard-history.jpg" alt="All your copy history, in one place" width="49%">
+</p>
+<p>
+  <img src="docs/images/clipboard-settings.jpg" alt="Settings" width="32.5%">
+  <img src="docs/images/clipboard-title.jpg" alt="Give it a title" width="32.5%">
+  <img src="docs/images/text-recognition.jpg" alt="Text recognition" width="32.5%">
+</p>
 
-<p align="center"><img src="docs/images/capture-en.png" alt="Capture and annotation" width="920"></p>
+### Screenshot & recording
 
 Take screenshots and recordings with the shortcut you set.
 
@@ -103,6 +120,11 @@ Colors are captured in the display's own color space, so nothing shifts.
 **Text recognition:** powered by Apple's on-device OCR. Recognized text is stored with the image in the clipboard, so you can use it later.
 
 **Recording:** MP4 / GIF. Pick the format after recording.
+
+<p>
+  <img src="docs/images/capture-annotations.jpg" alt="Annotate right after capturing" width="49%">
+  <img src="docs/images/recording-formats.jpg" alt="Recording formats" width="49%">
+</p>
 
 <br>
 
