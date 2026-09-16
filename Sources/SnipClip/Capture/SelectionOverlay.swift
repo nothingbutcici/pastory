@@ -38,7 +38,7 @@ final class SelectionOverlayController {
         return w.convertToScreen(r)
     }
 
-    func present(snapshot: ShareableSnapshot, mode: PickMode, completion: @escaping (CaptureTarget?) -> Void) {
+    func present(snapshot: ShareableSnapshot, mode: PickMode, frozen: [CGDirectDisplayID: CGImage] = [:], completion: @escaping (CaptureTarget?) -> Void) {
         if isPresenting || !overlays.isEmpty { release() }
         isPresenting = true
         // While picking, the overlay is NOT the key window: taking key focus from the front app closes its menus,
@@ -64,6 +64,7 @@ final class SelectionOverlayController {
             guard let display = snapshot.display(for: screen) else { continue }
             let w = OverlayWindow(screen: screen, display: display)
             w.overlayView.controller = self
+            w.overlayView.backdrop = frozen[display.displayID]
             w.overlayView.candidates = pickable.map { ($0, CoordinateSpace.cocoaRect(fromCG: $0.frame)) }
             overlays.append(w)
         }
@@ -254,6 +255,9 @@ final class OverlayView: NSView {
     /// After a pick: freeze the drawing; the frame gets handles.
     var held = false
     var heldRect: CGRect?
+    /// The screen as it was the instant the hotkey was pressed. Drawn under the mask, so whatever closes when our
+    /// windows appear (menus, drop-downs) is still there to be framed.
+    var backdrop: CGImage?
     private var resizing: (handle: Int, anchor: CGRect)?
     static let handleSize: CGFloat = 9
 
@@ -305,14 +309,27 @@ final class OverlayView: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         guard let ctx = NSGraphicsContext.current else { return }
+        if let backdrop {
+            ctx.cgContext.interpolationQuality = .none
+            ctx.cgContext.draw(backdrop, in: bounds)
+        }
         NSColor(calibratedWhite: 0, alpha: 0.5).setFill()
         bounds.fill()
         let hole: CGRect? = held ? heldRect : (controller?.mode == .window ? hoveredRectInView : selectionRect)
         guard let hole else { return }
-        ctx.compositingOperation = .copy
-        NSColor.clear.setFill()
-        hole.fill()
-        ctx.compositingOperation = .sourceOver
+        if let backdrop {
+            // Punch the hole in the dimming only: the frozen picture shows through undimmed.
+            NSGraphicsContext.saveGraphicsState()
+            NSBezierPath(rect: hole).addClip()
+            ctx.cgContext.interpolationQuality = .none
+            ctx.cgContext.draw(backdrop, in: bounds)
+            NSGraphicsContext.restoreGraphicsState()
+        } else {
+            ctx.compositingOperation = .copy
+            NSColor.clear.setFill()
+            hole.fill()
+            ctx.compositingOperation = .sourceOver
+        }
         // Square drop shadow outside the frame only (clipped away from the hole), so the edge reads on white too.
         NSGraphicsContext.saveGraphicsState()
         let outside = NSBezierPath(rect: bounds)

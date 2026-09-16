@@ -75,7 +75,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.removeAllItems()
         let p = Preferences.shared
         add(menu, "截图".l, #selector(menuCapture), hint: p.shortcut(Preferences.Key.hotkeyCapture))
-        add(menu, "5 秒后截整屏（菜单、下拉用）".l, #selector(menuTimedCapture))
         add(menu, ShelfPanelController.shared.isVisible ? "隐藏剪贴板".l : "显示剪贴板".l, #selector(menuShelf),
             hint: p.shortcut(Preferences.Key.hotkeyShelf))
         add(menu, "搜索剪贴板".l, #selector(menuSearch), hint: p.shortcut(Preferences.Key.hotkeySearch))
@@ -132,7 +131,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func menuCapture() { CaptureCoordinator.shared.start() }
-    @objc private func menuTimedCapture() { CaptureCoordinator.shared.startTimed() }
     @objc private func menuShelf() { ShelfPanelController.shared.toggle() }
     @objc private func menuSearch() { ShelfPanelController.shared.showSearch() }
     @objc private func menuTogglePause() { Preferences.shared.monitoringPaused.toggle() }

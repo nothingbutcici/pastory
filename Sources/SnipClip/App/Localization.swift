@@ -36,7 +36,7 @@ enum L {
         "快捷键被其他应用占用": "Shortcut taken by another app",
         "\n\n另一个应用（常见是微信、飞书）已经注册了同样的组合键，系统只认先注册的那个。换一个组合键，或者去那个应用里改掉它的。":
             "\n\nAnother app (often WeChat or Feishu) already registered the same combination; macOS honours whoever registered first. Pick another combination, or change it in that app.",
-        "5 秒后截整屏（菜单、下拉用）": "Capture screen in 5 s (for menus)", "打开设置": "Open Settings", "稍后": "Later", "隐藏剪贴板": "Hide Clipboard", "显示剪贴板": "Show Clipboard",
+        "打开设置": "Open Settings", "稍后": "Later", "隐藏剪贴板": "Hide Clipboard", "显示剪贴板": "Show Clipboard",
         "暂停记录剪贴板": "Pause Clipboard Capture", "打开存储文件夹": "Open Storage Folder", "设置…": "Settings…",
         "退出 Pastory": "Quit Pastory", "编辑": "Edit", "撤销": "Undo", "重做": "Redo", "剪切": "Cut", "拷贝": "Copy",
         "粘贴": "Paste", "全选": "Select All",
