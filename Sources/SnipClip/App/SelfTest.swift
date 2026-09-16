@@ -89,6 +89,24 @@ enum SelfTest {
                 ok = (urls?.count ?? 0) == 1
             case "ingest": ok = ingest()
             case "tombstone": ok = tombstone()
+            case "updater":
+                let fixture = """
+                {"tag_name":"v1.2","html_url":"https://github.com/nothingbutcici/pastory/releases/tag/v1.2","body":"- faster shelf\\n- HEIC option",
+                 "assets":[{"name":"Pastory-1.2.zip","browser_download_url":"https://github.com/nothingbutcici/pastory/releases/download/v1.2/Pastory-1.2.zip"}]}
+                """
+                let r: Updater.Release?
+                do { r = try Updater.parse(Data(fixture.utf8)) } catch { print("parse error: \(error)"); r = nil }
+                if let r { print("parsed: \(r.version) \(r.zipURL?.lastPathComponent ?? "-") notes=\(r.notes.count)") }
+                let checks: [(String, Bool)] = [
+                    ("parses tag/notes/asset", r?.version == "1.2" && r?.zipURL?.lastPathComponent == "Pastory-1.2.zip" && r?.notes.contains("HEIC") == true),
+                    ("1.2 > 1.0", Updater.isNewer("1.2", than: "1.0")),
+                    ("1.0.1 > 1.0", Updater.isNewer("1.0.1", than: "1.0")),
+                    ("1.0 !> 1.0", !Updater.isNewer("1.0", than: "1.0")),
+                    ("1.10 > 1.9", Updater.isNewer("1.10", than: "1.9")),
+                    ("ad-hoc build must not self-install", Updater.teamIdentifier(of: Bundle.main.bundleURL) == nil ? !Updater.canSelfInstall : true),
+                ]
+                for (n, c) in checks { print("\(c ? "ok  " : "FAIL") \(n)") }
+                ok = checks.allSatisfy(\.1)
             case "heic": ok = heic()
             case "openpanel":
                 // How long until the system open panel is actually on screen (first show in this process)?

@@ -141,6 +141,12 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
   语言 = 设置 › 语言（跟随系统 / 中文 / English，`Preferences.language`），切换时 `ShelfModel.langTick` 让货架整体重建，
   菜单栏菜单每次打开时重建；`SNIPCLIP_LANG=en` 可强制离屏渲染英文。新增文案：写中文字面量 + `.l`，再往表里加一行英文；
   `ClipStore.importSourceName`（"导入"）是存库的标记，永远不翻译，显示时走「已导入」。
+- **更新**（2026-09-16，`App/Updater.swift`）：启动 30 秒后、之后每 24 小时，向 `api.github.com/repos/nothingbutcici/pastory/releases/latest`
+  取最新 release（这是 app 唯一的网络请求，不带任何标识；设置 › 系统 可关，菜单和设置里都有「检查更新」）。tag 必须是 `v<版本>`，
+  资产是 `.zip`。比当前 `CFBundleShortVersionString` 新就弹窗：下载并安装 / 稍后 / 跳过这个版本。
+  **只有 Developer ID 签名的包才自动安装**：下载、`ditto` 解压、`codesign --verify`、比对 TeamIdentifier 和运行中的自己一致，
+  再 `replaceItemAt` 原地替换并重新启动；ad-hoc 包或被 App Translocation 挪走的包只打开下载页。
+  发版流程：改 Info.plist 版本 → commit → `./release.sh notes.md`（打 tag、传 zip、建 release）。`--selftest updater` 测解析和版本比较。
 - **货架键盘（2026-09-16 第五轮审查后）**：设置页打开时只认 ⎋（返回）和 ⌘F，不会对看不见的卡片执行删除 / Pin / 复制；
   搜索框里 ⏎ 直接复制高亮结果并收起、↑↓ 在结果间移动（IME 候选框打开时这些键交还给输入法）；导航 / 功能键（U+F700 私用区）不会打进搜索框；
   首个字母先存进 `pendingQuery`，等搜索框拿到焦点后再追加，避免被全选覆盖。单击复制后货架"漂浮"期间切到第三个应用会自动收起

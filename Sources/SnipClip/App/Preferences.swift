@@ -120,6 +120,10 @@ final class Preferences {
     var storesHEIC: Bool { imageStorage == "heic" }
     /// Double-click / ⏎ also sends ⌘V to the app you came from (needs Accessibility). On by default; falls back to copy-only.
     var pasteOnDoubleClick: Bool { get { d.object(forKey: "pasteOnDoubleClick") as? Bool ?? true } set { d.set(newValue, forKey: "pasteOnDoubleClick") } }
+    /// Daily update check against GitHub Releases (the app's only network request). On by default.
+    var checkForUpdates: Bool { get { d.object(forKey: "checkForUpdates") as? Bool ?? true } set { d.set(newValue, forKey: "checkForUpdates") } }
+    var lastUpdateCheck: Date? { get { d.object(forKey: "lastUpdateCheck") as? Date } set { d.set(newValue, forKey: "lastUpdateCheck") } }
+    var skippedVersion: String? { get { d.string(forKey: "skippedVersion") } set { d.set(newValue, forKey: "skippedVersion") } }
     /// "system" (follow macOS), "zh" or "en".
     var language: String { get { d.string(forKey: "language") ?? "system" } set { d.set(newValue, forKey: "language"); L.languageChanged() } }
     /// First launch on this Mac: the shelf opens once by itself, so a menu-bar-only app does not look like it failed to start.

@@ -172,6 +172,12 @@ struct SettingsPane: View {
                         }
                         section("系统".l) {
                             row("登录时启动".l) { PaperToggle(isOn: $prefs.launchAtLogin) }
+                            row(String(format: "版本 %@ · 每天自动检查更新".l, Updater.currentVersion)) {
+                                HStack(spacing: 8) {
+                                    pill("检查更新".l) { Task { @MainActor in await Updater.shared.check(interactive: true) } }
+                                    PaperToggle(isOn: $prefs.checkForUpdates)
+                                }
+                            }
                             if let e = prefs.loginError { Text(e).font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.warn)).padding(.horizontal, 16) }
                             row("屏幕录制权限（截图、录屏需要）".l) {
                                 HStack(spacing: 8) {

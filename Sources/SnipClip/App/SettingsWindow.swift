@@ -26,6 +26,7 @@ final class PrefsMirror {
     var paused: Bool { didSet { Preferences.shared.monitoringPaused = paused } }
     var imageStorage: String { get { access(keyPath: \.imageStorage); return Preferences.shared.imageStorage } set { withMutation(keyPath: \.imageStorage) { Preferences.shared.imageStorage = newValue } } }
     var pasteOnDoubleClick: Bool { get { access(keyPath: \.pasteOnDoubleClick); return Preferences.shared.pasteOnDoubleClick } set { withMutation(keyPath: \.pasteOnDoubleClick) { Preferences.shared.pasteOnDoubleClick = newValue } } }
+    var checkForUpdates: Bool { get { access(keyPath: \.checkForUpdates); return Preferences.shared.checkForUpdates } set { withMutation(keyPath: \.checkForUpdates) { Preferences.shared.checkForUpdates = newValue } } }
     var launchAtLogin: Bool {
         didSet {
             do {

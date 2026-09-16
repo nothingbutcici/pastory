@@ -25,6 +25,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         Retention.schedule()
         ClipboardMonitor.shared.start()
         ShelfPanelController.shared.prewarm()
+        Updater.shared.schedule()
         NotificationCenter.default.addObserver(forName: .languageChanged, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.buildMainMenu() }
         }
@@ -82,6 +83,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         pause.state = p.monitoringPaused ? .on : .off
         add(menu, "打开存储文件夹".l, #selector(menuOpenStore))
         menu.addItem(.separator())
+        add(menu, "检查更新…".l, #selector(menuCheckUpdates))
         add(menu, "设置…".l, #selector(menuSettings), keyEquivalent: ",")
         add(menu, "退出 Pastory".l, #selector(menuQuit), keyEquivalent: "q")
     }
@@ -134,6 +136,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func menuTogglePause() { Preferences.shared.monitoringPaused.toggle() }
     @objc private func menuOpenStore() { NSWorkspace.shared.open(ClipStore.shared.root) }
     @objc private func menuSettings() { SettingsWindowController.shared.show() }
+    @objc private func menuCheckUpdates() { Task { @MainActor in await Updater.shared.check(interactive: true) } }
     @objc private func menuQuit() {
         NSApp.terminate(nil)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { exit(0) }

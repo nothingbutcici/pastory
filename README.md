@@ -86,7 +86,7 @@ Offscreen self-tests render every surface and exercise retention, clipboard inge
 
 ## Privacy
 
-Pastory reads the general pasteboard twice a second (it checks one integer, the change count, and only reads content when it changed). It skips items marked concealed or transient by password managers. Nothing leaves the machine.
+Once a day Pastory asks GitHub whether a newer release exists (Settings › System turns this off; it is the only network request the app makes, and it carries no identifier). Pastory reads the general pasteboard twice a second (it checks one integer, the change count, and only reads content when it changed). It skips items marked concealed or transient by password managers. Nothing leaves the machine.
 
 ## Acknowledgements
 
