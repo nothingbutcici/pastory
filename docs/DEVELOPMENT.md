@@ -38,7 +38,7 @@ build/               构建产物，不进 git
 | `items/<id>.png` | 图片原图，带显示器色彩描述文件，不重编码 |
 | `items/<id>.json` | 文件条目：路径列表 |
 | `items/<id>.mp4` / `.gif` | 录屏本体 |
-| `thumbs/<id>.png` | 货架缩略图（长边 640 px） |
+| `thumbs/<id>.heic`（旧库里是 .png） | 货架缩略图（长边 640 px） |
 
 索引用 SQLite（`Clipboard/ClipDB.swift`，系统自带 libsqlite3），正文仍是文件；整表在一个事务里写，几千条也快。
 自测可用环境变量 `SNIPCLIP_STORE=<dir>` 指到别的目录，不污染真实数据。
@@ -158,6 +158,7 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
 - **双击 / ⏎ 直接粘贴**（2026-09-16，设置里可关，默认开）：`copyAndClose` 收起货架后重新激活之前的前台应用，确认它在前台后
   用 CGEvent 发一次 ⌘V（`Permissions.sendPaste`）。这一步需要「辅助功能」权限：没有时第一次双击会弹系统提示，并退化为只复制并收起。
   单击仍然只复制。分发包每次重签，权限要重新授（和屏幕录制一样）。这是唯一用到辅助功能的地方。
+- **缩略图是 HEIC**（2026-09-16）：长边 900px、质量 0.8，只用于货架显示，约为 PNG 的 1/4；旧的 .png 缩略图继续可读，`thumbURL` 两种都找。
 - **截图存储格式**（2026-09-16，设置 › 剪贴板 › 本地数据库截图存储方式）：默认无损 PNG；可选 HEIC 质量 0.9（ImageIO 编码，
   保留原色彩空间，约为 PNG 的 1/3）。只影响新截图；`contentHash` 永远是原 PNG 的 hash，去重不受格式影响；
   `ClipStore.png(of:)` 对 HEIC 项解码后再包成 PNG 交给剪贴板 / 编辑器 / 导出（像素、色彩空间不变），Quick Look 直接看 HEIC 文件。

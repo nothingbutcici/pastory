@@ -67,7 +67,7 @@ Pastory 是一个 macOS 菜单栏小工具，把两件事合在一起做：
 |---|---|
 | `pastory.sqlite` | 索引（SQLite，WAL）：类型、时间、来源应用、预览、识别文字、Pin、标题、内容哈希 |
 | `items/<id>.<ext>` | 正文本身：`.txt`、`.png`、`.mp4`、`.gif`，或文件路径列表的 JSON |
-| `thumbs/<id>.png` | 货架缩略图 |
+| `thumbs/<id>.heic` | 货架缩略图 |
 
 故意用普通文件：Finder 里能直接看，能被备份，整个文件夹拷到另一台 Mac 就能导入。
 

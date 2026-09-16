@@ -67,7 +67,7 @@ Default shortcuts: **⌥⌘S** screenshot / record, **⇧⌘V** shelf, **⌥⌘F
 |---|---|
 | `pastory.sqlite` | the index (SQLite, WAL): kind, time, source app, preview, recognized text, pin, title, content hash |
 | `items/<id>.<ext>` | the payloads themselves — `.txt`, `.png`, `.mp4`, `.gif`, or a JSON list of file paths |
-| `thumbs/<id>.png` | thumbnails for the shelf |
+| `thumbs/<id>.heic` | thumbnails for the shelf |
 
 Plain files on purpose: you can look at them in Finder, back them up, or copy the folder to another Mac and import it.
 

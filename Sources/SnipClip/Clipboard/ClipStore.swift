@@ -152,7 +152,14 @@ final class ClipStore {
 
     func payloadURL(_ item: ClipItem) -> URL { itemsDir.appendingPathComponent(item.fileName) }
     func rtfURL(_ item: ClipItem) -> URL { itemsDir.appendingPathComponent("\(item.id).rtf") }
-    func thumbURL(_ item: ClipItem) -> URL { thumbsDir.appendingPathComponent("\(item.id).png") }
+    /// Thumbnails are display-only, so they are lossy HEIC (≈ a quarter of a PNG). Older stores still have .png ones.
+    func thumbURL(_ item: ClipItem) -> URL {
+        let heic = thumbsDir.appendingPathComponent("\(item.id).heic")
+        if FileManager.default.fileExists(atPath: heic.path) { return heic }
+        let png = thumbsDir.appendingPathComponent("\(item.id).png")
+        return FileManager.default.fileExists(atPath: png.path) ? png : heic
+    }
+    private func thumbData(_ t: CGImage) -> Data? { Screenshotter.heicData(t, quality: 0.8) ?? Screenshotter.pngData(t) }
 
     /// A human-named file for the pasteboard ("Rec 2026-09-11 16.10.23.mp4"), kept under share/<id>/ so it
     /// can always be found and removed with the item. Hard link when the volume allows, copy otherwise.
@@ -216,7 +223,7 @@ final class ClipStore {
                             ext: ext, hasRTF: false, pixelWidth: cg.width, pixelHeight: cg.height,
                             byteCount: stored.count, duration: nil, title: nil, contentHash: hash)
         do { try stored.write(to: payloadURL(item), options: .atomic) } catch { return nil }
-        if let t = Screenshotter.thumbnail(cg, maxPixels: 900), let td = Screenshotter.pngData(t) {
+        if let t = Screenshotter.thumbnail(cg, maxPixels: 900), let td = thumbData(t) {
             try? td.write(to: thumbURL(item), options: .atomic)
         }
         prepend(item)
@@ -262,7 +269,7 @@ final class ClipStore {
                             ext: ext, hasRTF: false, pixelWidth: poster?.width, pixelHeight: poster?.height,
                             byteCount: size, duration: duration, title: nil, contentHash: Int(truncatingIfNeeded: UInt64.random(in: 0...UInt64.max)))
         do { try FileManager.default.moveItem(at: tempFile, to: payloadURL(item)) } catch { return nil }
-        if let poster, let t = Screenshotter.thumbnail(poster, maxPixels: 900), let td = Screenshotter.pngData(t) {
+        if let poster, let t = Screenshotter.thumbnail(poster, maxPixels: 900), let td = thumbData(t) {
             try? td.write(to: thumbURL(item), options: .atomic)
         }
         prepend(item)
@@ -293,7 +300,7 @@ final class ClipStore {
         items[i].ext = ext
         do { try stored.write(to: payloadURL(items[i]), options: .atomic) } catch { items[i].ext = old.ext; return }
         if old.ext != ext { try? FileManager.default.removeItem(at: payloadURL(old)) }
-        if let t = Screenshotter.thumbnail(cg, maxPixels: 900), let td = Screenshotter.pngData(t) {
+        if let t = Screenshotter.thumbnail(cg, maxPixels: 900), let td = thumbData(t) {
             try? td.write(to: thumbURL(items[i]), options: .atomic)
         }
         thumbCache[id] = nil
@@ -379,7 +386,7 @@ final class ClipStore {
                                     ext: ext, hasRTF: false, pixelWidth: cg.width, pixelHeight: cg.height,
                                     byteCount: stored.count, duration: nil, title: e.title, contentHash: hash)
                 guard (try? stored.write(to: payloadURL(item), options: .atomic)) != nil else { continue }
-                if let t = Screenshotter.thumbnail(cg, maxPixels: 900), let td = Screenshotter.pngData(t) {
+                if let t = Screenshotter.thumbnail(cg, maxPixels: 900), let td = thumbData(t) {
                     try? td.write(to: thumbURL(item), options: .atomic)
                 }
                 added.append(item)
