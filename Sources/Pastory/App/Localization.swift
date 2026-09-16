@@ -3,7 +3,7 @@ import Foundation
 /// Two languages, one table. Source strings are the Chinese literals in the code; `"…".l` returns the English
 /// when the app runs in English. Keys with a context ("tab") disambiguate words that translate differently.
 enum L {
-    /// Resolved from Preferences ("system" / "zh" / "en"); SNIPCLIP_LANG overrides for offscreen renders.
+    /// Resolved from Preferences ("system" / "zh" / "en"); PASTORY_LANG overrides for offscreen renders.
     /// Cached: a card body asks a dozen times per render. `Preferences.language` resets it.
     static var isEnglish: Bool {
         if let c = cached { return c }
@@ -20,7 +20,7 @@ enum L {
         return v
     }
     nonisolated(unsafe) private static var cached: Bool?
-    private static let envOverride = ProcessInfo.processInfo.environment["SNIPCLIP_LANG"]
+    private static let envOverride = ProcessInfo.processInfo.environment["PASTORY_LANG"]
     static func languageChanged() { cached = nil; NotificationCenter.default.post(name: .languageChanged, object: nil) }
 
     static let en: [String: String] = [

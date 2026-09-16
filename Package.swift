@@ -2,12 +2,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "SnipClip",
+    name: "Pastory",
     platforms: [.macOS(.v15)],
     targets: [
         .executableTarget(
-            name: "SnipClip",
-            path: "Sources/SnipClip",
+            name: "Pastory",
+            path: "Sources/Pastory",
             swiftSettings: [.swiftLanguageMode(.v5)],
             linkerSettings: [.linkedLibrary("sqlite3")]
         )

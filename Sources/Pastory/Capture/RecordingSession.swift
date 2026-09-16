@@ -22,7 +22,7 @@ final class RecordingSession {
     init(target: CaptureTarget, regionScreenRect: CGRect) {
         self.target = target
         self.regionScreenRect = regionScreenRect
-        tmpURL = FileManager.default.temporaryDirectory.appendingPathComponent("snipclip-\(UUID().uuidString).mp4")
+        tmpURL = FileManager.default.temporaryDirectory.appendingPathComponent("pastory-\(UUID().uuidString).mp4")
     }
 
     func start() {

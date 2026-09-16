@@ -1,6 +1,6 @@
 import AppKit
 
-/// Everything Snip Clip puts on the pasteboard carries `marker` = item id so the
+/// Everything Pastory puts on the pasteboard carries `marker` = item id so the
 /// monitor bumps the existing item instead of recording a duplicate.
 enum PasteboardWriter {
     static let marker = NSPasteboard.PasteboardType("com.cici.snipclip.marker")

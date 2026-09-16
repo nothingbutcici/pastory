@@ -11,9 +11,9 @@ macOS 菜单栏工具，截图 + 剪贴板货架合一。截图直接进剪贴�
 ```
 README.md            本文件：约定、构建、自测、存储格式
 Package.swift        SwiftPM，macOS 15+，只用 Apple 框架，无第三方依赖
-build.sh             swift build → build/Snip Clip.app → codesign（自签名证书「Snip Clip Dev」）
+build.sh             swift build → build/Pastory.app → codesign（Developer ID，其次自签名证书「Pastory Dev」，否则 ad-hoc）
 Resources/           Info.plist、entitlements、AppIcon.icns
-Sources/SnipClip/
+Sources/Pastory/
   App/               入口、菜单栏、全局快捷键、权限、偏好、设置窗口
   Capture/           ScreenCaptureKit 取图、框选覆盖层、坐标换算、区域录屏（SCRecordingOutput → mp4，可转 GIF）
   Annotate/          截图标注：Excalidraw 风手绘渲染（选择/矩形/椭圆/箭头/直线/画笔/文字/马赛克），OCR 面板
@@ -41,7 +41,7 @@ build/               构建产物，不进 git
 | `thumbs/<id>.heic`（旧库里是 .png） | 货架缩略图（长边 640 px） |
 
 索引用 SQLite（`Clipboard/ClipDB.swift`，系统自带 libsqlite3），正文仍是文件；整表在一个事务里写，几千条也快。
-自测可用环境变量 `SNIPCLIP_STORE=<dir>` 指到别的目录，不污染真实数据。
+自测可用环境变量 `PASTORY_STORE=<dir>` 指到别的目录，不污染真实数据。
 
 - 「保存到本地」每次弹系统保存对话框让用户选位置（默认打开上次用过的文件夹），存储里的原条目不动。
 - 清理规则（`Clipboard/Retention.swift`）按自然日：设清理时刻 X（默认 04:00，设置里 0–23 可调）和保留天数 N（默认 1；0 = 永不，此时时刻选择器禁用、不设定时器）。
@@ -60,7 +60,7 @@ build/               构建产物，不进 git
 open "build/Pastory.app"
 ```
 
-签名顺序：钥匙串里有「Snip Clip Dev」用它；没有就复用 cc record 的「CC Record Dev」（同一台机器、同一用途，
+签名顺序：钥匙串里有「Pastory Dev」用它；没有就复用 cc record 的「CC Record Dev」（同一台机器、同一用途，
 不必再生成一张）；都没有才 ad-hoc（每次重编译都要重新勾屏幕录制权限）。要单独一张证书就跑
 `./tools/make-signing-cert.sh`。只需要 Command Line Tools，不需要完整 Xcode。
 
@@ -80,19 +80,19 @@ open "build/Pastory.app"
 BIN="./build/Pastory.app/Contents/MacOS/Pastory"
 "$BIN" --selftest capture <out.png>    # 截主屏全图，打印色彩空间；再用系统 screencapture 抽样比像素
 "$BIN" --selftest ocr [in.png]         # 不给路径则自绘一张中英文图，识别后核对关键词
-SNIPCLIP_STORE=/tmp/x "$BIN" --selftest clipboard 10   # 监听 10 秒，打印期间记录到的条目
-SNIPCLIP_STORE=/tmp/x "$BIN" --selftest retention      # 造今天 / 昨天 / 昨天固定 / 三天前，清理后核对存活
-SNIPCLIP_STORE=/tmp/x "$BIN" --selftest shelf <out.png>     # 离屏渲染货架面板（含 5 条样例）
+PASTORY_STORE=/tmp/x "$BIN" --selftest clipboard 10   # 监听 10 秒，打印期间记录到的条目
+PASTORY_STORE=/tmp/x "$BIN" --selftest retention      # 造今天 / 昨天 / 昨天固定 / 三天前，清理后核对存活
+PASTORY_STORE=/tmp/x "$BIN" --selftest shelf <out.png>     # 离屏渲染货架面板（含 5 条样例）
 "$BIN" --selftest annotate <out.png>   # 离屏渲染标注画布 + 工具条，另存 <out>.flat.png 为合成结果
 "$BIN" --selftest gif                  # 合成 2 秒 mp4 → GIF，核对帧数与首帧
 "$BIN" --selftest preview <out.png>    # 离屏渲染录屏预览窗（视频区离屏是黑的，看布局用）
-SNIPCLIP_STORE=/tmp/x "$BIN" --selftest settings <out.png>   # 离屏渲染货架的设置页
-SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本编辑窗 <out>.text.png 与图片编辑窗 <out>.image.png
+PASTORY_STORE=/tmp/x "$BIN" --selftest settings <out.png>   # 离屏渲染货架的设置页
+PASTORY_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本编辑窗 <out>.text.png 与图片编辑窗 <out>.image.png
 ```
 
 后三个不需要屏幕录制权限，改 UI 后先看这两张图。
 
-**会写存储的自测（clipboard / retention / relocate / shelf / settings / editors）必须带 `SNIPCLIP_STORE=<临时目录>`，
+**会写存储的自测（clipboard / retention / relocate / shelf / settings / editors）必须带 `PASTORY_STORE=<临时目录>`，
 不带会直接拒绝运行。** `ClipStore.defaultRoot` 在该环境变量存在时也指向它，所以「搬回默认位置」之类的路径在测试里
 永远落在沙箱内。2026-09-12 曾因为这一点没做到，一次自测把用户真实存储清空过，不要再犯。
 
@@ -113,7 +113,7 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
   `Resources/MenuIcon(@2x).png` 直接取自 `PastoryMenuBar.imageset`（template，build.sh 会拷进包）。面包人 `Resources/Mascot.png` 留在仓库但不进包、代码不引用。
   品牌字体 Ysabeau Office（OFL，`Resources/Fonts/`，启动时按进程注册）只用在「Pastory」字样。
   截图 / 录屏只排除取景遮罩自己的窗口，货架开着时也能被截进去。
-- 框选完成后屏幕顶部出品牌条：logo · Snip Clip · [截屏 │ 录屏] · ✕，默认截屏；点录屏进录制流程。
+- 框选完成后屏幕顶部出品牌条：logo · Pastory · [截屏 │ 录屏] · ✕，默认截屏；点录屏进录制流程。
   选区是浅蓝框 + 8 个米纸手柄，拖手柄可以改选区（截图是整屏取一次再按选区裁，拖手柄只是重新裁，标注位置不动），
   右上角深色角标显示像素尺寸。
 - 工具条两层，结构对标飞书：主条 = 矩形 R / 椭圆 O / 箭头 A / 直线 L / 画笔 P / 文字 T / 马赛克 M │ 识别文字 │
@@ -139,7 +139,7 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
 - **双语**（2026-09-14）：`App/Localization.swift` 一张表，键就是代码里的中文字面量，`"…".l` 在英文环境返回英文，
   `"图片".l("tab")` 这类带上下文的键写成 `tab|图片`。带数字的句子用 `String(format: "%d 字".l, n)`。
   语言 = 设置 › 语言（跟随系统 / 中文 / English，`Preferences.language`），切换时 `ShelfModel.langTick` 让货架整体重建，
-  菜单栏菜单每次打开时重建；`SNIPCLIP_LANG=en` 可强制离屏渲染英文。新增文案：写中文字面量 + `.l`，再往表里加一行英文；
+  菜单栏菜单每次打开时重建；`PASTORY_LANG=en` 可强制离屏渲染英文。新增文案：写中文字面量 + `.l`，再往表里加一行英文；
   `ClipStore.importSourceName`（"导入"）是存库的标记，永远不翻译，显示时走「已导入」。
 - **签名与公证**（2026-09-16 起）：Developer ID Application 证书 `jie su (M558WUQ3G8)` 在登录钥匙串（CSR 用 openssl 生成，
   私钥已入钥匙串；Apple 的 Developer ID G2 中间证书也已导入）。公证凭据是 App Store Connect API 密钥，`xcrun notarytool
@@ -194,7 +194,7 @@ SNIPCLIP_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本
 - **屏幕录制权限**：系统自己的授权框每次启动最多弹一次；之后截图再被拒时弹我们的提示，第一个按钮是
   「我已打开，重新启动 Pastory」（授权只对新进程生效，重启是唯一办法），第二个才是「打开系统设置」。
   从终端直接启动的 Pastory，权限会记在终端名下，正式使用要从 Finder / 启动台打开。
-- **自测护栏**：会写库的子命令（clipboard / retention / shelf / settings / editors / import）必须带 `SNIPCLIP_STORE`，
+- **自测护栏**：会写库的子命令（clipboard / retention / shelf / settings / editors / import）必须带 `PASTORY_STORE`，
   且路径不能在 `~/Library/Application Support` 下面（不管叫什么名字），否则直接拒绝。
 - **截图中再按截图键 = 重新框选**，不是退出；打开着的「识别文字」面板会留在原地（这样才能截它），
   完成时只带上属于这次截图的识别文本（OCR 面板带 token）。⎋ 仍是取消。

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# One-time: create a self-signed code-signing identity "Snip Clip Dev" in the login
+# One-time: create a self-signed code-signing identity "Pastory Dev" in the login
 # keychain so rebuilds keep a stable signature (and the Screen Recording grant survives).
 set -euo pipefail
-NAME="${1:-Snip Clip Dev}"
+NAME="${1:-Pastory Dev}"
 KC="$HOME/Library/Keychains/login.keychain-db"
 if security find-identity -v -p codesigning "$KC" 2>/dev/null | grep -q "\"$NAME\""; then
     echo "identity '$NAME' already exists"; exit 0

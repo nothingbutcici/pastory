@@ -1,6 +1,6 @@
 import AppKit
 
-/// Brand bar above everything while capturing:  [logo] Snip Clip   [ 截屏 | 录屏 ]  │  ✕
+/// Brand bar above everything while capturing:  [logo] Pastory   [ 截屏 | 录屏 ]  │  ✕
 final class TopBar: NSView {
     var onRecord: (() -> Void)?
     var onClose: (() -> Void)?

@@ -3,7 +3,7 @@ import ScreenCaptureKit
 import SwiftUI
 
 /// `--selftest capture <out.png>` · `--selftest ocr [in.png]` · `--selftest clipboard <seconds>`
-/// Set SNIPCLIP_STORE=<dir> to keep test items out of the real store.
+/// Set PASTORY_STORE=<dir> to keep test items out of the real store.
 enum SelfTest {
     /// A file that exists in any checkout, for the file-list tests.
     static let sampleFile = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
@@ -14,25 +14,25 @@ enum SelfTest {
         guard let i = args.firstIndex(of: "--selftest"), i + 1 < args.count else { return false }
         let cmd = args[i + 1]
         let rest = Array(args[(i + 2)...])
-        // Anything that writes to a store must run inside SNIPCLIP_STORE. Never against the user's data.
+        // Anything that writes to a store must run inside PASTORY_STORE. Never against the user's data.
         let mutating: Set<String> = ["clipboard", "retention", "shelf", "settings", "editors", "import", "ingest", "tombstone", "heic"]
         if mutating.contains(cmd) {
-            let env = ProcessInfo.processInfo.environment["SNIPCLIP_STORE"] ?? ""
+            let env = ProcessInfo.processInfo.environment["PASTORY_STORE"] ?? ""
             // Nothing under Application Support counts as a sandbox, whatever the folder is called.
             let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].resolvingSymlinksInPath().path
             let target = URL(fileURLWithPath: env).resolvingSymlinksInPath().path
             if env.isEmpty || target.hasPrefix(support) {
-                print("refusing: --selftest \(cmd) needs SNIPCLIP_STORE pointing at a scratch folder (never the real store)")
+                print("refusing: --selftest \(cmd) needs PASTORY_STORE pointing at a scratch folder (never the real store)")
                 exit(2)
             }
         }
         Task { @MainActor in
             var ok = false
             switch cmd {
-            case "capture": ok = await capture(out: rest.first ?? "snipclip-capture.png")
+            case "capture": ok = await capture(out: rest.first ?? "pastory-capture.png")
             case "ocr": ok = ocr(path: rest.first)
             case "clipboard": ok = await clipboard(seconds: Int(rest.first ?? "10") ?? 10)
-            case "shelf": ok = await renderShelf(out: rest.first ?? "snipclip-shelf.png")
+            case "shelf": ok = await renderShelf(out: rest.first ?? "pastory-shelf.png")
             case "settings":
                 await seedStore()
                 let model = ShelfPanelController.shared.model
@@ -43,17 +43,17 @@ enum SelfTest {
                 let w = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
                 w.contentView = host
                 w.isReleasedWhenClosed = false
-                ok = snapshot(host, to: rest.first ?? "snipclip-settings.png")
+                ok = snapshot(host, to: rest.first ?? "pastory-settings.png")
             case "preview":
-                let mov = FileManager.default.temporaryDirectory.appendingPathComponent("snipclip-preview.mp4")
+                let mov = FileManager.default.temporaryDirectory.appendingPathComponent("pastory-preview.mp4")
                 try? FileManager.default.removeItem(at: mov)
                 try? await SyntheticMovie.write(to: mov, size: CGSize(width: 1280, height: 720), seconds: 6, fps: 30)
                 let w = RecordingPreviewWindow(movie: mov, duration: 6, pixelSize: CGSize(width: 1280, height: 720), near: CGRect(x: 200, y: 200, width: 640, height: 360))
                 w.debugSeek(2.5)
-                ok = w.debugContentView.map { snapshot($0, to: rest.first ?? "snipclip-preview.png") } ?? false
+                ok = w.debugContentView.map { snapshot($0, to: rest.first ?? "pastory-preview.png") } ?? false
             case "editors":
                 await seedStore()
-                let out = rest.first ?? "snipclip-editor.png"
+                let out = rest.first ?? "pastory-editor.png"
                 var okAll = true
                 if let t = ClipStore.shared.items.first(where: { $0.kind == .text }), let v = TextEditorWindow.debugView(t) {
                     okAll = snapshot(v, to: URL(fileURLWithPath: out).deletingPathExtension().appendingPathExtension("text.png").path) && okAll
@@ -66,7 +66,7 @@ enum SelfTest {
                 }
                 ok = okAll
             case "ocrpanel":
-                ok = OCRPanelController.shared.debugView(sample: "Snip Clip 是一个截图工具\n所有复制过的内容都留在货架里\nMade in 2026 · 中英混排 OK").map { snapshot($0, to: rest.first ?? "snipclip-ocrpanel.png") } ?? false
+                ok = OCRPanelController.shared.debugView(sample: "Pastory 是一个截图工具\n所有复制过的内容都留在剪贴板里\nMade in 2026 · 中英混排 OK").map { snapshot($0, to: rest.first ?? "pastory-ocrpanel.png") } ?? false
             case "import":
                 // Scan a foreign SQLite file (arg 1) and pull it into the sandbox store; prints what it found.
                 do {
@@ -175,7 +175,7 @@ enum SelfTest {
                 print(String(format: "open panel visible after %.2f s (visible=%@)", Date().timeIntervalSince(t0), panel.isVisible ? "yes" : "no"))
                 panel.cancel(nil)
                 ok = panel.isVisible || waited < 30
-            case "annotate": ok = renderAnnotate(out: rest.first ?? "snipclip-annotate.png")
+            case "annotate": ok = renderAnnotate(out: rest.first ?? "pastory-annotate.png")
             default: print("unknown selftest \(cmd)")
             }
             exit(ok ? 0 : 1)
@@ -200,7 +200,7 @@ enum SelfTest {
             print("screen colorSpace=\((screen.colorSpace?.cgColorSpace?.name as String?) ?? "nil")")
 
             // Reference: Apple's own screencapture of the same display, then compare samples.
-            let ref = url.deletingLastPathComponent().appendingPathComponent("snipclip-ref.png")
+            let ref = url.deletingLastPathComponent().appendingPathComponent("pastory-ref.png")
             let p = Process()
             p.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
             let f = screen.frame
@@ -253,7 +253,7 @@ enum SelfTest {
         } else {
             guard let img = renderSample() else { print("sample render failed"); return false }
             image = img
-            expect = ["Snip Clip", "截图工具", "2026"]
+            expect = ["Pastory", "截图工具", "2026"]
         }
         do {
             let t0 = Date()
@@ -275,7 +275,7 @@ enum SelfTest {
         ctx.setFillColor(CGColor.white); ctx.fill(CGRect(x: 0, y: 0, width: w, height: h))
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = NSGraphicsContext(cgContext: ctx, flipped: false)
-        let lines = ["Snip Clip 是一个截图工具", "所有复制过的内容都留在货架里", "Made in 2026 · 中英混排 OK"]
+        let lines = ["Pastory 是一个截图工具", "所有复制过的内容都留在剪贴板里", "Made in 2026 · 中英混排 OK"]
         for (i, s) in lines.enumerated() {
             (s as NSString).draw(at: CGPoint(x: 40, y: 180 - i * 64), withAttributes: [
                 .font: NSFont.systemFont(ofSize: 40), .foregroundColor: NSColor.black])
@@ -368,8 +368,8 @@ enum SelfTest {
     @MainActor
     private static func gif() async -> Bool {
         let dir = FileManager.default.temporaryDirectory
-        let mov = dir.appendingPathComponent("snipclip-selftest.mp4")
-        let gifURL = dir.appendingPathComponent("snipclip-selftest.gif")
+        let mov = dir.appendingPathComponent("pastory-selftest.mp4")
+        let gifURL = dir.appendingPathComponent("pastory-selftest.gif")
         try? FileManager.default.removeItem(at: mov)
         try? FileManager.default.removeItem(at: gifURL)
         do {
@@ -396,7 +396,7 @@ enum SelfTest {
     private static func seedStore() async {
         let store = ClipStore.shared
         guard store.items.isEmpty else { return }
-        let mov = FileManager.default.temporaryDirectory.appendingPathComponent("snipclip-seed.mp4")
+        let mov = FileManager.default.temporaryDirectory.appendingPathComponent("pastory-seed.mp4")
         try? FileManager.default.removeItem(at: mov)
         if (try? await SyntheticMovie.write(to: mov, size: CGSize(width: 1280, height: 720), seconds: 8, fps: 30)) != nil {
             let poster = await GIFEncoder.poster(movie: mov)
@@ -406,7 +406,7 @@ enum SelfTest {
         store.insertText("会议纪要 9/11\n1. VM 首发时间定 8/5\n2. Big @ 主打功能演示要重录\n3. 达人投放链接统一走 ?tc=", rtf: nil, source: ClipStore.Source(bundleID: "com.apple.Notes", name: "备忘录"))
         store.insertText("https://github.com/nothingbutcici/session-library/pull/12", rtf: nil, source: src)
         if let img = renderSample(), let png = Screenshotter.pngData(img) {
-            store.insertImage(png: png, source: CaptureCoordinator.source, ocrText: "Snip Clip 是一个截图工具")
+            store.insertImage(png: png, source: CaptureCoordinator.source, ocrText: "Pastory 是一个截图工具")
         }
         store.insertFiles([URL(fileURLWithPath: SelfTest.sampleFile.path),
                            URL(fileURLWithPath: "/Users/cici/Project/Claude/snip clip/Package.swift")],
@@ -484,7 +484,7 @@ enum SelfTest {
             Annotation(tool: .pen, color: red, size: .m, points: stride(from: 0, to: 120, by: 3).map { CGPoint(x: 280 + CGFloat($0), y: 96 + 9 * sin(CGFloat($0) / 7)) }),
             Annotation(tool: .mosaic, color: red, size: .m, points: [CGPoint(x: 20, y: 72), CGPoint(x: 200, y: 108)]),
             Annotation(tool: .text, color: blue, size: .m, points: [CGPoint(x: 262, y: 6)], text: "你好，今天天气怎么样？"),
-            Annotation(tool: .text, color: ink, size: .s, points: [CGPoint(x: 300, y: 32)], text: "Hello Snip Clip"),
+            Annotation(tool: .text, color: ink, size: .s, points: [CGPoint(x: 300, y: 32)], text: "Hello Pastory"),
         ], select: nil)
         guard snapshot(stage, to: URL(fileURLWithPath: out).deletingPathExtension().appendingPathExtension("idle.png").path) else { return false }
         canvas.debugSet(canvas.annotations, select: 0)
@@ -525,7 +525,7 @@ extension SelfTest {
     @MainActor static func ingest() -> Bool {
         let store = ClipStore.shared
         store.removeAll { _ in true }
-        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("snipclip-ingest-\(UUID().uuidString).png")
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("pastory-ingest-\(UUID().uuidString).png")
         let img = NSImage(size: CGSize(width: 40, height: 30), flipped: false) { r in NSColor.orange.setFill(); r.fill(); return true }
         guard let tiff = img.tiffRepresentation, let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) else { return false }
         try? png.write(to: tmp)

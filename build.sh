@@ -12,8 +12,8 @@ if [ -z "${SIGN_ID:-}" ]; then
     DEV="$(echo "$IDS" | grep -o '"Developer ID Application: [^"]*"' | head -1 | tr -d '"' || true)"
     if [ -n "$DEV" ]; then
         SIGN_ID="$DEV"
-    elif echo "$IDS" | grep -q '"Snip Clip Dev"'; then
-        SIGN_ID="Snip Clip Dev"
+    elif echo "$IDS" | grep -q '"Pastory Dev"'; then
+        SIGN_ID="Pastory Dev"
     elif echo "$IDS" | grep -q '"CC Record Dev"'; then
         SIGN_ID="CC Record Dev"      # same machine, same purpose: reuse instead of a second cert
     else
@@ -27,14 +27,14 @@ if [ -n "${ARCHS:-}" ]; then
     for a in $ARCHS; do
         # SwiftPM's per-triple build database goes stale after host builds ("command … not registered"): wipe and retry once.
         swift build -c "$CONFIG" --triple "$a-apple-macosx" || { rm -rf ".build/$a-apple-macosx"; swift build -c "$CONFIG" --triple "$a-apple-macosx"; }
-        SLICES+=("$(swift build -c "$CONFIG" --triple "$a-apple-macosx" --show-bin-path)/SnipClip")
+        SLICES+=("$(swift build -c "$CONFIG" --triple "$a-apple-macosx" --show-bin-path)/Pastory")
     done
     mkdir -p build
-    lipo -create "${SLICES[@]}" -output build/SnipClip-universal
-    BIN="build/SnipClip-universal"
+    lipo -create "${SLICES[@]}" -output build/Pastory-universal
+    BIN="build/Pastory-universal"
 else
     swift build -c "$CONFIG"
-    BIN="$(swift build -c "$CONFIG" --show-bin-path)/SnipClip"
+    BIN="$(swift build -c "$CONFIG" --show-bin-path)/Pastory"
 fi
 
 APP="build/Pastory.app"
@@ -50,7 +50,7 @@ done
 # A Developer ID identity gets the hardened runtime + secure timestamp that notarization requires.
 SIGN_FLAGS=()
 case "$SIGN_ID" in "Developer ID Application"*) SIGN_FLAGS=(--options runtime --timestamp);; esac
-if ! codesign --force --sign "$SIGN_ID" ${SIGN_FLAGS[@]+"${SIGN_FLAGS[@]}"} --entitlements Resources/SnipClip.entitlements "$APP" 2>/dev/null; then
+if ! codesign --force --sign "$SIGN_ID" ${SIGN_FLAGS[@]+"${SIGN_FLAGS[@]}"} --entitlements Resources/Pastory.entitlements "$APP" 2>/dev/null; then
     codesign --force --sign "$SIGN_ID" ${SIGN_FLAGS[@]+"${SIGN_FLAGS[@]}"} "$APP"
 fi
 echo "→ $APP (signed: $SIGN_ID)"
