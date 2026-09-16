@@ -100,8 +100,8 @@ macOS 15 或更新，Intel 和 Apple 芯片都可以。
 - **其他软件截图：** 微信、飞书、系统截图，只要进了剪贴板，就有一张卡，一样能搜、能 Pin、能标注。
 
 <p>
-  <img src="docs/images/clipboard-editing.jpg" alt="已复制内容，接着改改" width="49%">
   <img src="docs/images/clipboard-history.jpg" alt="所有复制历史，都在这里" width="49%">
+  <img src="docs/images/clipboard-editing.jpg" alt="已复制内容，接着改改" width="49%">
 </p>
 <p>
   <img src="docs/images/clipboard-settings.jpg" alt="设置" width="32.5%">

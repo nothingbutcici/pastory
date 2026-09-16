@@ -100,8 +100,8 @@ Open it with a shortcut of your choice or from the menu bar icon. Everything you
 - **Screenshots from other apps:** WeChat, Feishu, the built-in macOS screenshot — anything that reaches the clipboard gets a card, and can be searched, pinned, and annotated like everything else.
 
 <p>
-  <img src="docs/images/clipboard-editing.jpg" alt="Edit what you copied" width="49%">
   <img src="docs/images/clipboard-history.jpg" alt="All your copy history, in one place" width="49%">
+  <img src="docs/images/clipboard-editing.jpg" alt="Edit what you copied" width="49%">
 </p>
 <p>
   <img src="docs/images/clipboard-settings.jpg" alt="Settings" width="32.5%">
