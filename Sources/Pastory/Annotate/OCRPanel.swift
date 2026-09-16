@@ -11,6 +11,23 @@ final class OCRPanelController: NSObject, NSWindowDelegate {
     private var task: Task<Void, Never>?
     /// Which capture asked for this text; a later capture must not inherit it.
     private(set) var token: UUID?
+    private static let abovePicker = NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()) + 1)
+
+    override init() {
+        super.init()
+        // Labels are baked in at build time; a language switch throws the panel away so the next one is rebuilt.
+        NotificationCenter.default.addObserver(forName: .languageChanged, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.close()
+                self.panel = nil; self.textView = nil; self.status = nil
+            }
+        }
+    }
+
+    /// A new capture is starting: the panel must not cover the picker — the frozen backdrop shows it instead,
+    /// so it can be screenshotted like any other window.
+    func sinkBelowPicker() { panel?.level = .floating }
 
     /// Text as currently shown (edited or not); nil when the panel is not up.
     var currentText: String? {
@@ -26,6 +43,7 @@ final class OCRPanelController: NSObject, NSWindowDelegate {
         panel = p
         textView?.string = ""
         status?.stringValue = "识别中…".l
+        p.level = Self.abovePicker
         place(p, near: anchor)
         p.orderFrontRegardless()
         p.makeKey()
@@ -67,7 +85,7 @@ final class OCRPanelController: NSObject, NSWindowDelegate {
         p.titlebarAppearsTransparent = true
         p.appearance = NSAppearance(named: .darkAqua)
         p.backgroundColor = Theme.brown
-        p.level = NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()) + 1)      // just above the picker
+        p.level = Self.abovePicker
         p.isReleasedWhenClosed = false
         p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         p.delegate = self

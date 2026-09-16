@@ -25,6 +25,7 @@ final class CaptureCoordinator: AnnotateDelegate {
         // Hotkey again while the picker or annotator is up: start over, but leave an open 识别文字 panel alone —
         // being able to screenshot that panel is the point.
         if isBusy { finish(keepOCRPanel: true) }
+        OCRPanelController.shared.sinkBelowPicker()
         ocrToken = UUID()                    // a panel left over from the last capture is not this capture's text
         guard Permissions.ensureScreenRecording() else { return }
         isBusy = true
