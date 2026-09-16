@@ -569,7 +569,8 @@ extension SelfTest {
         check("hash is the PNG's, so the same picture dedupes", store.insertImage(png: png, source: Source(bundleID: "test", name: "Test"))?.id == item.id)
         Preferences.shared.imageStorage = "png"
         guard let plain = store.insertImage(png: Screenshotter.pngData(Screenshotter.thumbnail(cg, maxPixels: 300)!)!, source: Source(bundleID: "test", name: "Test")) else { return false }
-        check("back to png for new items", plain.ext == "png")
+        check("png when chosen", plain.ext == "png")
+        Preferences.shared.imageStorage = "heic"
         store.removeAll { _ in true }
         return ok
     }

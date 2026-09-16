@@ -115,8 +115,8 @@ final class Preferences {
     }
     var monitoringPaused: Bool { get { d.bool(forKey: Key.monitoringPaused) } set { d.set(newValue, forKey: Key.monitoringPaused) } }
     var ocrImages: Bool { get { d.bool(forKey: Key.ocrImages) } set { d.set(newValue, forKey: Key.ocrImages) } }
-    /// How new screenshots are stored: "png" (lossless, default) or "heic" (quality 0.9, about a third of the size).
-    var imageStorage: String { get { d.string(forKey: "imageStorage") ?? "png" } set { d.set(newValue, forKey: "imageStorage") } }
+    /// How new screenshots are stored: "heic" (quality 0.9, about a third of the size, default) or "png" (lossless).
+    var imageStorage: String { get { d.string(forKey: "imageStorage") ?? "heic" } set { d.set(newValue, forKey: "imageStorage") } }
     var storesHEIC: Bool { imageStorage == "heic" }
     /// Double-click / ⏎ also sends ⌘V to the app you came from (needs Accessibility). On by default; falls back to copy-only.
     var pasteOnDoubleClick: Bool { get { d.object(forKey: "pasteOnDoubleClick") as? Bool ?? true } set { d.set(newValue, forKey: "pasteOnDoubleClick") } }

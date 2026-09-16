@@ -24,7 +24,7 @@ Everything stays on your Mac. No account, no network, no telemetry.
 
 **Capture**
 - Region / window / full-screen picker with resize handles; the front app keeps its menus and popovers open while you pick.
-- Color-accurate: captures in the display's own color space (Display P3 stays P3, nothing is squashed to sRGB).
+- Color-accurate: captures in the display's own color space (Display P3 stays P3, nothing is squashed to sRGB). The copy you paste right after capturing is lossless; the shelf keeps screenshots as high-quality HEIC by default (lossless PNG is a setting), and "Save to Disk" always writes a full-resolution PNG.
 - Excalidraw-style annotations: rectangle, ellipse, arrow, line, pen, text, mosaic — seven colors, three weights, drag to move, handles to reshape.
 - Text recognition (Vision, on-device) for Chinese and English; the text is editable before you copy it.
 - Screen recording of the same region to MP4, or GIF with a size budget, with a preview before anything is copied.

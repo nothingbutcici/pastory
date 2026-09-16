@@ -111,7 +111,7 @@ struct SettingsPane: View {
                             }
                             row("本地数据库截图存储方式".l) {
                                 HStack(spacing: 4) {
-                                    ForEach([("png", "无损 PNG（默认）"), ("heic", "高质量 HEIC（约小 3 倍）")], id: \.0) { code, label in
+                                    ForEach([("heic", "高质量 HEIC（默认，约小 3 倍）"), ("png", "无损 PNG")], id: \.0) { code, label in
                                         let on = prefs.imageStorage == code
                                         Button { prefs.imageStorage = code } label: {
                                             Text(label.l).font(.system(size: 12.5, weight: on ? .semibold : .medium))
