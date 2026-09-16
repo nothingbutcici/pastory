@@ -4,122 +4,118 @@
 
 <h1 align="center">Pastory</h1>
 
-<p align="center"><b>Pastory = Paste + History</b> · <a href="README.zh.md">中文</a></p>
+<p align="center"><b>Pastory = Paste + History</b> · <a href="README.en.md">English</a></p>
 
 <p align="center">
-  <img src="docs/images/shelf-en.png" alt="The Pastory clipboard" width="920">
+  <img src="docs/images/shelf-zh.png" alt="Pastory 剪贴板" width="920">
 </p>
 
-Everything on your computer has a history. Except the clipboard. It only remembers the last thing.
+你电脑上什么都有历史记录。只有剪贴板除外，它只记得最后一次。
 
-You press ⌘C dozens of times a day. More than half of those are things you've copied before.
+你每天按几十次 ⌘C。其中一大半，是过去已经复制过的东西。
 
-So the stuff you use most — the prompt that finally worked, that link you meant to keep, the screenshot, the client's address, the invoice details — vanishes the moment you copy the next thing.
+于是那些高频使用的内容：好用的 prompt、发现的宝藏链接、截过的图、客户地址、发票抬头……都在「下一次复制」的时候瞬间消失。
 
-Pastory gives the clipboard a long-term memory: everything you copy — text, links, images, screenshots, recordings — lives in one panel where you can find it and use it again.
+Pastory 给剪贴板开了个长期记忆的外挂：复制过的文字、链接、图片、截图、录屏，都在一个面板里集中管理和调用。
 
-- Pin what you use often. Pinned items survive any cleanup schedule.
-- Give important items a title so you recognize them at a glance.
-- Click to copy, double-click to paste straight into the app you were in.
+- 常用内容 Pin 起来，就算设了定时清理，也不会被删。
+- 重要内容起个标题，一眼就能认出。
+- 单击立即复制，双击直接贴进外部输入框。
 
-Everything stays on your Mac. No account, no network, your data is 100% yours.
+所有东西都在你自己的电脑上。没有账号，不联网，隐私安全 100% 在你手里。
 
-## Install
+## 安装
 
-macOS 15 or later, Intel or Apple silicon.
+macOS 15 或更新，Intel 和 Apple 芯片都可以。
 
-1. Download the [latest zip](../../releases/latest), unzip, drag `Pastory.app` into Applications.
-2. Open it. A handwritten **P** appears in the menu bar and the clipboard panel opens once by itself. (Builds are notarized by Apple — no security warnings.)
-3. The first screenshot asks for **Screen Recording** permission; turn it on and reopen Pastory.
+1. 下载 [最新版 zip](../../releases/latest)，解压，把 `Pastory.app` 拖进「应用程序」。
+2. 打开它。菜单栏右上角出现手写的 **P**，第一次会自动弹出剪贴板面板。（已过 Apple 公证，请放心“食用”）
+3. 第一次截图时，按提示打开「屏幕录制」权限，然后重新打开 Pastory。
 
-Default shortcuts: **⌥⌘S** screenshot / record, **⇧⌘V** clipboard. Both can be changed in Settings.
-
-Optional: with **Accessibility** permission, double-clicking a card pastes it straight into the app you came from; without it, double-click copies and closes.
-
-Pastory tells you when a new version is out; one click updates it in place.
+快捷键、自动清理时间、截图存储格式等均可在「设置」中根据偏好自定义。
 
 ---
 
-## Why I built it
+## 为什么做它
 
-### The clipboard — the real need
+### 剪贴板，我最核心的需求
 
-I copy text and take screenshots many times a day, and a good share of those are things I already did an hour ago (ADHD). Repeat, repeat, repeat.
+每天我都会复制文本、截图很多次，其中不少甚至是一个小时前刚做过的操作（ADHD），反复重复操作ing。
 
-The useful bits ended up in Notes sometimes, in Obsidian other times. Scattered everywhere.
+常用的内容有的时候会粘贴进「备忘录」，有的时候会放进 OB。总之信息也很分散。
 
-So — this little app.
+于是，有了这个小产品！！！
 
-Every copy, screenshots included, lands in one place, waiting to be looked at again, reused, or edited.
+所有复制行为（含截图），都收拢在同一个地方，等待回顾、二次使用，甚至是编辑。
 
-Power move: if what you copy is information-dense, let an agent read your Pastory database now and then and turn it into a reviewable markdown knowledge base.
+高阶用法：如果你来回复制的内容信息密度很高，甚至可以让 Agent 定期读你的 Pastory 数据库，帮你整理成可以 review 的 md 知识库！
 
-### Screenshots (a small indulgence)
+### 截图（额外私心加的小功能）
 
-I used two screenshot tools at once.
+我的 Mac 上同时会用到两个截图工具。
 
-WeChat's shifts the colors, but I love its text recognition, so I'd call it when I needed the words.
+微信截图有色差，但我很喜欢「识别文字」这个功能，所以需要认字的时候，我会唤起微信的截图。
 
-Feishu's keeps the colors right and can record MP4 / GIF, so I'd call it for those.
+飞书截图没有色差，还能录屏（MP4 / GIF），所以对应的需求我会唤起飞书的截图。
 
-Which shortcut to press was a decision I had to make every single time.
+只不过按哪个快捷键，总需要我提前想一下。
 
-Both can annotate, but neither looks nice doing it. I care about how the font and the text box look while I'm marking something up (I need my small joys).
+另外，两个产品虽然都有基础的标注能力，只是样式都不太「雅」。我很在意标注时字体、文本框好不好看（时刻需要为自己提供情绪价值）。
 
-So Pastory folds all of that into one tool.
+所以 Pastory 把这些能力都合在一起了！
 
-## What it does
+## 核心功能
 
-### Clipboard history
+### 剪贴板历史
 
-Open it with a shortcut of your choosing or from the menu bar. Everything you copied is a card, with the app it came from and the time.
+可自由设置唤起快捷键，也可以点击顶部 menu button 唤起。复制过的任何内容都以卡片形式呈现，同时保留来源应用与复制时间。
 
-- **Copy:** click any card and it's on your clipboard, ready to paste.
-- **Copy and paste in one go:** double-click a card and it lands in the input field of the app you were in.
-- **Search:** by keyword, across text, titles, and the words recognized inside images.
-- **Pin to keep:** pinned items stay for good; unpinned ones are cleaned up on a schedule you set.
-- **Titles:** name the important ones so you spot them instantly.
-- **Edit in place:** text and images can be edited; the result replaces the original on the same card.
-- **Screenshots from other tools:** WeChat, Feishu, the system — anything that reaches the clipboard gets a card, searchable, pinnable, annotatable.
+- **复制内容：** 单击任意卡片，即为复制，可直接粘贴进目标输入框。
+- **复制内容，自动带进输入框：** 双击任意卡片，选中内容会直接贴进所在应用输入框。
+- **剪贴板搜索：** 支持根据关键词进行历史搜索，搜索范围包括文本、标题、图片中的文本内容。
+- **Pin 一下，内容长期保留：** 重要内容随手 Pin 起来，方便随时回捞使用，长期保存。未 Pin 内容可在设置中自定义清理时间。
+- **重要内容，添加标题：** 方便浏览，一眼认出。
+- **支持二次编辑：** 剪贴板文本、图片均提供二次编辑能力；调整后，新内容会替换原 copy 内容，留在剪贴板中，方便下次使用。
+- **其他软件截图：** 微信、飞书、系统截图，只要进了剪贴板，就有一张卡，一样能搜、能 Pin、能标注。
 
-### Screenshot & recording
+### 截图 & 录屏
 
-<p align="center"><img src="docs/images/capture-en.png" alt="Capture and annotation" width="920"></p>
+<p align="center"><img src="docs/images/capture-zh.png" alt="截图与标注" width="920"></p>
 
-Press your shortcut to capture or record.
+根据设置好的快捷键，进行截图、录屏等相关操作。
 
-Colors are taken in the display's own color space, so nothing shifts.
+颜色按显示器自己的色彩空间取，不会在截图时改变画面原色。
 
-**Annotations look like Obsidian's Excalidraw plugin** (if you've used it, you'll smile): rectangle, ellipse, arrow, line, pen, text, mosaic, in seven low-saturation colors. Pictures you send out will look good.
+**图片标注是 Obsidian 插件 Excalidraw 的画风**（用过的朋友看到这里应该会很开心）：编辑会很美观：支持矩形、圆、箭头、直线、画笔、文字、马赛克，同时配了七种低饱和的颜色。编辑后分享出去的图大家都会直呼好看！
 
-**Recognize text:** Apple's on-device OCR; the recognized text is stored with the image so you can find it later.
+**识别文字：** 底层是 Apple 自带的本地 OCR，识别出来的文字也会跟着图一起存进剪贴板，方便后续使用。
 
-**Record:** MP4 or GIF — pick the format after recording.
+**录屏：** 支持 MP4 / GIF，录制后选择对应格式即可。
 
-## Why you might want it
+## 你为什么需要
 
-**Shipping addresses, invoice details, the sentences you type every day.**
-We've all dug through chat history for the same piece of information again and again.
+**寄件地址、开票信息、话术等对你而言常用的文本内容**
+相信大家都有过：需要某个信息时，每次都得来回翻聊天记录疯狂找的体验。
 
-With Pastory: copy it once, title it "Client A address" or "Company invoice", pin it. Next time, double-click and it's pasted.
+使用 Pastory：文本复制一次，加个标题如「客户 A 地址」「公司开票信息」。Pin 起来，下次使用，双击就能贴过去。
 
-**Prompts that worked, links worth keeping.**
-The moment you copy it, it's in Pastory — no need to force a "save it to notes" habit. And no more scrolling back through fifty turns of conversation wondering which session it was in.
+**好用的 Prompt、宝藏链接**
+复制的那一刻它就在剪贴板里了，终于不用专门逼自己培养随时存到笔记软件的习惯啦！！下次做类似的任务，也不用再思考我在哪个 session 中聊过，翻几十轮对话挨个找。
 
-With Pastory: search a keyword, it's there.
+使用 Pastory：搜索关键词，想用随时都能找得到。
 
-**A visual reference board.**
-When you vibe-code a product, visuals matter. I used to screenshot references frantically and file each one by hand — ten seconds a picture, at least.
+**当视觉素材库用。**
+vibe coding 做产品，视觉也很重要。过去疯狂截图找参考，再一个个存在本地文件夹。单图耗时至少 10 秒。
 
-With Pastory: screenshot, and they line up in a row to compare and choose from. Pin the ones you like, annotate when needed, and save to disk — always a full-resolution PNG.
+使用 Pastory：简单截图，剪贴板排成一排，方便你比较、再确定最终选中方案。喜欢的 Pin 住，要标注的时候再点开编辑。喜欢就下载保存到桌面，导出的永远是全分辨率 PNG。
 
-## Privacy
+## 隐私
 
-- Everything lives in `~/Library/Application Support/Pastory/`: plain files plus one SQLite index. Look at it, back it up, copy it to another Mac and import it.
-- No account, no analytics. The only network request is a daily update check; it carries no identifier and can be turned off in Settings.
-- Items that password managers mark as concealed are never recorded.
+- 所有数据都在 `~/Library/Application Support/Pastory/`：普通文件加一个 SQLite 索引，随时能看、能备份、能拷到另一台 Mac 导入。
+- 没有账号，没有统计。唯一的联网请求是每天一次检查更新，不带任何标识，设置里可以关。
+- 密码管理器标记为隐藏的内容不会被记录。
 
-## Build from source
+## 从源码构建
 
 ```
 git clone https://github.com/nothingbutcici/pastory.git
@@ -127,10 +123,10 @@ cd pastory
 ./build.sh          # → build/Pastory.app
 ```
 
-Swift Package Manager, Apple frameworks only. Project conventions live in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+Swift Package Manager，只用 Apple 自带框架。项目约定见 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
 
-## Credits & license
+## 致谢与许可
 
-Typefaces [Caveat](https://fonts.google.com/specimen/Caveat) and [Ysabeau Office](https://fonts.google.com/specimen/Ysabeau+Office) (SIL Open Font License). Interaction inspired by [Paste](https://pasteapp.io); annotation style after [Excalidraw](https://excalidraw.com).
+字体 [Caveat](https://fonts.google.com/specimen/Caveat)、[Ysabeau Office](https://fonts.google.com/specimen/Ysabeau+Office)（SIL 开源字体许可）。交互受 [Paste](https://pasteapp.io) 启发，标注风格来自 [Excalidraw](https://excalidraw.com)。
 
 MIT License · © 2026 nothingbutcici

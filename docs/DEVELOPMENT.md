@@ -1,4 +1,4 @@
-> 这是项目的规则本（约定、存储 / 清理规则、视觉系统、自测）。面向用户的介绍在仓库根目录的 [README.md](../README.md) / [README.zh.md](../README.zh.md)。
+> 这是项目的规则本（约定、存储 / 清理规则、视觉系统、自测）。面向用户的介绍在仓库根目录的 [README.md](../README.md)（中文，默认）/ [README.en.md](../README.en.md)。
 
 # Pastory（代号 Snip Clip）
 
