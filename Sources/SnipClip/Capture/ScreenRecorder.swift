@@ -47,8 +47,8 @@ final class ScreenRecorder: NSObject, SCStreamDelegate, SCStreamOutput {
         cfg.captureResolution = .best
         cfg.showsCursor = true
         cfg.capturesAudio = false
-        // Native = the display's pixels (Retina 2×); "standard" = 1 pixel per point, a quarter of the data.
-        let scale = Preferences.shared.recordNativeScale ? Screenshotter.pixelScale(filter, backingScale: backingScale) : 1
+        // Always the display's own pixels: a 1× recording shown on a Retina screen is soft no matter the bitrate.
+        let scale = Screenshotter.pixelScale(filter, backingScale: backingScale)
         let pointSize: CGSize
         switch target {
         case .region(_, let r):

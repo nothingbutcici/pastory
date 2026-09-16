@@ -109,22 +109,6 @@ struct SettingsPane: View {
                                     PaperToggle(isOn: $prefs.pasteOnDoubleClick)
                                 }
                             }
-                            row("录屏清晰度".l) {
-                                HStack(spacing: 4) {
-                                    ForEach([(true, "原生（Retina 清晰，推荐）"), (false, "一半（体积约 1/4，文字会发虚）")], id: \.0) { native, label in
-                                        let on = prefs.recordNativeScale == native
-                                        Button { prefs.recordNativeScale = native } label: {
-                                            Text(label.l).font(.system(size: 12.5, weight: on ? .semibold : .medium))
-                                                .foregroundStyle(Color.ink)
-                                                .padding(.horizontal, 11).padding(.vertical, 6)
-                                                .background(on ? Color.paperBlue : Color.clear, in: Capsule())
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
-                                }
-                                .padding(3)
-                                .overlay(Capsule().stroke(Color.ink.opacity(0.5), lineWidth: 1))
-                            }
                             row("录屏编码".l) {
                                 HStack(spacing: 4) {
                                     ForEach([(false, "H.264（到处能放）"), (true, "HEVC（再小一半，Windows 可能放不了）")], id: \.0) { hevc, label in

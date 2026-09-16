@@ -124,8 +124,7 @@ final class Preferences {
     var checkForUpdates: Bool { get { d.object(forKey: "checkForUpdates") as? Bool ?? true } set { d.set(newValue, forKey: "checkForUpdates") } }
     var lastUpdateCheck: Date? { get { d.object(forKey: "lastUpdateCheck") as? Date } set { d.set(newValue, forKey: "lastUpdateCheck") } }
     var skippedVersion: String? { get { d.string(forKey: "skippedVersion") } set { d.set(newValue, forKey: "skippedVersion") } }
-    /// Recordings: native (Retina) pixels or one pixel per point; H.264 (compatible) or HEVC (smaller).
-    var recordNativeScale: Bool { get { d.object(forKey: "recordNativeScale") as? Bool ?? true } set { d.set(newValue, forKey: "recordNativeScale") } }
+    /// Recordings: H.264 (compatible) or HEVC (smaller). Resolution is always the display's own.
     var recordHEVC: Bool { get { d.bool(forKey: "recordHEVC") } set { d.set(newValue, forKey: "recordHEVC") } }
     /// "system" (follow macOS), "zh" or "en".
     var language: String { get { d.string(forKey: "language") ?? "system" } set { d.set(newValue, forKey: "language"); L.languageChanged() } }
