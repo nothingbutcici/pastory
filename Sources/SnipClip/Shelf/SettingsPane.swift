@@ -111,7 +111,7 @@ struct SettingsPane: View {
                             }
                             row("录屏清晰度".l) {
                                 HStack(spacing: 4) {
-                                    ForEach([(true, "原生（Retina，约 40 MB/分钟）"), (false, "标准（约 12 MB/分钟）")], id: \.0) { native, label in
+                                    ForEach([(true, "原生（Retina 清晰，推荐）"), (false, "一半（体积约 1/4，文字会发虚）")], id: \.0) { native, label in
                                         let on = prefs.recordNativeScale == native
                                         Button { prefs.recordNativeScale = native } label: {
                                             Text(label.l).font(.system(size: 12.5, weight: on ? .semibold : .medium))

@@ -18,15 +18,17 @@ final class ScreenRecorder: NSObject, SCStreamDelegate, SCStreamOutput {
 
     static let fps: Int32 = 30
 
-    /// Constant-quality target for the hardware encoder (0…1). Text stays crisp; still frames cost almost nothing,
-    /// motion costs what it costs. 0.72 is roughly x264 CRF 20 territory for UI footage.
+    /// Kept only for the self-test comparison; see `bitrate` for why it is not the default.
     static let quality: Float = 0.72
 
-    /// Fallback when the encoder refuses quality mode: bits per pixel per frame, 0.07 (≈ 11 Mbps for 3200×1640 @ 30).
+    /// Average-bitrate target: bits per pixel per frame, 0.1 for H.264 (≈ 16 Mbps for 3200×1640 @ 30, ≈ 2 Mbps for
+    /// 1038×612). The encoder skips still blocks for free, so this is what busy moments may spend, not what a still
+    /// demo costs. (The hardware encoder's "quality" mode starved a real 1× clip down to 314 kbps — visibly soft — so
+    /// it is not used.)
     static func bitrate(width: Int, height: Int, hevc: Bool) -> Int {
-        let bpp = hevc ? 0.045 : 0.07
+        let bpp = hevc ? 0.065 : 0.1
         let bps = Double(width * height) * Double(fps) * bpp
-        return Int(min(max(bps, 2_500_000), 24_000_000))
+        return Int(min(max(bps, 3_000_000), 30_000_000))
     }
 
     func start(target: CaptureTarget, excluding windows: [SCWindow], backingScale: CGFloat?, outputURL: URL) async throws {
@@ -70,7 +72,7 @@ final class ScreenRecorder: NSObject, SCStreamDelegate, SCStreamOutput {
     }
 
     /// Writer + input + adaptor, already started. Shared with the self-test so a bad settings key shows up there, not on ■.
-    static func makeWriter(url: URL, width: Int, height: Int, hevc: Bool, constantQuality: Bool = true) throws -> (AVAssetWriter, AVAssetWriterInput, AVAssetWriterInputPixelBufferAdaptor) {
+    static func makeWriter(url: URL, width: Int, height: Int, hevc: Bool, constantQuality: Bool = false) throws -> (AVAssetWriter, AVAssetWriterInput, AVAssetWriterInputPixelBufferAdaptor) {
         let w = try AVAssetWriter(outputURL: url, fileType: .mp4)
         var compression: [String: Any] = [
             AVVideoExpectedSourceFrameRateKey: fps,

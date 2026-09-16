@@ -87,7 +87,7 @@ enum L {
         "已经是最新版本": "You're up to date", "Pastory %@": "Pastory %@", "检查更新失败": "Update check failed",
         "Pastory %@ 可以更新了（当前 %@）": "Pastory %@ is available (you have %@)", "下载并安装": "Download and Install", "打开下载页": "Open Download Page",
         "稍后": "Later", "跳过这个版本": "Skip This Version", "自动更新没有成功": "The update could not be installed", "可以手动从下载页更新。": "You can update by hand from the download page.",
-        "录屏清晰度": "Recording resolution", "原生（Retina，约 40 MB/分钟）": "Native (Retina, ~40 MB/min)", "标准（约 12 MB/分钟）": "Standard (~12 MB/min)",
+        "录屏清晰度": "Recording resolution", "原生（Retina 清晰，推荐）": "Native (Retina-sharp, recommended)", "一半（体积约 1/4，文字会发虚）": "Half (about ¼ the size; text goes soft)",
         "录屏编码": "Recording codec", "H.264（到处能放）": "H.264 (plays everywhere)", "HEVC（再小一半，Windows 可能放不了）": "HEVC (half the size; Windows may not play it)",
         "复制为 GIF（会糊，建议 MP4）": "Copy as GIF (blurry at this length; MP4 is better)",
         "语言": "Language", "跟随系统": "System", "中文": "中文",

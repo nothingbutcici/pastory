@@ -96,7 +96,7 @@ enum SelfTest {
                         page[o] = v; page[o + 1] = v; page[o + 2] = v; page[o + 3] = 255
                     }
                 }
-                for (hevc, cq, still) in [(false, true, false), (true, true, false), (false, false, false), (false, true, true)] {
+                for (hevc, cq, still) in [(false, false, false), (true, false, false), (false, false, true), (false, true, false)] {
                     let url = FileManager.default.temporaryDirectory.appendingPathComponent("pastory-writer-\(hevc ? "hevc" : "h264")-\(cq ? "cq" : "abr").mp4")
                     try? FileManager.default.removeItem(at: url)
                     do {
