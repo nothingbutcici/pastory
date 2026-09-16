@@ -4,129 +4,152 @@
 
 <h1 align="center">Pastory</h1>
 
-<p align="center"><b>Pastory = Paste + History</b> · <a href="README.md">中文</a></p>
+<p align="center">Pastory = Paste + History</p>
+
+<p align="center">
+  <a href="README.md">简体中文</a> · English
+</p>
+
+<br>
 
 <p align="center">
   <img src="docs/images/shelf-en.png" alt="The Pastory clipboard" width="920">
 </p>
 
-Everything on your computer has a history. Except the clipboard. It only remembers the last thing.
+<br>
 
-You press ⌘C dozens of times a day. More than half of those are things you've copied before.
+Everything on your computer keeps a history. Everything except the clipboard, which only remembers the last thing.
 
-So the stuff you use most — the prompt that finally worked, that link you meant to keep, the screenshot, the client's address, the invoice details — vanishes the moment you copy the next thing.
+You press ⌘C dozens of times a day. More than half of those are things you have copied before.
 
-Pastory gives the clipboard a long-term memory: everything you copy — text, links, images, screenshots, recordings — lives in one panel where you can find it and use it again.
+So the things you use most often — the prompt that works, that link you found, a screenshot, a client's address, your invoice details — disappear the moment you copy the next thing.
 
-- Pin what you use often. Pinned items survive any cleanup schedule.
-- Give important items a title so you recognize them at a glance.
-- Click to copy, double-click to paste straight into the app you were in.
+Pastory gives the clipboard a long-term memory: text, links, images, screenshots, and recordings you copy all live in one panel where you can manage and reuse them.
 
-Everything stays on your Mac. No account, no network, your data is 100% yours.
+- Pin what you use often. Pinned items are never removed, even with automatic cleanup on.
+- Give important items a title so you can spot them at a glance.
+- Click to copy. Double-click to paste directly into the app you were using.
+
+Everything stays on your Mac. No account, no network access. Your data is 100% yours.
+
+<br>
 
 ## Install
 
-macOS 15 or later, Intel or Apple silicon.
+Requires macOS 15 or later. Runs on Intel and Apple silicon.
 
-1. Download the [latest zip](../../releases/latest), unzip, drag `Pastory.app` into Applications.
-2. Open it. A handwritten **P** appears in the menu bar and the clipboard panel opens once by itself. (Notarized by Apple — safe to enjoy.)
-3. The first screenshot asks for **Screen Recording** permission; turn it on and reopen Pastory.
+1. Download the [latest release](../../releases/latest), unzip it, and drag `Pastory.app` into Applications.
+2. Open it. A handwritten **P** appears in the menu bar, and the clipboard panel opens once on first launch. (Notarized by Apple.)
+3. The first time you take a screenshot, allow **Screen Recording** when prompted, then reopen Pastory.
 
-Shortcuts, cleanup schedule, screenshot storage format and more can be tuned in Settings.
+Shortcuts, cleanup schedule, screenshot storage format, and more can be changed in Settings.
 
----
+<br>
 
 ## Why I built it
 
 ### The clipboard — the real need
 
-I copy text and take screenshots many times a day, and a good share of those are things I already did an hour ago (ADHD). Repeat, repeat, repeat.
+I copy text and take screenshots many times a day, and a good number of those are things I already did an hour earlier (ADHD). The same actions, over and over.
 
-The useful bits ended up in Notes sometimes, in Obsidian other times. Scattered everywhere.
+Things I used often ended up in Notes sometimes, in Obsidian other times. Scattered everywhere.
 
-So — this little app.
+So I built this little app.
 
-Every copy, screenshots included, lands in one place, waiting to be looked at again, reused, or edited.
+Every copy, screenshots included, is collected in one place, ready to be revisited, reused, or edited.
 
-Power move: if what you copy is information-dense, let an agent read your Pastory database now and then and turn it into a reviewable markdown knowledge base.
+Power move: if the things you copy are information-dense, have an agent read your Pastory database periodically and turn it into a reviewable Markdown knowledge base.
 
 ### Screenshots (a small indulgence)
 
-I used two screenshot tools at once.
+I used two screenshot tools side by side.
 
-WeChat's shifts the colors, but I love its text recognition, so I'd call it when I needed the words.
+WeChat's shifts the colors, but I love its text recognition, so I reached for it whenever I needed the text.
 
-Feishu's keeps the colors right and can record MP4 / GIF, so I'd call it for those.
+Feishu's keeps the colors right and can also record MP4 / GIF, so I reached for it for those.
 
-Which shortcut to press was a decision I had to make every single time.
+Which shortcut to press was something I had to think about every single time.
 
-Both can annotate, but neither looks nice doing it. I care about how the font and the text box look while I'm marking something up (I need my small joys).
+Both can annotate, but neither looks nice doing it. I care about how the font and the text box look while I annotate (I need my small joys).
 
-So Pastory folds all of that into one tool.
+So Pastory brings all of that together.
 
-## What it does
+<br>
+
+## Features
 
 ### Clipboard history
 
-Open it with a shortcut of your choosing or from the menu bar. Everything you copied is a card, with the app it came from and the time.
+Open it with a shortcut of your choice or from the menu bar icon. Everything you copy appears as a card, along with the app it came from and the time.
 
-- **Copy:** click any card and it's on your clipboard, ready to paste.
-- **Copy and paste in one go:** double-click a card and it lands in the input field of the app you were in.
-- **Search:** by keyword, across text, titles, and the words recognized inside images.
-- **Pin to keep:** pinned items stay for good; unpinned ones are cleaned up on a schedule you set.
-- **Titles:** name the important ones so you spot them instantly.
-- **Edit in place:** text and images can be edited; the result replaces the original on the same card.
-- **Screenshots from other tools:** WeChat, Feishu, the system — anything that reaches the clipboard gets a card, searchable, pinnable, annotatable.
+- **Copy:** click any card to copy it, ready to paste into the field you're working in.
+- **Copy and paste in one step:** double-click a card and its content is pasted directly into the app you were using.
+- **Search:** search your history by keyword, across text, titles, and text recognized inside images.
+- **Pin to keep:** pin important items to keep them for good. Unpinned items are cleaned up on a schedule you set.
+- **Titles:** name important items so you can find them at a glance.
+- **Edit in place:** text and images can be edited. The result replaces the original on the same card, ready for next time.
+- **Screenshots from other apps:** WeChat, Feishu, the built-in macOS screenshot — anything that reaches the clipboard gets a card, and can be searched, pinned, and annotated like everything else.
 
 ### Screenshot & recording
 
 <p align="center"><img src="docs/images/capture-en.png" alt="Capture and annotation" width="920"></p>
 
-Press your shortcut to capture or record.
+Take screenshots and recordings with the shortcut you set.
 
-Colors are taken in the display's own color space, so nothing shifts.
+Colors are captured in the display's own color space, so nothing shifts.
 
-**Annotations look like Obsidian's Excalidraw plugin** (if you've used it, you'll smile): rectangle, ellipse, arrow, line, pen, text, mosaic, in seven low-saturation colors. Pictures you send out will look good.
+**Annotations are in the style of Obsidian's Excalidraw plugin** (if you've used it, you'll be happy to see this): rectangle, ellipse, arrow, line, pen, text, and mosaic, with seven low-saturation colors. The pictures you share will look good.
 
-**Recognize text:** Apple's on-device OCR; the recognized text is stored with the image so you can find it later.
+**Text recognition:** powered by Apple's on-device OCR. Recognized text is stored with the image in the clipboard, so you can use it later.
 
-**Record:** MP4 or GIF — pick the format after recording.
+**Recording:** MP4 / GIF. Pick the format after recording.
+
+<br>
 
 ## Why you might want it
 
-**Shipping addresses, invoice details, the sentences you type every day.**
-We've all dug through chat history for the same piece of information again and again.
+#### Shipping addresses, invoice details, canned replies — the text you use all the time
 
-With Pastory: copy it once, title it "Client A address" or "Company invoice", pin it. Next time, double-click and it's pasted.
+We've all been there: you need one piece of information and end up digging through chat history to find it, again.
 
-**Prompts that worked, links worth keeping.**
-The moment you copy it, it's in Pastory — no need to force a "save it to notes" habit. And no more scrolling back through fifty turns of conversation wondering which session it was in.
+With Pastory: copy it once and give it a title such as "Client A address" or "Company invoice details". Pin it. Next time, double-click and it's pasted.
 
-With Pastory: search a keyword, it's there.
+#### Prompts that work, links worth keeping
 
-**A visual reference board.**
-When you vibe-code a product, visuals matter. I used to screenshot references frantically and file each one by hand — ten seconds a picture, at least.
+The moment you copy it, it's in your clipboard — no more forcing yourself to save everything to a notes app. Next time you do a similar task, you don't have to remember which session you discussed it in or scroll through dozens of turns to find it.
 
-With Pastory: screenshot, and they line up in a row to compare and choose from. Pin the ones you like, annotate when needed, and save to disk — always a full-resolution PNG.
+With Pastory: search a keyword and it's there whenever you need it.
+
+#### A visual reference library
+
+When you vibe-code a product, visuals matter. I used to take screenshots of references frantically and save each one to a local folder — at least ten seconds per image.
+
+With Pastory: take a screenshot, and the images line up in the clipboard so you can compare them and pick the final one. Pin the ones you like, open them to annotate when needed, and save to your desktop when you want — always as a full-resolution PNG.
+
+<br>
 
 ## Privacy
 
-- Everything lives in `~/Library/Application Support/Pastory/`: plain files plus one SQLite index. Look at it, back it up, copy it to another Mac and import it.
+- All data lives in `~/Library/Application Support/Pastory/`: plain files plus one SQLite index. You can browse it, back it up, or copy it to another Mac and import it.
 - No account, no analytics. The only network request is a daily update check; it carries no identifier and can be turned off in Settings.
 - Items that password managers mark as concealed are never recorded.
 
+<br>
+
 ## Build from source
 
-```
+```bash
 git clone https://github.com/nothingbutcici/pastory.git
 cd pastory
 ./build.sh          # → build/Pastory.app
 ```
 
-Swift Package Manager, Apple frameworks only. Project conventions live in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+Swift Package Manager, Apple frameworks only. Project conventions are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+
+<br>
 
 ## Credits & license
 
-Typefaces [Caveat](https://fonts.google.com/specimen/Caveat) and [Ysabeau Office](https://fonts.google.com/specimen/Ysabeau+Office) (SIL Open Font License). Interaction inspired by [Paste](https://pasteapp.io); annotation style after [Excalidraw](https://excalidraw.com).
+Typefaces: [Caveat](https://fonts.google.com/specimen/Caveat) and [Ysabeau Office](https://fonts.google.com/specimen/Ysabeau+Office) (SIL Open Font License). Interaction inspired by [Paste](https://pasteapp.io); annotation style after [Excalidraw](https://excalidraw.com).
 
-MIT License · © 2026 nothingbutcici
+[MIT License](LICENSE) · © 2026 nothingbutcici

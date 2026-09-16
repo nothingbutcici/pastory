@@ -4,11 +4,19 @@
 
 <h1 align="center">Pastory</h1>
 
-<p align="center"><b>Pastory = Paste + History</b> · <a href="README.en.md">English</a></p>
+<p align="center">Pastory = Paste + History</p>
+
+<p align="center">
+  简体中文 · <a href="README.en.md">English</a>
+</p>
+
+<br>
 
 <p align="center">
   <img src="docs/images/shelf-zh.png" alt="Pastory 剪贴板" width="920">
 </p>
+
+<br>
 
 你电脑上什么都有历史记录。只有剪贴板除外，它只记得最后一次。
 
@@ -24,6 +32,8 @@ Pastory 给剪贴板开了个长期记忆的外挂：复制过的文字、链接
 
 所有东西都在你自己的电脑上。没有账号，不联网，隐私安全 100% 在你手里。
 
+<br>
+
 ## 安装
 
 macOS 15 或更新，Intel 和 Apple 芯片都可以。
@@ -34,7 +44,7 @@ macOS 15 或更新，Intel 和 Apple 芯片都可以。
 
 快捷键、自动清理时间、截图存储格式等均可在「设置」中根据偏好自定义。
 
----
+<br>
 
 ## 为什么做它
 
@@ -64,6 +74,8 @@ macOS 15 或更新，Intel 和 Apple 芯片都可以。
 
 所以 Pastory 把这些能力都合在一起了！
 
+<br>
+
 ## 核心功能
 
 ### 剪贴板历史
@@ -92,22 +104,29 @@ macOS 15 或更新，Intel 和 Apple 芯片都可以。
 
 **录屏：** 支持 MP4 / GIF，录制后选择对应格式即可。
 
+<br>
+
 ## 你为什么需要
 
-**寄件地址、开票信息、话术等对你而言常用的文本内容**
+#### 寄件地址、开票信息、话术等对你而言常用的文本内容
+
 相信大家都有过：需要某个信息时，每次都得来回翻聊天记录疯狂找的体验。
 
 使用 Pastory：文本复制一次，加个标题如「客户 A 地址」「公司开票信息」。Pin 起来，下次使用，双击就能贴过去。
 
-**好用的 Prompt、宝藏链接**
+#### 好用的 Prompt、宝藏链接
+
 复制的那一刻它就在剪贴板里了，终于不用专门逼自己培养随时存到笔记软件的习惯啦！！下次做类似的任务，也不用再思考我在哪个 session 中聊过，翻几十轮对话挨个找。
 
 使用 Pastory：搜索关键词，想用随时都能找得到。
 
-**当视觉素材库用。**
+#### 当视觉素材库用
+
 vibe coding 做产品，视觉也很重要。过去疯狂截图找参考，再一个个存在本地文件夹。单图耗时至少 10 秒。
 
 使用 Pastory：简单截图，剪贴板排成一排，方便你比较、再确定最终选中方案。喜欢的 Pin 住，要标注的时候再点开编辑。喜欢就下载保存到桌面，导出的永远是全分辨率 PNG。
+
+<br>
 
 ## 隐私
 
@@ -115,9 +134,11 @@ vibe coding 做产品，视觉也很重要。过去疯狂截图找参考，再�
 - 没有账号，没有统计。唯一的联网请求是每天一次检查更新，不带任何标识，设置里可以关。
 - 密码管理器标记为隐藏的内容不会被记录。
 
+<br>
+
 ## 从源码构建
 
-```
+```bash
 git clone https://github.com/nothingbutcici/pastory.git
 cd pastory
 ./build.sh          # → build/Pastory.app
@@ -125,8 +146,10 @@ cd pastory
 
 Swift Package Manager，只用 Apple 自带框架。项目约定见 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
 
+<br>
+
 ## 致谢与许可
 
 字体 [Caveat](https://fonts.google.com/specimen/Caveat)、[Ysabeau Office](https://fonts.google.com/specimen/Ysabeau+Office)（SIL 开源字体许可）。交互受 [Paste](https://pasteapp.io) 启发，标注风格来自 [Excalidraw](https://excalidraw.com)。
 
-MIT License · © 2026 nothingbutcici
+[MIT License](LICENSE) · © 2026 nothingbutcici

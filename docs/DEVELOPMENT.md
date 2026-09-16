@@ -110,7 +110,7 @@ PASTORY_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本�
   米字 + 浅蓝选中；标注调色盘 = 紫 + #E9631A / #C56F8C / #A9C2E0 / #59382C / #1E151C / #EBEBDF（用户 2026-09-12 晚定）。
   logo 用品牌稿 `Project/codex相关/pastory clipboard concepts/brand/signature-assets/Pastory Logo/`：
   `Resources/Logo.png` 与 `AppIcon.icns` 由 `pastory-app-icon-hd.png` 圆角化生成（1024 画布放 824 圆角方，半径 22.37%），
-  `Resources/MenuIcon(@2x).png` 直接取自 `PastoryMenuBar.imageset`（template，build.sh 会拷进包）。面包人 `Resources/Mascot.png` 留在仓库但不进包、代码不引用。
+  `Resources/MenuIcon(@2x).png` 直接取自 `PastoryMenuBar.imageset`（template，build.sh 会拷进包）。面包人素材已移出仓库（2026-09-16）。
   品牌字体 Ysabeau Office（OFL，`Resources/Fonts/`，启动时按进程注册）只用在「Pastory」字样。
   截图 / 录屏只排除取景遮罩自己的窗口，货架开着时也能被截进去。
 - 框选完成后屏幕顶部出品牌条：logo · Pastory · [截屏 │ 录屏] · ✕，默认截屏；点录屏进录制流程。

@@ -408,8 +408,7 @@ enum SelfTest {
         if let img = renderSample(), let png = Screenshotter.pngData(img) {
             store.insertImage(png: png, source: CaptureCoordinator.source, ocrText: "Pastory 是一个截图工具")
         }
-        store.insertFiles([URL(fileURLWithPath: SelfTest.sampleFile.path),
-                           URL(fileURLWithPath: "/Users/cici/Project/Claude/snip clip/Package.swift")],
+        store.insertFiles([SelfTest.sampleFile, SelfTest.sampleFile.deletingLastPathComponent().appendingPathComponent("README.md")],
                           source: ClipStore.Source(bundleID: "com.apple.finder", name: "Finder"))
         store.insertText("const shelf = items.filter(i => i.pinned)\n  .map(render)\n  .join('')", rtf: nil, source: ClipStore.Source(bundleID: "com.microsoft.VSCode", name: "Code"))
         if let first = store.items.last { store.togglePin(first.id) }
