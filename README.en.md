@@ -101,12 +101,12 @@ Open it with a shortcut of your choice or from the menu bar icon. Everything you
 
 <p>
   <img src="docs/images/clipboard-history-en.jpg" alt="All your copy history, in one place" width="49%">
-  <img src="docs/images/clipboard-editing-en.jpg" alt="Edit what you copied" width="49%">
+  <img src="docs/images/clipboard-settings-en.jpg" alt="Settings" width="49%">
 </p>
 <p>
-  <img src="docs/images/clipboard-settings-en.jpg" alt="Settings" width="32.5%">
+  <img src="docs/images/card-actions-en.jpg" alt="One card, four quick actions" width="32.5%">
   <img src="docs/images/clipboard-title-en.jpg" alt="Give it a title" width="32.5%">
-  <img src="docs/images/text-recognition-en.jpg" alt="Text recognition" width="32.5%">
+  <img src="docs/images/clipboard-editing-en.jpg" alt="Edit what you copied" width="32.5%">
 </p>
 
 ### Screenshot & recording
@@ -122,8 +122,9 @@ Colors are captured in the display's own color space, so nothing shifts.
 **Recording:** MP4 / GIF. Pick the format after recording.
 
 <p>
-  <img src="docs/images/capture-annotations-en.jpg" alt="Annotate right after capturing" width="49%">
-  <img src="docs/images/recording-formats-en.jpg" alt="Recording formats" width="49%">
+  <img src="docs/images/capture-annotations-en.jpg" alt="Annotate right after capturing" width="32.5%">
+  <img src="docs/images/text-recognition-en.jpg" alt="Text recognition" width="32.5%">
+  <img src="docs/images/recording-formats-en.jpg" alt="Recording formats" width="32.5%">
 </p>
 
 <br>

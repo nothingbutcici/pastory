@@ -101,12 +101,12 @@ macOS 15 或更新，Intel 和 Apple 芯片都可以。
 
 <p>
   <img src="docs/images/clipboard-history.jpg" alt="所有复制历史，都在这里" width="49%">
-  <img src="docs/images/clipboard-editing.jpg" alt="已复制内容，接着改改" width="49%">
+  <img src="docs/images/clipboard-settings.jpg" alt="设置" width="49%">
 </p>
 <p>
-  <img src="docs/images/clipboard-settings.jpg" alt="设置" width="32.5%">
+  <img src="docs/images/card-actions.jpg" alt="一张卡片，四个顺手操作" width="32.5%">
   <img src="docs/images/clipboard-title.jpg" alt="加个标题" width="32.5%">
-  <img src="docs/images/text-recognition.jpg" alt="图片里的字，识别提取文本" width="32.5%">
+  <img src="docs/images/clipboard-editing.jpg" alt="已复制内容，接着改改" width="32.5%">
 </p>
 
 ### 截图 & 录屏
@@ -122,8 +122,9 @@ macOS 15 或更新，Intel 和 Apple 芯片都可以。
 **录屏：** 支持 MP4 / GIF，录制后选择对应格式即可。
 
 <p>
-  <img src="docs/images/capture-annotations.jpg" alt="截图之后，随时标注" width="49%">
-  <img src="docs/images/recording-formats.jpg" alt="屏幕录制，按格式复制" width="49%">
+  <img src="docs/images/capture-annotations.jpg" alt="截图之后，随时标注" width="32.5%">
+  <img src="docs/images/text-recognition.jpg" alt="图片里的字，识别提取文本" width="32.5%">
+  <img src="docs/images/recording-formats.jpg" alt="屏幕录制，按格式复制" width="32.5%">
 </p>
 
 <br>
