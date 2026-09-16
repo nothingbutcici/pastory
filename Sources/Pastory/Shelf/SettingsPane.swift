@@ -128,38 +128,12 @@ struct SettingsPane: View {
                             }
                         }
                         section("截图与录屏".l) {
-                            row("本地数据库截图存储方式".l) {
-                                HStack(spacing: 4) {
-                                    ForEach([("heic", "高质量 HEIC（约小 3 倍）"), ("png", "无损 PNG")], id: \.0) { code, label in
-                                        let on = prefs.imageStorage == code
-                                        Button { prefs.imageStorage = code } label: {
-                                            Text(label.l).font(.system(size: 12.5, weight: on ? .semibold : .medium))
-                                                .foregroundStyle(Color.ink)
-                                                .padding(.horizontal, 11).padding(.vertical, 6)
-                                                .background(on ? Color.paperBlue : Color.clear, in: Capsule())
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
-                                }
-                                .padding(3)
-                                .overlay(Capsule().stroke(Color.ink.opacity(0.5), lineWidth: 1))
-                            }
-                            row("录屏编码".l) {
-                                HStack(spacing: 4) {
-                                    ForEach([(false, "H.264（所有设备都能播放）"), (true, "HEVC（体积小一半，老设备和部分 Windows 打不开）")], id: \.0) { hevc, label in
-                                        let on = prefs.recordHEVC == hevc
-                                        Button { prefs.recordHEVC = hevc } label: {
-                                            Text(label.l).font(.system(size: 12.5, weight: on ? .semibold : .medium))
-                                                .foregroundStyle(Color.ink)
-                                                .padding(.horizontal, 11).padding(.vertical, 6)
-                                                .background(on ? Color.paperBlue : Color.clear, in: Capsule())
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
-                                }
-                                .padding(3)
-                                .overlay(Capsule().stroke(Color.ink.opacity(0.5), lineWidth: 1))
-                            }
+                            choice("本地数据库截图存储方式".l,
+                                   options: [("heic", "HEIC", "高质量有损压缩，体积约为 PNG 的三分之一".l), ("png", "PNG", "无损，体积最大".l)],
+                                   selected: prefs.imageStorage) { prefs.imageStorage = $0 }
+                            choice("录屏编码".l,
+                                   options: [("h264", "H.264", "所有设备都能播放".l), ("hevc", "HEVC", "体积小一半；老设备和部分 Windows 打不开".l)],
+                                   selected: prefs.recordHEVC ? "hevc" : "h264") { prefs.recordHEVC = $0 == "hevc" }
                         }
                         section("位置".l) {
                             row("「保存到本地」默认打开的文件夹".l) {
@@ -245,6 +219,33 @@ struct SettingsPane: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 9)
+    }
+
+    /// Short segmented choice; the selected option's explanation sits under the row label in small type.
+    private func choice(_ label: String, options: [(code: String, title: String, hint: String)], selected: String, set: @escaping (String) -> Void) -> some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(label).font(.serif(15)).foregroundStyle(Color.ink).lineLimit(1).truncationMode(.middle)
+                Text(options.first { $0.code == selected }?.hint ?? "").font(.serif(12)).foregroundStyle(Color.inkMuted)
+            }
+            Spacer(minLength: 12)
+            HStack(spacing: 4) {
+                ForEach(options, id: \.code) { o in
+                    let on = o.code == selected
+                    Button { set(o.code) } label: {
+                        Text(o.title).font(.system(size: 12.5, weight: on ? .semibold : .medium))
+                            .foregroundStyle(Color.ink)
+                            .padding(.horizontal, 12).padding(.vertical, 6)
+                            .background(on ? Color.paperBlue : Color.clear, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(3)
+            .overlay(Capsule().stroke(Color.ink.opacity(0.5), lineWidth: 1))
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 7)
     }
 
     /// Status tag: small serif, ink; filled blue when the state is "on", plain outline otherwise. Never a warning colour.
