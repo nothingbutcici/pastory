@@ -118,7 +118,7 @@ final class Preferences {
     /// How new screenshots are stored: "heic" (quality 0.9, about a third of the size, default) or "png" (lossless).
     var imageStorage: String { get { d.string(forKey: "imageStorage") ?? "heic" } set { d.set(newValue, forKey: "imageStorage") } }
     var storesHEIC: Bool { imageStorage == "heic" }
-    /// Double-click / ⏎ also sends ⌘V to the app you came from (needs Accessibility). On by default; falls back to copy-only.
+    /// Double-click also sends ⌘V to the app you came from (needs Accessibility). On by default; falls back to copy-only.
     var pasteOnDoubleClick: Bool { get { d.object(forKey: "pasteOnDoubleClick") as? Bool ?? true } set { d.set(newValue, forKey: "pasteOnDoubleClick") } }
     /// Daily update check against GitHub Releases (the app's only network request). On by default.
     var checkForUpdates: Bool { get { d.object(forKey: "checkForUpdates") as? Bool ?? true } set { d.set(newValue, forKey: "checkForUpdates") } }

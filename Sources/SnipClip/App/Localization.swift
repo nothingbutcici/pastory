@@ -80,7 +80,7 @@ enum L {
         "一年": "1 year", "永不删除": "Forever", "当日清理时间": "Cleanup time",
         "图片自动识别文字（可按文字搜图）": "OCR images automatically (search images by text)", "暂停同步至剪贴板": "Pause clipboard capture",
         "本地数据库截图存储方式": "How screenshots are stored locally", "高质量 HEIC（默认，约小 3 倍）": "High-quality HEIC (default, about 3× smaller)", "无损 PNG": "Lossless PNG",
-        "双击 / ⏎ 后直接粘贴到刚才的应用": "Double-click / ⏎ pastes into the app you came from", "需要辅助功能权限": "Needs Accessibility",
+        "双击直接粘贴到刚才的应用": "Double-click pastes into the app you came from", "清理": "Cleanup", "截图与录屏": "Screenshots & Recording", "需要辅助功能权限": "Needs Accessibility",
         "这条是 Pin 住的，确定删除？": "This one is pinned. Delete it?", "Pin 住的内容不会被自动清理，只有这样手动删除才会消失，而且不能恢复。": "Pinned items are never cleaned up automatically; deleting by hand is the only way they go, and it cannot be undone.",
         "版本更新": "Updates", "当前版本 %@": "Current version %@", "检查中…": "Checking…", "已是最新版本": "Up to date", "有新版本 %@": "New version %@", "检查失败：%@": "Check failed: %@",
         "每天自动检查一次（app 唯一的联网请求，不带任何标识）": "Check once a day (the app's only network request; carries no identifier)", "检查更新": "Check for Updates", "检查更新…": "Check for Updates…",

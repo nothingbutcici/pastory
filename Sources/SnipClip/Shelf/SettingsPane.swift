@@ -72,7 +72,7 @@ struct SettingsPane: View {
                             row("显示 / 隐藏剪贴板".l) { ShortcutRecorder(key: Preferences.Key.hotkeyShelf) }
                             row("搜索剪贴板".l) { ShortcutRecorder(key: Preferences.Key.hotkeySearch) }
                         }
-                        section("剪贴板".l) {
+                        section("清理".l) {
                             row("未 Pin 内容保留时间".l) {
                                 HStack(spacing: 4) {
                                     ForEach([(1, "1 天".l), (3, "3 天".l), (7, "7 天".l), (30, "30 天".l), (365, "一年".l), (0, "永不删除".l)], id: \.0) { days, label in
@@ -93,9 +93,31 @@ struct SettingsPane: View {
                                 HourWheel(hour: $prefs.cleanupHour, enabled: prefs.retentionDays != 0)
                                     .opacity(prefs.retentionDays == 0 ? 0.35 : 1)
                             }
-                            row("图片自动识别文字（可按文字搜图）".l) { PaperToggle(isOn: $prefs.ocrImages) }
+                            row("手动清空一次（不含已 Pin 内容）".l) {
+                                pill(cleared ? "已清空".l : "现在清空".l, disabled: cleared) {
+                                    ClipStore.shared.removeAll { !$0.pinned }
+                                    cleared = true
+                                }
+                            }
+                        }
+                        section("导入".l) {
+                            row("从其他剪贴板工具导入（SQLite）".l) {
+                                HStack(spacing: 8) {
+                                    if let importNote { Text(importNote).font(.system(size: 12)).foregroundStyle(Color.inkMuted).lineLimit(1) }
+                                    pill("选择数据库…".l) { importDatabase() }
+                                }
+                            }
+                            if ClipStore.shared.items.contains(where: { $0.sourceAppName == ClipStore.importSourceName }) {
+                                row("移除所有导入进来的条目（来源为「导入」）".l) {
+                                    pill("移除".l) { removeImported() }
+                                }
+                            }
+                        }
+                    }
+                    VStack(spacing: 16) {
+                        section("剪贴板".l) {
                             row("暂停同步至剪贴板".l) { PaperToggle(isOn: $prefs.paused) }
-                            row("双击 / ⏎ 后直接粘贴到刚才的应用".l) {
+                            row("双击直接粘贴到刚才的应用".l) {
                                 HStack(spacing: 8) {
                                     if prefs.pasteOnDoubleClick {
                                         Text(hasAX ? "已授权".l : "需要辅助功能权限".l)
@@ -108,6 +130,25 @@ struct SettingsPane: View {
                                     }
                                     PaperToggle(isOn: $prefs.pasteOnDoubleClick)
                                 }
+                            }
+                        }
+                        section("截图与录屏".l) {
+                            row("图片自动识别文字（可按文字搜图）".l) { PaperToggle(isOn: $prefs.ocrImages) }
+                            row("本地数据库截图存储方式".l) {
+                                HStack(spacing: 4) {
+                                    ForEach([("heic", "高质量 HEIC（默认，约小 3 倍）"), ("png", "无损 PNG")], id: \.0) { code, label in
+                                        let on = prefs.imageStorage == code
+                                        Button { prefs.imageStorage = code } label: {
+                                            Text(label.l).font(.system(size: 12.5, weight: on ? .semibold : .medium))
+                                                .foregroundStyle(Color.ink)
+                                                .padding(.horizontal, 11).padding(.vertical, 6)
+                                                .background(on ? Color.paperBlue : Color.clear, in: Capsule())
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                .padding(3)
+                                .overlay(Capsule().stroke(Color.ink.opacity(0.5), lineWidth: 1))
                             }
                             row("录屏编码".l) {
                                 HStack(spacing: 4) {
@@ -125,58 +166,7 @@ struct SettingsPane: View {
                                 .padding(3)
                                 .overlay(Capsule().stroke(Color.ink.opacity(0.5), lineWidth: 1))
                             }
-                            row("本地数据库截图存储方式".l) {
-                                HStack(spacing: 4) {
-                                    ForEach([("heic", "高质量 HEIC（默认，约小 3 倍）"), ("png", "无损 PNG")], id: \.0) { code, label in
-                                        let on = prefs.imageStorage == code
-                                        Button { prefs.imageStorage = code } label: {
-                                            Text(label.l).font(.system(size: 12.5, weight: on ? .semibold : .medium))
-                                                .foregroundStyle(Color.ink)
-                                                .padding(.horizontal, 11).padding(.vertical, 6)
-                                                .background(on ? Color.paperBlue : Color.clear, in: Capsule())
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
-                                }
-                                .padding(3)
-                                .overlay(Capsule().stroke(Color.ink.opacity(0.5), lineWidth: 1))
-                            }
-                            row("语言".l) {
-                                HStack(spacing: 4) {
-                                    ForEach([("system", "跟随系统".l), ("zh", "中文".l), ("en", "English")], id: \.0) { code, label in
-                                        let on = Preferences.shared.language == code
-                                        Button { Preferences.shared.language = code; model.langTick += 1 } label: {
-                                            Text(label.l).font(.system(size: 12.5, weight: on ? .semibold : .medium))
-                                                .foregroundStyle(Color.ink)
-                                                .padding(.horizontal, 11).padding(.vertical, 6)
-                                                .background(on ? Color.paperBlue : Color.clear, in: Capsule())
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
-                                }
-                                .padding(3)
-                                .overlay(Capsule().stroke(Color.ink.opacity(0.5), lineWidth: 1))
-                            }
-                            row("从其他剪贴板工具导入（SQLite）".l) {
-                                HStack(spacing: 8) {
-                                    if let importNote { Text(importNote).font(.system(size: 12)).foregroundStyle(Color.inkMuted).lineLimit(1) }
-                                    pill("选择数据库…".l) { importDatabase() }
-                                }
-                            }
-                            if ClipStore.shared.items.contains(where: { $0.sourceAppName == ClipStore.importSourceName }) {
-                                row("移除所有导入进来的条目（来源为「导入」）".l) {
-                                    pill("移除".l) { removeImported() }
-                                }
-                            }
-                            row("手动清空一次（不含已 Pin 内容）".l) {
-                                pill(cleared ? "已清空".l : "现在清空".l, disabled: cleared) {
-                                    ClipStore.shared.removeAll { !$0.pinned }
-                                    cleared = true
-                                }
-                            }
                         }
-                    }
-                    VStack(spacing: 16) {
                         section("位置".l) {
                             row("「保存到本地」默认打开的文件夹".l) {
                                 HStack(spacing: 8) {
@@ -211,6 +201,22 @@ struct SettingsPane: View {
                         }
                         section("系统".l) {
                             row("登录时启动".l) { PaperToggle(isOn: $prefs.launchAtLogin) }
+                            row("语言".l) {
+                                HStack(spacing: 4) {
+                                    ForEach([("system", "跟随系统".l), ("zh", "中文".l), ("en", "English")], id: \.0) { code, label in
+                                        let on = Preferences.shared.language == code
+                                        Button { Preferences.shared.language = code; model.langTick += 1 } label: {
+                                            Text(label.l).font(.system(size: 12.5, weight: on ? .semibold : .medium))
+                                                .foregroundStyle(Color.ink)
+                                                .padding(.horizontal, 11).padding(.vertical, 6)
+                                                .background(on ? Color.paperBlue : Color.clear, in: Capsule())
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                .padding(3)
+                                .overlay(Capsule().stroke(Color.ink.opacity(0.5), lineWidth: 1))
+                            }
                             if let e = prefs.loginError { Text(e).font(.system(size: 12)).foregroundStyle(Color(nsColor: Theme.warn)).padding(.horizontal, 16) }
                             row("屏幕录制权限（截图、录屏需要）".l) {
                                 HStack(spacing: 8) {

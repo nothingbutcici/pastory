@@ -72,7 +72,7 @@ Settings › Import reads Paste's database directly (and other SQLite-based mana
 <p align="center"><img src="docs/images/shelf-zh.png" alt="Shelf, Chinese UI" width="920"></p>
 
 - Cards for text, links, images, files and recordings, with the app they came from and the time.
-- **Click** copies and keeps the shelf open (the blue card with the pushpin is what's on your clipboard right now). **Double-click or ⏎** copies, closes, and pastes into the app you came from. **Space** is Quick Look.
+- **Click** copies and keeps the shelf open (the blue card with the pushpin is what's on your clipboard right now). **Double-click** copies, closes, and pastes into the app you came from; **⏎** copies and closes. **Space** is Quick Look.
 - Just start typing to search — across text, titles and the words recognized inside images. ↑↓ moves, ⏎ takes.
 - Pin, rename, edit text in place, re-annotate an image, save to disk.
 - Copying something you copied before brings the old card back instead of making a twin.
@@ -102,7 +102,7 @@ Unpinned items live for *N* calendar days — 1, 3, 7, 30, 365 or forever — an
 | ⌥⌘S | Screenshot / record (drag; Space = window; F or ⏎ = whole screen; ⎋ = cancel) |
 | ⇧⌘V | Open the shelf · ⌥⌘F opens it with search focused |
 | ← → ↑ ↓ | Move between cards · type anything to search |
-| ⏎ | Copy, close, paste into the app you came from |
+| ⏎ | Copy and close · double-click also pastes into the app you came from |
 | Space | Quick Look · P pin · S save to disk · ⌫ delete |
 | In the annotator | R O A L P T M pick tools · ⌘Z undo · ⏎ done · ⎋ cancel |
 

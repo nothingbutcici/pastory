@@ -395,12 +395,14 @@ final class ShelfModel {
         ShelfPanelController.shared.handBackFocus()
     }
     /// ⏎ / double-click: copy and put the shelf away.
-    func copyAndClose(_ item: ClipItem) {
+    /// Double-click: copy, close, and (with Accessibility) paste into the app you came from.
+    /// ⏎ only copies and closes — one key is too easy to hit for something that types into another app.
+    func copyAndClose(_ item: ClipItem, paste: Bool = true) {
         copy(item)
         ShelfPanelController.shared.hide()
-        ShelfPanelController.shared.pasteIntoPreviousApp()
+        if paste { ShelfPanelController.shared.pasteIntoPreviousApp() }
     }
-    func copySelected() { if let s = selected { copyAndClose(s) } }
+    func copySelected() { if let s = selected { copyAndClose(s, paste: false) } }
     func previewSelected() { ShelfPanelController.shared.toggleQuickLook() }
 
     /// Text → our editor window; image → the annotation editor. Saving rewrites the item and copies it.
