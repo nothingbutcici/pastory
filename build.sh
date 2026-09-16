@@ -21,7 +21,8 @@ fi
 if [ -n "${ARCHS:-}" ]; then
     SLICES=()
     for a in $ARCHS; do
-        swift build -c "$CONFIG" --triple "$a-apple-macosx"
+        # SwiftPM's per-triple build database goes stale after host builds ("command … not registered"): wipe and retry once.
+        swift build -c "$CONFIG" --triple "$a-apple-macosx" || { rm -rf ".build/$a-apple-macosx"; swift build -c "$CONFIG" --triple "$a-apple-macosx"; }
         SLICES+=("$(swift build -c "$CONFIG" --triple "$a-apple-macosx" --show-bin-path)/SnipClip")
     done
     mkdir -p build
