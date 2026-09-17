@@ -36,6 +36,11 @@
 
 <p align="center">所有东西都在你自己的电脑上。没有账号，除每天一次检查更新外不联网，隐私安全 100% 在你手里。</p>
 
+<p align="center">
+  <img src="docs/images/wechat-group.png" alt="微信群：Pastory 小小群" width="160"><br>
+  <sub>扫码进微信群，聊用法、提想法</sub>
+</p>
+
 <br>
 
 ## 安装
