@@ -30,15 +30,29 @@ enum Permissions {
     }
 
     /// ⌘V into whatever is in front right now.
-    static func sendPaste() {
+    /// Posted at session level, not HID level: HID-level events feed the system's physical-keyboard
+    /// state, and interleaving with real key presses once left Command latched down machine-wide
+    /// (2026-09-17, cleared only by a reboot). Session level reaches apps without that bookkeeping.
+    /// Also waits for the user's own modifiers to lift first, so the synthetic ⌘ never overlaps a real one.
+    static func sendPaste(retries: Int = 12) {
+        let held: CGEventFlags = [.maskCommand, .maskShift, .maskAlternate, .maskControl]
+        if !CGEventSource.flagsState(.combinedSessionState).intersection(held).isEmpty {
+            if retries > 0 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { sendPaste(retries: retries - 1) }
+            }
+            return
+        }
         guard let src = CGEventSource(stateID: .combinedSessionState) else { return }
+        // While the synthetic keystroke is in flight, hold back real keyboard events so nothing interleaves with it.
+        src.setLocalEventsFilterDuringSuppressionState([.permitLocalMouseEvents, .permitSystemDefinedEvents],
+                                                       state: .eventSuppressionStateSuppressionInterval)
         let v: CGKeyCode = 9      // kVK_ANSI_V
         let down = CGEvent(keyboardEventSource: src, virtualKey: v, keyDown: true)
         let up = CGEvent(keyboardEventSource: src, virtualKey: v, keyDown: false)
         down?.flags = .maskCommand
         up?.flags = .maskCommand
-        down?.post(tap: .cghidEventTap)
-        up?.post(tap: .cghidEventTap)
+        down?.post(tap: .cgSessionEventTap)
+        up?.post(tap: .cgSessionEventTap)
     }
 
     static func openSettings(_ pane: String) {
