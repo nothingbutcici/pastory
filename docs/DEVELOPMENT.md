@@ -93,6 +93,7 @@ PASTORY_STORE=/tmp/x "$BIN" --selftest ocrpanel <out.png>  # 离屏渲染识别�
 PASTORY_STORE=/tmp/x "$BIN" --selftest heic | ingest | tombstone | writer | updater | l10n   # 存储格式 / 入库规则 / 墓碑 / 编码码率 / 更新器 / 词表去重
 PASTORY_STORE=/tmp/x "$BIN" --selftest import <db>         # 用一个外来 SQLite 验证导入
 ```
+`--selftest updatewin <out.png>` 渲染更新进度窗；`--selftest download <url> [out]` 用更新器的下载器真实下载一次，打印进度回调次数或失败文案。
 `PASTORY_STORE` / `PASTORY_LANG` 只在命令行带 `--selftest` 时生效（`App/Sandbox.swift`），正常启动一律忽略，
 所以壳里残留的变量不会把 app 指到沙箱。
 

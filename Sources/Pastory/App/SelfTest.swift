@@ -65,6 +65,20 @@ enum SelfTest {
                     okAll = snapshot(v, to: URL(fileURLWithPath: out).deletingPathExtension().appendingPathExtension("image.png").path) && okAll
                 }
                 ok = okAll
+            case "download":
+                // Exercise the updater's downloader for real: progress callbacks, completion, and the error wording.
+                let dest = URL(fileURLWithPath: rest.count > 1 ? rest[1] : NSTemporaryDirectory() + "pastory-dl-test")
+                try? FileManager.default.removeItem(at: dest)
+                var ticks = 0
+                do {
+                    try await UpdateDownload().fetch(URL(string: rest.first ?? "")!, to: dest) { _, _ in ticks += 1 }
+                    let size = (try? FileManager.default.attributesOfItem(atPath: dest.path)[.size] as? Int) ?? 0
+                    print("ok   \(size ?? 0) bytes, \(ticks) progress callbacks"); ok = true
+                } catch { print("failed: \(Updater.describe(error)) [\((error as NSError).domain) \((error as NSError).code)]"); ok = false }
+            case "updatewin":
+                let w = UpdateProgressWindow(version: "1.0.3")
+                w.update(done: 1_900_000, total: 4_860_000)
+                ok = w.debugContentView.map { $0.frame = CGRect(x: 0, y: 0, width: 380, height: 150); $0.layoutSubtreeIfNeeded(); return snapshot($0, to: rest.first ?? "pastory-updatewin.png") } ?? false
             case "ocrpanel":
                 ok = OCRPanelController.shared.debugView(sample: "Pastory 是一个截图工具\n所有复制过的内容都留在剪贴板里\nMade in 2026 · 中英混排 OK").map { snapshot($0, to: rest.first ?? "pastory-ocrpanel.png") } ?? false
             case "import":

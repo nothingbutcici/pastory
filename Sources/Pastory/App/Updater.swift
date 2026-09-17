@@ -59,8 +59,8 @@ final class Updater {
             offer(release)
             return .available(release.version)
         } catch {
-            if interactive, !quiet { info("检查更新失败".l, error.localizedDescription) }
-            return .failed(error.localizedDescription)
+            if interactive, !quiet { info("检查更新失败".l, Self.describe(error, long: true)) }
+            return .failed(Self.describe(error))
         }
     }
 
@@ -140,7 +140,7 @@ final class Updater {
         return !path.contains("/AppTranslocation/") && FileManager.default.isWritableFile(atPath: (path as NSString).deletingLastPathComponent)
     }
 
-    static func teamIdentifier(of app: URL) -> String? {
+    nonisolated static func teamIdentifier(of app: URL) -> String? {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
         p.arguments = ["-dv", "--verbose=2", app.path]
@@ -154,23 +154,36 @@ final class Updater {
         return id == "not set" ? nil : String(id)
     }
 
+    enum InstallError: Error { case signature, archive }
+
     private func install(from zip: URL, version: String, page: URL) async {
         let fm = FileManager.default
         let work = fm.temporaryDirectory.appendingPathComponent("pastory-update-\(UUID().uuidString)", isDirectory: true)
+        let window = UpdateProgressWindow(version: version)
+        let download = UpdateDownload()
+        window.onCancel = { download.cancel() }
+        window.show()
+        defer { window.close() }
         do {
             try fm.createDirectory(at: work, withIntermediateDirectories: true)
-            let (tmp, _) = try await URLSession.shared.download(from: zip)
             let zipFile = work.appendingPathComponent("Pastory.zip")
-            try fm.moveItem(at: tmp, to: zipFile)
-            try run("/usr/bin/ditto", ["-x", "-k", zipFile.path, work.path])
-            let newApp = work.appendingPathComponent("Pastory.app")
-            guard fm.fileExists(atPath: newApp.path) else { throw URLError(.cannotDecodeContentData) }
-            // Same team as the running copy, chained to Apple's Developer ID root, and a valid signature — or we do not touch anything.
-            guard let mine = Self.teamIdentifier(of: Bundle.main.bundleURL) else { throw URLError(.secureConnectionFailed) }
-            try run("/usr/bin/codesign", ["--verify", "--deep", "--strict",
-                                          "-R=anchor apple generic and certificate leaf[subject.OU] = \"\(mine)\"", newApp.path])
-            guard Self.teamIdentifier(of: newApp) == mine else { throw URLError(.secureConnectionFailed) }
+            try await download.fetch(zip, to: zipFile) { done, total in window.update(done: done, total: total) }
+            window.beginInstalling()
             let target = Bundle.main.bundleURL
+            // Unzip and verify off the main thread: the clipboard poll and the UI keep running meanwhile.
+            let newApp = try await Task.detached(priority: .userInitiated) { () throws -> URL in
+                try Self.run("/usr/bin/ditto", ["-x", "-k", zipFile.path, work.path])
+                let newApp = work.appendingPathComponent("Pastory.app")
+                guard FileManager.default.fileExists(atPath: newApp.path) else { throw InstallError.archive }
+                // Same team as the running copy, chained to Apple's Developer ID root, and a valid signature — or we do not touch anything.
+                guard let mine = Self.teamIdentifier(of: target) else { throw InstallError.signature }
+                do {
+                    try Self.run("/usr/bin/codesign", ["--verify", "--deep", "--strict",
+                                                       "-R=anchor apple generic and certificate leaf[subject.OU] = \"\(mine)\"", newApp.path])
+                } catch { throw InstallError.signature }
+                guard Self.teamIdentifier(of: newApp) == mine else { throw InstallError.signature }
+                return newApp
+            }.value
             _ = try fm.replaceItemAt(target, withItemAt: newApp, backupItemName: nil, options: [])
             try? fm.removeItem(at: work)
             let cfg = NSWorkspace.OpenConfiguration()
@@ -180,24 +193,45 @@ final class Updater {
             }
         } catch {
             try? fm.removeItem(at: work)
+            window.close()
+            if (error as? URLError)?.code == .cancelled { return }        // the user pressed 取消
             let a = NSAlert()
             a.messageText = "自动更新没有成功".l
-            a.informativeText = error.localizedDescription + "\n\n" + "可以手动从下载页更新。".l
+            a.informativeText = Self.describe(error, long: true)
+            a.addButton(withTitle: "重试".l)
             a.addButton(withTitle: "打开下载页".l)
             a.addButton(withTitle: "取消".l)
             NSApp.activate(ignoringOtherApps: true)
-            if a.runModal() == .alertFirstButtonReturn { NSWorkspace.shared.open(page) }
+            switch a.runModal() {
+            case .alertFirstButtonReturn: await install(from: zip, version: version, page: page)
+            case .alertSecondButtonReturn: NSWorkspace.shared.open(page)
+            default: break
+            }
         }
     }
 
-    private func run(_ tool: String, _ args: [String]) throws {
+    /// What went wrong, in words the user can act on. Network trouble reaching GitHub is by far the usual cause.
+    nonisolated static func describe(_ error: Error, long: Bool = false) -> String {
+        if let e = error as? InstallError {
+            return e == .signature ? "下载的更新包没有通过签名校验，已放弃安装。".l : "下载的更新包不完整。".l
+        }
+        if error is URLError {
+            return long ? "连不上 GitHub，更新包没有下载下来。\n\n部分网络直连 GitHub 不稳定：可以打开代理后重试，或者从下载页手动下载。".l
+                        : "连不上 GitHub（可能需要代理）".l
+        }
+        return error.localizedDescription
+    }
+
+    nonisolated private static func run(_ tool: String, _ args: [String]) throws {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: tool)
         p.arguments = args
-        let err = Pipe(); p.standardError = err; p.standardOutput = Pipe()
-        try p.run(); p.waitUntilExit()
+        let err = Pipe(); p.standardError = err; p.standardOutput = FileHandle.nullDevice
+        try p.run()
+        let errData = err.fileHandleForReading.readDataToEndOfFile()      // drain before waiting: a full pipe would block the child
+        p.waitUntilExit()
         guard p.terminationStatus == 0 else {
-            let msg = String(decoding: err.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+            let msg = String(decoding: errData, as: UTF8.self)
             throw NSError(domain: "Pastory.Update", code: Int(p.terminationStatus), userInfo: [NSLocalizedDescriptionKey: msg.trimmingCharacters(in: .whitespacesAndNewlines)])
         }
     }
