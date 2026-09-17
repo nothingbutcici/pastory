@@ -10,6 +10,8 @@
   简体中文 · <a href="README.en.md">English</a>
 </p>
 
+<p align="center">喜欢就请不要吝啬你的 Star，感谢各位！</p>
+
 <br>
 
 <p align="center">

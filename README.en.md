@@ -10,6 +10,8 @@
   <a href="README.md">简体中文</a> · English
 </p>
 
+<p align="center">Like it? A Star would mean a lot. Thank you!</p>
+
 <br>
 
 <p align="center">
