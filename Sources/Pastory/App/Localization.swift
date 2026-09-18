@@ -36,6 +36,10 @@ enum L {
         ("重试", "Retry"), ("下载的更新包没有通过签名校验，已放弃安装。", "The downloaded update failed signature verification and was not installed."),
         ("下载的更新包不完整。", "The downloaded update is incomplete."), ("连不上 GitHub（可能需要代理）", "Cannot reach GitHub (a proxy may help)"),
         ("连不上 GitHub，更新包没有下载下来。\n\n部分网络直连 GitHub 不稳定：可以打开代理后重试，或者从下载页手动下载。", "Could not reach GitHub, so the update was not downloaded.\n\nSome networks cannot reach GitHub reliably: turn on a proxy and try again, or download it manually from the release page."),
+        ("你好，我是 Pastory", "Hi, I'm Pastory"), ("先设两个快捷键，30 秒就好。", "Two shortcuts to set first. Takes 30 seconds."),
+        ("被占用就换一个；以后随时在设置里改。", "Taken by another app? Pick a different one. You can change these in Settings any time."),
+        ("菜单栏右上角的手写 P 也能打开我。现在随便复制点什么，它会出现在右边。", "The handwritten P in the menu bar opens me too. Copy anything now and it shows up on the right."),
+        ("开始使用", "Get Started"),
         ("复制文字", "Copy Text"), ("关闭", "Close"), ("截屏", "Screenshot"), ("录屏", "Record"), ("取消", "Cancel"),
         // Menu bar / app
         ("截图", "Screenshot"), ("剪贴板", "Clipboard"), ("搜索剪贴板", "Search Clipboard"),

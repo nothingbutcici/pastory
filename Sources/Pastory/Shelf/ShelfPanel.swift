@@ -284,6 +284,9 @@ enum ShelfFilter: String, CaseIterable, Identifiable {
 final class ShelfModel {
     var query = ""
     var showSettings = false
+    /// First launch until 「开始使用」 is pressed; the welcome card leads the row.
+    var showWelcome = !Preferences.shared.didWelcome
+    func finishWelcome() { Preferences.shared.didWelcome = true; showWelcome = false }
     /// Card whose title is being edited inline.
     var renamingID: String?
     var filter: ShelfFilter = .all

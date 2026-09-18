@@ -42,7 +42,7 @@ struct ShelfView: View {
             } else {
                 VStack(spacing: 0) {
                     header
-                    if items.isEmpty { empty } else { cards(items) }
+                    if items.isEmpty && !model.showWelcome { empty } else { cards(items) }
                     footer
                 }
                 .padding(.horizontal, 20)
@@ -169,6 +169,7 @@ struct ShelfView: View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(alignment: .top, spacing: 16) {
+                    if model.showWelcome { WelcomeCard(model: model) }
                     ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                         ClipCardView(item: item, selected: item.id == model.selectedID, onClipboard: item.id == ClipStore.shared.items.first?.id,
                                      index: index,

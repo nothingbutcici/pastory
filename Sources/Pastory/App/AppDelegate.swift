@@ -36,7 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             MainActor.assumeIsolated { self?.buildMainMenu() }
         }
         if !Preferences.shared.didWelcome {
-            Preferences.shared.didWelcome = true
+            // The shelf opens by itself with the welcome card; the card sets the flag when the user is done.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { ShelfPanelController.shared.show() }
         }
     }
@@ -66,7 +66,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             MainActor.assumeIsolated { ShelfPanelController.shared.showSearch() }
         }) { taken.append("搜索剪贴板".l + " " + p.shortcut(Preferences.Key.hotkeySearch).display) }
         NotificationCenter.default.post(name: .shortcutBindingChanged, object: nil)
-        guard !taken.isEmpty else { return }
+        // During onboarding the welcome card shows the conflict inline next to the recorder; no extra dialog.
+        guard !taken.isEmpty, Preferences.shared.didWelcome else { return }
         let alert = NSAlert()
         alert.messageText = "快捷键被其他应用占用".l
         alert.informativeText = taken.joined(separator: "、") + "\n\n另一个应用（常见是微信、飞书）已经注册了同样的组合键，系统只认先注册的那个。换一个组合键，或者去那个应用里改掉它的。".l
