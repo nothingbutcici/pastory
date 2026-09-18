@@ -91,6 +91,28 @@ final class Updater {
         return Release(version: version, notes: (j["body"] as? String) ?? "", zipURL: zip, page: page)
     }
 
+    /// Release notes are Markdown with the Chinese half first and the English half after a `---` line.
+    /// NSAlert shows plain text, so: pick the half for the UI language, drop the "Pastory x.y" title line the
+    /// alert already carries, turn bold/headings/list dashes into plain text and bullets, and cap the length.
+    static func notesForDisplay(_ raw: String, version: String, english: Bool) -> String {
+        let halves = raw.components(separatedBy: "\n---\n")
+        var text = halves.count >= 2 ? (english ? halves[1...].joined(separator: "\n") : halves[0]) : raw
+        var lines: [String] = []
+        for var line in text.components(separatedBy: "\n") {
+            line = line.trimmingCharacters(in: .whitespaces)
+            if line == "Pastory \(version)" || line == "---" { continue }
+            line = line.replacingOccurrences(of: "**", with: "")
+            while line.hasPrefix("#") { line.removeFirst() }
+            line = line.trimmingCharacters(in: .whitespaces)
+            if line.hasPrefix("- ") { line = "•  " + line.dropFirst(2) }
+            lines.append(line)
+        }
+        text = lines.joined(separator: "\n")
+        while text.contains("\n\n\n") { text = text.replacingOccurrences(of: "\n\n\n", with: "\n\n") }
+        text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.count > 900 ? String(text.prefix(900)) + "…" : text
+    }
+
     /// "1.2.1" > "1.2" > "1.0"; non-numeric parts compare as 0.
     static func isNewer(_ a: String, than b: String) -> Bool {
         let pa = a.split(separator: ".").map { Int($0) ?? 0 }, pb = b.split(separator: ".").map { Int($0) ?? 0 }
@@ -106,8 +128,7 @@ final class Updater {
     private func offer(_ r: Release) {
         let a = NSAlert()
         a.messageText = String(format: "Pastory %@ 可以更新了（当前 %@）".l, r.version, Self.currentVersion)
-        let notes = r.notes.trimmingCharacters(in: .whitespacesAndNewlines)
-        a.informativeText = notes.isEmpty ? "" : String(notes.prefix(600))
+        a.informativeText = Self.notesForDisplay(r.notes, version: r.version, english: L.isEnglish)
         let canInstall = r.zipURL != nil && Self.canSelfInstall
         a.addButton(withTitle: canInstall ? "下载并安装".l : "打开下载页".l)
         a.addButton(withTitle: "稍后".l)

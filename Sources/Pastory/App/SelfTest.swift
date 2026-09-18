@@ -199,6 +199,10 @@ enum SelfTest {
                     ("1.0.1 > 1.0", Updater.isNewer("1.0.1", than: "1.0")),
                     ("1.0 !> 1.0", !Updater.isNewer("1.0", than: "1.0")),
                     ("1.10 > 1.9", Updater.isNewer("1.10", than: "1.9")),
+                    ("notes: zh half, no markdown", { let t = Updater.notesForDisplay("Pastory 1.2\n\n**新功能**\n- 一\n- 二\n\n---\n\nPastory 1.2\n\n**New**\n- one", version: "1.2", english: false)
+                        return t == "新功能\n•  一\n•  二" }()),
+                    ("notes: en half", Updater.notesForDisplay("中文\n---\n**New**\n- one", version: "1.2", english: true) == "New\n•  one"),
+                    ("notes: no divider keeps all", Updater.notesForDisplay("- a\n- b", version: "1.2", english: true) == "•  a\n•  b"),
                     ("ad-hoc build must not self-install", Updater.teamIdentifier(of: Bundle.main.bundleURL) == nil ? !Updater.canSelfInstall : true),
                 ]
                 for (n, c) in checks { print("\(c ? "ok  " : "FAIL") \(n)") }
