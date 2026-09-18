@@ -296,9 +296,7 @@ final class ShelfModel {
         Preferences.shared.welcomeTried = welcomeTried
     }
     func finishWelcome() {
-        let p = Preferences.shared
-        p.retentionDays = p.retentionDays          // write the current value explicitly; the pre-1.0.4 migration keys off "never written"
-        p.didWelcome = true
+        Preferences.shared.didWelcome = true
         showWelcome = false
         ShelfPanelController.shared.relayoutHeight()
     }

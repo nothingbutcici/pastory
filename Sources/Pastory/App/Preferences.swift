@@ -99,19 +99,10 @@ final class Preferences {
             Key.hotkeyCapture: Shortcut(keyCode: 1, carbonModifiers: UInt32(optionKey | cmdKey)).encoded,  // ⌥⌘S（⌃⌘A 被微信占用）
             Key.hotkeyShelf: Shortcut(keyCode: 9, carbonModifiers: UInt32(shiftKey | cmdKey)).encoded,     // ⇧⌘V
             Key.hotkeySearch: Shortcut(keyCode: 3, carbonModifiers: UInt32(optionKey | cmdKey)).encoded,   // ⌥⌘F
-            Key.retentionDays: 0,          // new installs keep everything until the user chooses a schedule
+            Key.retentionDays: 0,          // keep everything until the user picks a schedule; a stored value means they did
             Key.cleanupHour: 4,
             Key.monitoringPaused: false,
         ])
-    }
-
-    /// Installs from before 1.0.4 ran with an implicit 1-day retention. Pin that down explicitly for them once,
-    /// so changing the registered default does not silently change what happens to their history.
-    func migrateImplicitRetention() {
-        // `object(forKey:)` also sees the registered default, so ask the persistent domain whether the key was ever written.
-        let stored = d.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")?[Key.retentionDays]
-        guard stored == nil, didWelcome else { return }
-        d.set(1, forKey: Key.retentionDays)
     }
 
     /// Onboarding checklist: which of the two shortcuts has actually been used once.
