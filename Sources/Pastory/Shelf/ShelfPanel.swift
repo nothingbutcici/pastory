@@ -74,7 +74,8 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
             }
         }
         let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main ?? NSScreen.screens[0]
-        let height = max(384, (screen.frame.height * 0.48).rounded() - 36)      // 48% minus about a centimetre; cards follow the panel
+        var height = max(384, (screen.frame.height * 0.48).rounded() - 36)      // 48% minus about a centimetre; cards follow the panel
+        if model.showWelcome { height = max(height, 500) }                        // the welcome card needs the room; first launch only
         let target = CGRect(x: screen.frame.minX, y: screen.frame.minY, width: screen.frame.width, height: height)
         model.reset()
         // The window itself never leaves this screen (a display arranged below would otherwise see it slide through);

@@ -1,11 +1,11 @@
 import SwiftUI
 
-/// First launch: a ticket-shaped paper card at the head of the shelf. Two shortcuts to set, then two things
-/// to try; each try is ticked off once it has really happened. 「开始使用」 retires the card for good.
+/// First launch: a card built like every other card on the shelf — pushpin, source line, handwritten title —
+/// whose body sets the two shortcuts and then asks you to try them. 「开始使用」 retires it for good.
 struct WelcomeCard: View {
     @Bindable var model: ShelfModel
     @State private var tick = 0                      // re-read the shortcuts after the recorder changes them
-    static let width: CGFloat = 520
+    static let width: CGFloat = 440
 
     var body: some View {
         let _ = tick
@@ -13,27 +13,44 @@ struct WelcomeCard: View {
         let captureKey = Preferences.shared.shortcut(Preferences.Key.hotkeyCapture)
         let allDone = model.welcomeTried.isSuperset(of: ["shelf", "capture"])
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text("欢迎使用".l).font(.serif(20, bold: true)).foregroundStyle(Color.ink)
-                Text("Pastory").font(.script(27)).foregroundStyle(Color.ink)
+            // Header, as on a clip card: app icon · name, then a rule.
+            HStack(spacing: 8) {
+                if let logo = Theme.logo {
+                    Image(nsImage: logo).resizable().interpolation(.high).frame(width: 22, height: 22).clipShape(RoundedRectangle(cornerRadius: 5))
+                }
+                Text("Pastory").font(.serif(16)).foregroundStyle(Color.ink)
+                Spacer()
             }
+            .padding(.horizontal, 18).padding(.top, 30).padding(.bottom, 6)
+            Rectangle().fill(Color.ink.opacity(0.7)).frame(height: 1).padding(.horizontal, 18)
+            // Handwritten title between the two rules.
+            Text("欢迎使用 Pastory".l).font(.script(28)).foregroundStyle(Color.ink).lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 18).padding(.top, 6).padding(.bottom, 3)
+                .overlay(alignment: .bottom) { Rectangle().fill(Color.ink.opacity(0.6)).frame(height: 1).padding(.horizontal, 18) }
 
-            heading("设置常用快捷键".l).padding(.top, 10)
-            step(icon: "clipboard", title: "显示 / 隐藏剪贴板".l, key: Preferences.Key.hotkeyShelf, tag: "shelf")
-            Rectangle().fill(Color.ink.opacity(0.12)).frame(height: 1)
-            step(icon: "crop", title: "截图".l, key: Preferences.Key.hotkeyCapture, tag: "capture")
+            VStack(alignment: .leading, spacing: 0) {
+                heading("设置常用快捷键".l)
+                step(icon: "clipboard", title: "显示 / 隐藏剪贴板".l, key: Preferences.Key.hotkeyShelf, tag: "shelf")
+                step(icon: "crop", title: "截图".l, key: Preferences.Key.hotkeyCapture, tag: "capture")
 
-            heading("试一试".l).padding(.top, 6)
-            todo(done: model.welcomeTried.contains("shelf"),
-                 text: shelfKey.isSet ? String(format: "按 %@ 打开或收起剪贴板".l, shelfKey.display) : "先给剪贴板设一个快捷键".l)
-            todo(done: model.welcomeTried.contains("capture"),
-                 text: captureKey.isSet ? String(format: "按 %@ 截一张图".l, captureKey.display) : "先给截图设一个快捷键".l)
+                Rectangle().fill(Color.ink.opacity(0.15)).frame(height: 1).padding(.vertical, 6)
 
-            Spacer(minLength: 2)
-            ticketRule.padding(.vertical, 3)
+                heading("试一试".l)
+                todo(done: model.welcomeTried.contains("shelf"),
+                     text: shelfKey.isSet ? String(format: "按 %@ 打开或收起剪贴板".l, shelfKey.display) : "先给剪贴板设一个快捷键".l)
+                todo(done: model.welcomeTried.contains("capture"),
+                     text: captureKey.isSet ? String(format: "按 %@ 截一张图".l, captureKey.display) : "先给截图设一个快捷键".l)
+
+                Spacer(minLength: 4)
+                Text("稍后也能在设置中调整".l).font(.serif(12)).foregroundStyle(Color.inkMuted).padding(.bottom, 4)
+            }
+            .padding(.horizontal, 18).padding(.top, 8)
+
+            ticketRule.padding(.vertical, 4)
 
             HStack(spacing: 10) {
-                Text("稍后也能在设置中调整 · 也可从菜单栏点 P 打开".l).font(.serif(12)).foregroundStyle(Color.inkMuted)
+                Text("也可从菜单栏点 P 打开".l).font(.serif(12)).foregroundStyle(Color.inkMuted)
                 Spacer()
                 Button { model.finishWelcome() } label: {
                     Text("开始使用".l).font(.serif(15, bold: true)).foregroundStyle(Color.ink)
@@ -43,31 +60,38 @@ struct WelcomeCard: View {
                 }
                 .buttonStyle(.plain)
             }
+            .padding(.horizontal, 18).padding(.bottom, 12)
         }
-        .padding(.horizontal, 22).padding(.top, 12).padding(.bottom, 10)
         .frame(width: Self.width)
         .frame(maxHeight: .infinity, alignment: .top)
         .background(
-            RoundedRectangle(cornerRadius: 8).fill(Paint.paper)
-                .shadow(color: .black.opacity(0.35), radius: 8, x: 1, y: 4)
+            RoundedRectangle(cornerRadius: 6).fill(Paint.paper)
+                .shadow(color: .black.opacity(0.4), radius: 9, x: 2, y: 6)
         )
+        .overlay(alignment: .top) {
+            if let img = Theme.pushpin {
+                Image(nsImage: img).resizable().interpolation(.high).scaledToFit().frame(height: 44)
+                    .shadow(color: .black.opacity(0.28), radius: 2, x: 1, y: 2)
+                    .offset(x: 0, y: -6)
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .shortcutsChanged)) { _ in tick += 1 }
     }
 
     private func heading(_ s: String) -> some View {
-        Text(s).font(.serif(13, bold: true)).foregroundStyle(Color.ink).padding(.bottom, 1)
+        Text(s).font(.serif(14, bold: true)).foregroundStyle(Color.ink).padding(.bottom, 2)
     }
 
     /// Icon · title · keycaps. A taken shortcut says so under the title.
     private func step(icon: String, title: String, key: String, tag: String) -> some View {
         let taken = HotKeyCenter.shared.failed.contains(tag)
-        return HStack(spacing: 14) {
-            Image(systemName: icon).font(.system(size: 16, weight: .light)).foregroundStyle(Color.ink).frame(width: 26)
-            VStack(alignment: .leading, spacing: 3) {
+        return HStack(spacing: 12) {
+            Image(systemName: icon).font(.system(size: 15, weight: .light)).foregroundStyle(Color.ink).frame(width: 22)
+            VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.serif(14)).foregroundStyle(Color.ink)
                 if taken { Text("被其他应用占用，点击换一个".l).font(.serif(12)).foregroundStyle(Color.inkMuted) }
             }
-            Spacer(minLength: 12)
+            Spacer(minLength: 10)
             ShortcutRecorder(key: key, keycaps: true)
         }
         .padding(.vertical, 3)
@@ -77,23 +101,24 @@ struct WelcomeCard: View {
     private func todo(done: Bool, text: String) -> some View {
         HStack(spacing: 10) {
             Image(systemName: done ? "checkmark.square.fill" : "square")
-                .font(.system(size: 16, weight: .light))
+                .font(.system(size: 15, weight: .light))
                 .foregroundStyle(done ? Color.paperBlueDeep : Color.ink.opacity(0.5))
-            Text(text).font(.serif(13)).foregroundStyle(done ? Color.inkMuted : Color.ink)
+                .frame(width: 22)
+            Text(text).font(.serif(14)).foregroundStyle(done ? Color.inkMuted : Color.ink)
                 .strikethrough(done, color: Color.inkMuted)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 3)
     }
 
     /// Dashed tear-off line with the two notches on the card's edges.
     private var ticketRule: some View {
         ZStack {
             Line().stroke(Color.ink.opacity(0.35), style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
-                .frame(height: 1)
+                .frame(height: 1).padding(.horizontal, 18)
             HStack {
-                Circle().fill(Paint.desk).frame(width: 16, height: 16).offset(x: -30)
+                Circle().fill(Paint.desk).frame(width: 16, height: 16).offset(x: -8)
                 Spacer()
-                Circle().fill(Paint.desk).frame(width: 16, height: 16).offset(x: 30)
+                Circle().fill(Paint.desk).frame(width: 16, height: 16).offset(x: 8)
             }
         }
         .frame(height: 16)
