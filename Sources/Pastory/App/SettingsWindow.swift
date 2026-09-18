@@ -87,16 +87,13 @@ struct ShortcutRecorder: View {
                 if !capturing, Date().timeIntervalSince(lastCancel) > 0.4 { startCapture() }
             } label: {
                 HStack(spacing: 6) {
-                    if capturing {
-                        Text("按下组合键".l).font(.serif(14)).foregroundStyle(Color.ink)
-                            .padding(.horizontal, 14).frame(height: 36)
-                            .background(Color.paperBlue, in: RoundedRectangle(cornerRadius: 10))
-                    } else if shortcut.isSet {
-                        ForEach(Array(shortcut.keycaps.enumerated()), id: \.offset) { _, cap in keycap(cap) }
+                    if capturing || !shortcut.isSet {
+                        // Same words idle and armed; armed draws the border in ink so the change of state is visible.
+                        Text(capturing ? "按下组合键…".l : "按下组合键".l).font(.serif(14)).foregroundStyle(Color.ink)
+                            .padding(.horizontal, 14).frame(height: 32)
+                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.ink.opacity(capturing ? 0.9 : 0.4), lineWidth: 1))
                     } else {
-                        Text("立即设置".l).font(.serif(14, bold: true)).foregroundStyle(Color.ink)
-                            .padding(.horizontal, 16).frame(height: 36)
-                            .background(Color.paperBlue, in: RoundedRectangle(cornerRadius: 10))
+                        ForEach(Array(shortcut.keycaps.enumerated()), id: \.offset) { _, cap in keycap(cap) }
                     }
                 }
                 .contentShape(Rectangle())
@@ -105,7 +102,7 @@ struct ShortcutRecorder: View {
             if shortcut.isSet, !capturing {
                 Button { stop(Shortcut.none) } label: {
                     Image(systemName: "xmark").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.inkMuted)
-                        .frame(width: 22, height: 36).contentShape(Rectangle())
+                        .frame(width: 22, height: 32).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain).help("不设快捷键".l)
             }
@@ -116,8 +113,8 @@ struct ShortcutRecorder: View {
     }
 
     private func keycap(_ s: String) -> some View {
-        Text(s).font(.system(size: s.count > 1 ? 12 : 16, weight: .medium)).foregroundStyle(Color.ink)
-            .frame(minWidth: 36, minHeight: 36).padding(.horizontal, s.count > 1 ? 8 : 0)
+        Text(s).font(.system(size: s.count > 1 ? 12 : 15, weight: .medium)).foregroundStyle(Color.ink)
+            .frame(minWidth: 32, minHeight: 32).padding(.horizontal, s.count > 1 ? 8 : 0)
             .background(
                 RoundedRectangle(cornerRadius: 10).fill(Color.paper)
                     .shadow(color: .black.opacity(0.18), radius: 1.5, x: 0, y: 2)
