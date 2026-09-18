@@ -552,7 +552,7 @@ extension SelfTest {
         try? png.write(to: tmp)
         defer { try? FileManager.default.removeItem(at: tmp) }
         func board(_ fill: (NSPasteboard) -> Void) -> ClipItem? {
-            let pb = NSPasteboard(name: NSPasteboard.Name("snipclip.selftest.\(UUID().uuidString)"))
+            let pb = NSPasteboard(name: NSPasteboard.Name("pastory.selftest.\(UUID().uuidString)"))
             pb.clearContents()
             fill(pb)
             defer { pb.releaseGlobally() }

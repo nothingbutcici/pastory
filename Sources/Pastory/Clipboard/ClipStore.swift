@@ -9,7 +9,7 @@ func stableHash(_ data: Data) -> Int {
 }
 
 /// ~/Library/Application Support/Pastory/
-///   pastory.sqlite   the index (SQLite, WAL); an old index.json is imported once and renamed
+///   pastory.sqlite   the index (SQLite, WAL)
 ///   items/<id>.<ext> payload (txt / png / json list of paths); <id>.rtf alongside when rich text
 ///   thumbs/<id>.heic shelf thumbnail for images and recordings (older stores: .png)
 @MainActor
@@ -22,7 +22,6 @@ final class ClipStore {
     private var itemsDir: URL
     private var thumbsDir: URL
     private var shareDir: URL
-    private var indexURL: URL { root.appendingPathComponent("index.json") }     // legacy, imported once
     private var dbURL: URL { root.appendingPathComponent("pastory.sqlite") }
     private var db: ClipDB?
 
@@ -33,13 +32,7 @@ final class ClipStore {
             return URL(fileURLWithPath: env, isDirectory: true)
         }
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        let new = support.appendingPathComponent("Pastory", isDirectory: true)
-        let old = support.appendingPathComponent("Snip Clip", isDirectory: true)
-        // One-time rename from the code-name folder; never leave two stores around.
-        if !FileManager.default.fileExists(atPath: new.path), FileManager.default.fileExists(atPath: old.path) {
-            try? FileManager.default.moveItem(at: old, to: new)
-        }
-        return new
+        return support.appendingPathComponent("Pastory", isDirectory: true)
     }
     private var thumbCache: [String: NSImage] = [:]
     static let maxTextBytes = 20 * 1024 * 1024
@@ -63,12 +56,6 @@ final class ClipStore {
 
     // MARK: - Persistence
 
-    /// One bad row must not take the whole index with it.
-    private struct Failable<T: Decodable>: Decodable {
-        let value: T?
-        init(from decoder: Decoder) throws { value = try? T(from: decoder) }
-    }
-
     /// Set when the index could not be read at launch. While it is set nothing is ever written back,
     /// because a replace-all save from an empty in-memory list would wipe the table.
     private(set) var loadFailed = false
@@ -76,18 +63,7 @@ final class ClipStore {
     private func load() {
         do {
             let d = try ClipDB(url: dbURL)
-            var rows = try d.loadAll()
-            // First run on a store from the JSON era: import, then retire the file.
-            if rows.isEmpty, let data = try? Data(contentsOf: indexURL) {
-                let dec = JSONDecoder(); dec.dateDecodingStrategy = .iso8601
-                let legacy = (try? dec.decode([Failable<ClipItem>].self, from: data))?.compactMap(\.value) ?? []
-                if !legacy.isEmpty {
-                    try d.saveAll(legacy)
-                    rows = legacy
-                }
-                let f = DateFormatter(); f.dateFormat = "yyyyMMdd-HHmmss"
-                try? FileManager.default.moveItem(at: indexURL, to: root.appendingPathComponent("index.migrated.\(f.string(from: Date())).json"))
-            }
+            let rows = try d.loadAll()
             db = d
             items = rows
             buried = (try? d.tombstoneHashes()) ?? []

@@ -5,15 +5,13 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 CONFIG="${CONFIG:-release}"
-# Prefer the Developer ID identity (same signature as the shipped app, so permissions carry over between a local
-# build and a release), then the local self-signed one (tools/make-signing-cert.sh); ad-hoc otherwise.
+# A Developer ID identity in the keychain is used automatically (same signature as the shipped app, so permissions
+# carry over between a local build and a release); otherwise ad-hoc.
 if [ -z "${SIGN_ID:-}" ]; then
     IDS="$(security find-identity -v -p codesigning 2>/dev/null || true)"
     DEV="$(echo "$IDS" | grep -o '"Developer ID Application: [^"]*"' | head -1 | tr -d '"' || true)"
     if [ -n "$DEV" ]; then
         SIGN_ID="$DEV"
-    elif echo "$IDS" | grep -q '"Pastory Dev"'; then
-        SIGN_ID="Pastory Dev"
     else
         SIGN_ID="-"
     fi

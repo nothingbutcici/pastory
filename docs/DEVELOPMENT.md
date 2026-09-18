@@ -1,268 +1,108 @@
-> 这是项目的规则本（约定、存储 / 清理规则、视觉系统、自测）。面向用户的介绍在仓库根目录的 [README.md](../README.md)（中文，默认）/ [README.en.md](../README.en.md)。
+# Pastory 开发约定
 
-# Pastory（代号 Snip Clip）
+> 给贡献者和未来的自己看的规则本。面向用户的介绍在仓库根目录的 [README.md](../README.md)（中文）/ [README.en.md](../README.en.md)。
 
-macOS 菜单栏工具，截图 + 剪贴板货架合一。截图直接进剪贴板即可 ⌘V 发出去；
-所有复制过的内容（含截图）留在底部滑出的半屏货架里，可回看、固定、存到本地，
-未固定的按保留期自动清。交互对标 Paste，截图对标飞书（不偏色）+ 微信（OCR）。
+Pastory 是 macOS 15+ 的菜单栏工具：剪贴板历史面板 + 截图标注 / 识别文字 / 区域录屏。SwiftPM，AppKit + SwiftUI，只用 Apple 框架和系统 libsqlite3，没有第三方依赖。
 
-## 目录约定
+## 目录
 
 ```
-docs/DEVELOPMENT.md  本文件：约定、构建、自测、存储格式；根目录 README.md / README.en.md 是给用户看的介绍
-Package.swift        SwiftPM，macOS 15+，只用 Apple 框架，无第三方依赖
-build.sh             swift build → build/Pastory.app → codesign（Developer ID，其次自签名证书「Pastory Dev」，否则 ad-hoc）
-Resources/           Info.plist、entitlements、AppIcon.icns、Logo / MenuIcon / Pushpin 图、Fonts/（Caveat、Ysabeau Office 及各自的 OFL）
+Package.swift        macOS 15+，Swift 6 工具链、v5 语言模式
+build.sh             swift build → build/Pastory.app → codesign（有 Developer ID 用它，否则 ad-hoc）
+dist.sh              universal 构建 + 公证 + 盖章 → dist/Pastory-<版本>.zip
+release.sh           dist.sh → 打 tag → GitHub Release（版本号来自 Info.plist）
+Resources/           Info.plist、entitlements（空）、AppIcon.icns、Logo / MenuIcon / Pushpin、Fonts/（Caveat、Ysabeau Office 及各自的 OFL）
 Sources/Pastory/
-  App/               入口、菜单栏、全局快捷键、权限、偏好、设置窗口
-  Capture/           ScreenCaptureKit 取图、框选覆盖层、坐标换算、区域录屏（SCRecordingOutput → mp4，可转 GIF）
-  Annotate/          截图标注：Excalidraw 风手绘渲染（选择/矩形/椭圆/箭头/直线/画笔/文字/马赛克），OCR 面板
-  Clipboard/         NSPasteboard 监听、条目模型、SQLite 索引 + 文件存储、保留期清理
-  Shelf/             底部半屏货架：横向卡片、固定、保存到本地（Exporter 弹对话框）、搜索
-tools/               make-signing-cert.sh 等一次性脚本
-build/               构建产物，不进 git
+  App/               入口、菜单栏、全局快捷键、权限、偏好、更新器、双语表、主题、自测
+  Capture/           取屏、框选浮层、截图、区域录屏、GIF 编码、录屏预览
+  Annotate/          标注画布与工具条、手绘渲染、OCR 与识别文字面板
+  Clipboard/         剪贴板监听、条目模型、SQLite 索引 + 文件存储、保留期清理、导入
+  Shelf/             剪贴板面板、卡片、设置页、文本 / 图片编辑窗、导出
+docs/                本文件、README 用图
 ```
 
 - 新文件放进对应子目录，一个类型一个文件。
-- 临时产物（测试截图、抽样图片）走会话 scratchpad，不进项目目录。
-- 取屏 / 快捷键 / 权限代码与作者的另一个录屏项目同源，但各自一份，不做跨项目引用。
+- 临时产物（测试截图、抽样图片）不进项目目录。
+- bundle id 是 `com.cici.snipclip`（产品早期代号），**不能改**：改了用户的屏幕录制、辅助功能授权和全部设置都会丢。
+
+## 构建、分发、发布
+
+```bash
+./build.sh                 # 本机架构，build/Pastory.app
+./dist.sh                  # arm64 + x86_64，签名、公证、盖章，dist/Pastory-<版本>.zip 和 首次打开.txt
+./release.sh notes.md      # 先改 Resources/Info.plist 的 CFBundleShortVersionString 并提交，再跑
+```
+
+只需要 Command Line Tools。没有 Developer ID 证书的机器上两个脚本自动退回 ad-hoc，`首次打开.txt` 会换成「仍要打开」版本。公证凭据是钥匙串 profile `pastory-notary`（`xcrun notarytool store-credentials`），仓库里没有任何密钥。发布包用 Developer ID 签名 + hardened runtime，`spctl --assess` 应显示 `source=Notarized Developer ID`。
+
+**更新器**（`App/Updater.swift`）：启动 30 秒后、之后每 24 小时读 `api.github.com/repos/nothingbutcici/pastory/releases/latest`，这是 app 唯一的网络请求，可在设置关闭。tag 必须是 `v<版本>`，资产是 `.zip`。只有 Developer ID 签名的包才自动安装：下载（有进度窗、可取消、30 秒无响应判失败）→ 后台解压 → `codesign --verify -R="anchor apple generic and certificate leaf[subject.OU] = <本 Team>"` → TeamIdentifier 与运行中的自己一致 → `replaceItemAt` 原地替换 → 重启。ad-hoc 包、被 App Translocation 挪走的包只打开下载页。
 
 ## 存储
 
-一切在 `~/Library/Application Support/Pastory/`：
+一切在 `~/Library/Application Support/Pastory/`，位置固定不可选，不上云：
 
 | 路径 | 内容 |
 | --- | --- |
-| `pastory.sqlite` | 索引（SQLite，WAL）：id、kind(text/url/image/files/video)、创建时间、来源 app、预览片段、OCR 文本、是否 Pin、标题、内容哈希。旧版 `index.json` 首次启动导入后改名 `index.migrated.<yyyyMMdd-HHmmss>.json` |
+| `pastory.sqlite` | 索引（SQLite，WAL）：id、kind(text/url/image/files/video)、创建 / 修改时间、来源 app、预览片段、OCR 文本、Pin、标题、内容哈希；另有 `tombstones` 表 |
 | `items/<id>.txt` | 文本 / 链接正文；富文本另存 `<id>.rtf` |
 | `items/<id>.heic` / `.png` | 图片原图（默认高质量 HEIC，设置可改无损 PNG），带显示器色彩描述文件 |
-| `items/<id>.json` | 文件条目：路径列表 |
-| `items/<id>.mp4` / `.gif` | 录屏本体 |
-| `thumbs/<id>.heic`（旧库里是 .png） | 货架缩略图（长边 900 px） |
+| `items/<id>.json` | 文件条目：路径列表（只存引用，不复制文件本体） |
+| `items/<id>.mp4` / `.gif` | 录屏本体；`share/` 下放可读文件名的硬链接供剪贴板使用 |
+| `thumbs/<id>.heic` | 面板缩略图，长边 900 px |
 
-索引用 SQLite（`Clipboard/ClipDB.swift`，系统自带 libsqlite3），正文仍是文件；整表在一个事务里写，几千条也快。
-自测可用环境变量 `PASTORY_STORE=<dir>` 指到别的目录，不污染真实数据。
+规则：
 
-- 「保存到本地」每次弹系统保存对话框让用户选位置（默认打开上次用过的文件夹），存储里的原条目不动。
-- 清理规则（`Clipboard/Retention.swift`）按自然日：设清理时刻 X（默认 04:00，设置里 0–23 可调）和保留天数 N（默认 1；0 = 永不，此时时刻选择器禁用、不设定时器）。
-  任何时候运行检查：过了今天的 X 就清「昨天及更早」（N=1），今天 0:00 之后的一律不动；没到 X 只清「前天及更早」。
-  无状态、可重复执行，不需要记"删过没有"；Pin 住的永远不清。触发点只有两个：启动时一次，以及一个定在"最早到期那条的到期时刻"
-  （它的日期 + N 天，当天 X 点）的定时器，到点清理后再定下一个；休眠错过会在唤醒时补发。没有周期巡检。
-  用户手动删除即落盘并删文件，重开不会回来（自测 `--selftest retention` 覆盖以上场景）。
-  索引读写失败会弹一次提示，且清理暂停直到写回成功。缩短保留天数会先告知将清掉多少条再执行。
-- 带 `org.nspasteboard.ConcealedType` / `TransientType` 标记的内容（密码管理器等）不记录。
-- 存放位置固定在上面这个目录，设置里只显示路径和「打开」，不提供更改。不上云。
-
-## 构建
-
-```bash
-./build.sh                      # 产出 build/Pastory.app（bundle id 仍是 com.cici.snipclip，权限不丢）
-open "build/Pastory.app"
-```
-
-签名顺序：钥匙串里有「Developer ID Application」证书优先（与发布包同一签名，权限互通）；其次自签名的「Pastory Dev」；
-都没有才 ad-hoc（每次重编译都要重新勾屏幕录制权限）。要一张自签证书就跑 `./tools/make-signing-cert.sh`。
-只需要 Command Line Tools，不需要完整 Xcode。
-
-## 分享给别人
-
-```bash
-./dist.sh        # 产出 dist/Pastory-<版本>.zip 和 dist/首次打开.txt，一起发给对方
-```
-
-有 Developer ID 证书和公证 profile 的机器上出的是 universal（arm64 + x86_64）、已公证盖章的包，对方双击即开；
-没有证书的机器自动退回 ad-hoc，`首次打开.txt` 会换成「仍要打开」版本（细节见下文「签名与公证」）。
-正式发布走 `./release.sh <notes.md>`：先改 `Resources/Info.plist` 的 CFBundleShortVersionString 并提交，脚本打 tag、推 tag、建 GitHub Release 并上传 zip。
-app 图标 `Resources/AppIcon.icns` 由 Logo.png 生成。
+- 单条改动走单行 upsert / delete，只有清空、导入走整表重写（`BEGIN IMMEDIATE`）。索引读不出时不写任何东西；索引写失败时 UI 回滚、清理暂停、提示一次，直到写回成功。
+- **Pin 住的条目永远不会被自动清理。** 清理按自然日：清理时刻 X（默认 04:00）和保留天数 N（默认 1；0 = 永不）。过了今天的 X 就清「昨天及更早」，没到 X 只清「前天及更早」。触发点只有启动时一次和一个定在最早到期时刻的定时器。唯一会连 Pin 一起删的是「移除所有导入进来的条目」，手动、有确认框、只针对来源为「导入」的条目。
+- 手动删除即落盘并删文件，重开不会回来。删除在 `tombstones` 留 `id + content_hash`，导入时跳过这些哈希，30 天后随清理清掉。
+- 去重：再次复制历史里已有的内容（同类型、内容哈希相同）不生成新卡，而是把那张卡提到最前。`contentHash` 永远是原 PNG 的哈希，与存储格式无关。
+- `ClipStore.png(of:)` 对 HEIC 项解码后再包成 PNG 交给剪贴板 / 编辑器 / 导出；粘贴和导出永远是无损的。
+- 带 `org.nspasteboard.ConcealedType` / `TransientType` / `AutoGeneratedType` 标记的内容不记录；暂停开关和锁屏期间不记录。单条文本超过 20 MB 不入库。
 
 ## 自测
 
 ```bash
 BIN="./build/Pastory.app/Contents/MacOS/Pastory"
-"$BIN" --selftest capture <out.png>    # 截主屏全图，打印色彩空间；再用系统 screencapture 抽样比像素
-"$BIN" --selftest ocr [in.png]         # 不给路径则自绘一张中英文图，识别后核对关键词
-PASTORY_STORE=/tmp/x "$BIN" --selftest clipboard 10   # 监听 10 秒，打印期间记录到的条目
-PASTORY_STORE=/tmp/x "$BIN" --selftest retention      # 造今天 / 昨天 / 昨天固定 / 三天前，清理后核对存活
-PASTORY_STORE=/tmp/x "$BIN" --selftest shelf <out.png>     # 离屏渲染货架面板（含 5 条样例）
-"$BIN" --selftest annotate <out.png>   # 离屏渲染标注画布 + 工具条，另存 <out>.flat.png 为合成结果
-"$BIN" --selftest gif                  # 合成 2 秒 mp4 → GIF，核对帧数与首帧
-"$BIN" --selftest preview <out.png>    # 离屏渲染录屏预览窗（视频区离屏是黑的，看布局用）
-PASTORY_STORE=/tmp/x "$BIN" --selftest settings <out.png>   # 离屏渲染货架的设置页
-PASTORY_STORE=/tmp/x "$BIN" --selftest editors <out.png>   # 离屏渲染文本编辑窗 <out>.text.png 与图片编辑窗 <out>.image.png
-PASTORY_STORE=/tmp/x "$BIN" --selftest ocrpanel <out.png>  # 离屏渲染识别文字面板
-PASTORY_STORE=/tmp/x "$BIN" --selftest heic | ingest | tombstone | writer | updater | l10n   # 存储格式 / 入库规则 / 墓碑 / 编码码率 / 更新器 / 词表去重
-PASTORY_STORE=/tmp/x "$BIN" --selftest import <db>         # 用一个外来 SQLite 验证导入
+S=/tmp/pastory-test      # 任何会写库的自测都必须指到一个临时目录
+PASTORY_STORE=$S "$BIN" --selftest shelf <out.png>       # 离屏渲染剪贴板面板（含样例）
+PASTORY_STORE=$S "$BIN" --selftest settings <out.png>    # 设置页
+PASTORY_STORE=$S "$BIN" --selftest editors <out.png>     # 文本 / 图片编辑窗
+PASTORY_STORE=$S "$BIN" --selftest ocrpanel <out.png>    # 识别文字面板
+PASTORY_STORE=$S "$BIN" --selftest updatewin <out.png>   # 更新进度窗
+PASTORY_STORE=$S "$BIN" --selftest annotate <out.png>    # 标注画布 + 工具条，另存 <out>.flat.png 为合成结果
+PASTORY_STORE=$S "$BIN" --selftest preview <out.png>     # 录屏预览窗
+PASTORY_STORE=$S "$BIN" --selftest retention | tombstone | heic | ingest | writer | gif | ocr | updater | l10n
+PASTORY_STORE=$S "$BIN" --selftest import <db>           # 用一个外来 SQLite 验证导入
+PASTORY_STORE=$S "$BIN" --selftest download <url> [out]  # 用更新器的下载器真实下载一次
+PASTORY_STORE=$S "$BIN" --selftest clipboard 10          # 监听 10 秒，打印记录到的条目
+PASTORY_LANG=en …                                        # 任何渲染类自测加这个变量出英文
 ```
-`--selftest updatewin <out.png>` 渲染更新进度窗；`--selftest download <url> [out]` 用更新器的下载器真实下载一次，打印进度回调次数或失败文案。
-`PASTORY_STORE` / `PASTORY_LANG` 只在命令行带 `--selftest` 时生效（`App/Sandbox.swift`），正常启动一律忽略，
-所以壳里残留的变量不会把 app 指到沙箱。
 
-后三个不需要屏幕录制权限，改 UI 后先看这两张图。
+- `PASTORY_STORE` / `PASTORY_LANG` 只在命令行带 `--selftest` 时生效（`App/Sandbox.swift`）；正常启动一律忽略，壳里残留的变量不会把 app 指到沙箱。
+- 会写库的子命令要求 `PASTORY_STORE` 非空且不在 `~/Library/Application Support` 之下，否则直接拒绝。新增会写库的子命令，第一件事是加进 `SelfTest.swift` 的 mutating 名单。
+- 改 UI 先跑对应的渲染自测看图，中英文各一张。
+- 重启 app 用单独一条命令，不要和带环境变量的自测写在同一行。
 
-**会写存储的自测（clipboard / retention / relocate / shelf / settings / editors）必须带 `PASTORY_STORE=<临时目录>`，
-不带会直接拒绝运行。** `ClipStore.defaultRoot` 在该环境变量存在时也指向它，所以「搬回默认位置」之类的路径在测试里
-永远落在沙箱内。2026-09-12 曾因为这一点没做到，一次自测把用户真实存储清空过，不要再犯。
+## 行为约定
 
-## 用法
+- **快捷键**：默认 ⌥⌘S 截图、⇧⌘V 面板、⌥⌘F 搜索，都可改。录制时当场试注册：被其他应用占用或和自己的另一个重复就拒绝；没有修饰键的单键拒绝；只有 ⌘ / ⇧ 加单键允许但提示会覆盖所有应用。
+- **面板键盘**：⏎ 复制并收起（不粘贴）；双击 = 复制、收起并粘贴到刚才的应用；← → ↑ ↓ 选；空格 Quick Look；⌘P Pin；⌘S 保存到本地；⌫ 删除（Pin 项确认）；⌘F 搜索；直接打字即搜索；⎋ 依次关闭重命名框 / 返回 / 清空搜索 / 收起。设置页打开时只认 ⎋ 和 ⌘F。
+- **合成按键只走会话层**：双击粘贴的 ⌘V 通过 `CGEvent` 发到 `.cgSessionEventTap`，发送前等用户的修饰键全部松开，发送期间屏蔽本地键盘事件。**绝不发到 `.cghidEventTap`**：那一层参与系统对物理键盘的记账，曾让 Command 键整机卡住直到重启。
+- **截图流程**：按键瞬间先把鼠标所在屏幕冻结成图，再弹选择层；选择层是 `.nonactivatingPanel`、`CGShieldingWindowLevel()`，框选期间不做 key window（否则前台应用的菜单 / 下拉会收起），键盘靠无修饰键的 Carbon 热键（⎋ 空格 F ⏎），截到图、标注器出现后才 `makeKey` 并解绑热键。截图中再按截图键 = 重新框选；打开着的识别文字面板降到普通层级留在原地，可以被截。取图像素比以 `NSScreen.backingScaleFactor` 为准。
+- **外部截图工具的图**：位图 + 一个图片文件 URL 同时上剪贴板（微信 / 飞书 / CleanShot 的做法），或只有一个临时目录里的图片文件，都按图片入库；Finder 复制文件（无位图）是文件条目。规则在 `ClipboardMonitor.ingest`，`--selftest ingest` 覆盖。
+- **录屏**：SCStream 帧直接进 `AVAssetWriter`，30 fps，原生像素，平均码率每像素每帧 H.264 0.1 / HEVC 0.065 bit，夹在 3–30 Mbps；停止时把最后一帧再补一次。上限 10 分钟。GIF 预算按时长阶梯（≤10 s 6 MB、≤30 s 10 MB、≤60 s 15 MB、更长 20 MB），从长边 1280、10 fps 起步，先降帧率再缩尺寸。录屏启动窗口期点「丢弃」也必须停掉采集流。
+- **导入**（`Clipboard/Importer.swift`）：永远在临时副本上读；Pastory 库按 schema 精确导，Paste（wiheads）有专门读法，其他 SQLite 按启发式；目录扫描按文件头识别、最多三层、超过 6 个库或过宽目录（家目录、Library 等）直接拒绝；id / ext 含 `/` 或 `..` 的行跳过。导入的一批整体排在自己记录之后；保留期不是「永不删除」时只给「导入并改为永不删除」。
+- **双语**（`App/Localization.swift`）：一张 `(中文, English)` 对表，键就是代码里的中文字面量，`"…".l`，带上下文的键写成 `tab|图片` 并用 `"图片".l("tab")`。新增文案 = 写中文字面量 + `.l` + 表里加一行。`--selftest l10n` 守重复键（重复键会让英文环境启动即崩）。中文用「」和全角标点，英文用 ASCII 标点。`ClipStore.importSourceName`（"导入"）是存库标记，永不翻译，显示走「已导入」。
+- **权限**：屏幕录制在第一次截图时请求（不在启动时）；系统弹窗每次启动最多一次，之后被拒时弹自家提示，第一个按钮是「重新启动 Pastory」（授权只对新进程生效）。辅助功能只用于双击粘贴，缺失时退化为只复制并收起。从终端直接启动的 Pastory 权限会记在终端名下，正式使用要从 Finder / 启动台打开。
+- **性能**：面板启动时预建；缩略图后台解码、缓存超 100 张淘汰最老的三分之一；搜索用按条目缓存的小写全文；设置页的权限徽标 1 秒轮询。
 
-- **⌥⌘S 截图**（⌃⌘A 被微信占用，系统只认先注册的）：拖拽选区；␣ 切窗口模式；F 整屏；单击空白 / 右键 / ⎋ 取消。
-  框选时只显示尺寸角标，没有十字线和提示文字。选完立刻整屏取图（重新枚举窗口把遮罩排除掉），之后出现的工具条不会进图。
-  ⏎ 或双击 = 复制到剪贴板并进货架；⌘Z 撤销一笔。
-- 视觉：货架是纸感（2026-09-12 改）：深棕纹理底，米色纸片卡带票根缺口和虚线，当前剪贴板那张是浅蓝纸；
-  正文宋体（Songti SC），标题和「Pastory」手写体（Caveat，CJK 回退翩翩体），设置页同样是纸片分区。
-  截图 / 录屏那套（顶栏、标注工具条、子条、尺寸角标、录屏控制条）、录屏预览窗、文本 / 图片编辑窗、
-  识别文字面板也全部是纸感（2026-09-12 晚统一）：米色纸条 `Theme.drawPaper` + 深棕桌面 `Theme.drawGround`，
-  选中态是浅蓝纸，选区框 / 手柄 / 元素选中框用浅蓝和米纸；按钮统一 `Theme.paperButton`。深色浮岛那套代码已全部删除。
-  截图浮层的条（顶栏 / 工具条 / 子条 / 尺寸角标 / 录屏控制条）2026-09-12 晚再改成和货架一样的深棕磨砂 `Theme.drawDesk`，
-  米字 + 浅蓝选中；标注调色盘 = 紫 + #E9631A / #C56F8C / #A9C2E0 / #59382C / #1E151C / #EBEBDF（用户 2026-09-12 晚定）。
-  logo 来自作者的品牌稿（不在仓库）：`Resources/Logo.png` 与 `AppIcon.icns` 由原始图标圆角化生成（1024 画布放 824 圆角方，半径 22.37%），
-  `Resources/MenuIcon(@2x).png` 是菜单栏 template 图（build.sh 会拷进包）。
-  品牌字体 Ysabeau Office（OFL，`Resources/Fonts/`，启动时按进程注册）只用在「Pastory」字样。
-  截图 / 录屏只排除取景遮罩自己的窗口，货架开着时也能被截进去。
-- 框选完成后屏幕顶部出品牌条：logo · Pastory · [截屏 │ 录屏] · ✕，默认截屏；点录屏进录制流程。
-  选区是浅蓝框 + 8 个米纸手柄，拖手柄可以改选区（截图是整屏取一次再按选区裁，拖手柄只是重新裁，标注位置不动），
-  右上角深色角标显示像素尺寸。
-- 工具条两层，结构对标飞书：主条 = 矩形 R / 椭圆 O / 箭头 A / 直线 L / 画笔 P / 文字 T / 马赛克 M │ 识别文字 │
-  撤销 · ✕ 取消 · ✓ 完成（米色图标，✓ 浅蓝）。子条只在点了某个工具、或选中了某个元素时从主条下方弹出（带指向小三角），
-  内容是三档粗细的小圆点（文字工具显示 小 / 中 / 大；马赛克档位 = 格子大小）和 7 个方形色块（选中打勾，马赛克不显示颜色）；
-  改动作用于选中元素，没选中时作为新元素的默认值。再点一次当前工具 = 收起。没有虚线、没有「保存到文件」（剪贴板已经联动）。
-  没有选择工具：点到已画的元素就选中它（矩形 / 椭圆只认边框，所以在框里仍能继续画），
-  拖动移动，拉手柄改形（直线 / 箭头两端点，方框四角），右上角 ✕ 或 ⌫ 删除，⌘Z 仍可撤销；
-  已选中的文字再点一下进入编辑。画笔画完不选中，方便连画。
-  线条是手绘感：路径打平后加低频噪声画两遍，每个形状带固定 seed，预览和导出一模一样。
-  文字用翩翩体（HanziPen SC，系统自带），没有就退回系统字体。
-  「识别文字」弹出可编辑结果，「复制文字」把文字复制走（图片条目也保留）。
-- **⌥⌘F 搜索剪贴板**：打开面板并直接聚焦搜索框。三个全局快捷键都在设置里改；录制时当场试注册，
-  被其他应用占用、和自己的另一个快捷键重复会拒绝并提示；单个键（没有 ⌘⌥⌃⇧）提示「至少两个键」；
-  只有 ⌘/⇧ 加单键（如 ⌘A）允许设置，但保存后提示「所有应用里的 ⌘A 都会变成这个功能」（2026-09-12 改，之前是直接拒绝）。
-- **外部截图工具的图**（微信 / 飞书 / CleanShot 把位图和一个图片文件 URL 一起放上剪贴板——Finder 复制文件不带位图，所以这一组合只会是截图工具；
-  或只放一个临时目录里的图片文件）按图片入库（缩略图 + OCR），不是「文件」；Finder 里复制文件（没有位图）仍是文件条目。规则在 `ClipboardMonitor.ingest`，
-  `--selftest ingest` 用私有剪贴板验证五种组合。卡片缩略图长边 900px。
-- **取图像素比**以 `NSScreen.backingScaleFactor` 为准（`Screenshotter.pixelScale`，和 `pointPixelScale` 取大），
-  截图和录屏都用它；`pointPixelScale` 在部分显示器上返回过 1，导致存下来的图只有一半分辨率。
-- **「移除所有导入进来的条目」是唯一会连 Pin 一起删的操作**：手动、有确认框、只针对来源为「导入」的条目；自动清理仍然永远不碰 Pin。
-- **导入时保留期不是永不删除**：弹窗只给「导入并改为永不删除」/「取消」，因为导入项都比保留期老，「只导入」等于导入后立刻被清。
-- **双语**（2026-09-14）：`App/Localization.swift` 一张表，键就是代码里的中文字面量，`"…".l` 在英文环境返回英文，
-  `"图片".l("tab")` 这类带上下文的键写成 `tab|图片`。带数字的句子用 `String(format: "%d 字".l, n)`。
-  语言 = 设置 › 语言（跟随系统 / 中文 / English，`Preferences.language`），切换时 `ShelfModel.langTick` 让货架整体重建，
-  菜单栏菜单每次打开时重建；`PASTORY_LANG=en` 可强制离屏渲染英文。新增文案：写中文字面量 + `.l`，再往表里加一行英文；
-  `ClipStore.importSourceName`（"导入"）是存库的标记，永远不翻译，显示时走「已导入」。
-- **签名与公证**（2026-09-16 起）：作者的 Developer ID Application 证书在登录钥匙串（CSR 用 openssl 生成，
-  私钥已入钥匙串；Apple 的 Developer ID G2 中间证书也已导入）。公证凭据是 App Store Connect API 密钥，`xcrun notarytool
-  store-credentials "pastory-notary"` 存在钥匙串里，仓库里没有任何密钥。`build.sh` 自动优先用这张证书（hardened runtime + 时间戳），
-  `dist.sh` 出包后 `notarytool submit --wait` → `stapler staple` → 重新 zip，末尾 `spctl` 应显示 `source=Notarized Developer ID`。
-  首次公证等了约 50 分钟，之后通常几分钟。没有证书的机器上两个脚本自动退回 ad-hoc，首次打开说明也跟着换成「仍要打开」版本。
-- **更新**（2026-09-16，`App/Updater.swift`）：启动 30 秒后、之后每 24 小时，向 `api.github.com/repos/nothingbutcici/pastory/releases/latest`
-  取最新 release（这是 app 唯一的网络请求，不带任何标识；设置 › 系统 可关，菜单和设置里都有「检查更新」）。tag 必须是 `v<版本>`，
-  资产是 `.zip`。比当前 `CFBundleShortVersionString` 新就弹窗：下载并安装 / 稍后 / 跳过这个版本。
-  **只有 Developer ID 签名的包才自动安装**：下载、`ditto` 解压、`codesign --verify`、比对 TeamIdentifier 和运行中的自己一致，
-  再 `replaceItemAt` 原地替换并重新启动；ad-hoc 包或被 App Translocation 挪走的包只打开下载页。
-  发版流程：改 Info.plist 版本 → commit → `./release.sh notes.md`（打 tag、传 zip、建 release）。`--selftest updater` 测解析和版本比较。
-- **设置分区**（2026-09-16）：左列 版本更新 / 快捷键 / 清理 / 导入，右列 剪贴板 / 截图与录屏 / 位置 / 系统（语言在系统里）。
-  样式只有三种控件：选项胶囊（系统 12.5）、按钮 `pill`（系统 13）、状态标签 `tag`（宋体 12，开=浅蓝底，关=描边），没有警告色。
-  图片 OCR 不再是开关，永远开着；「保存到本地」的文件夹只显示当前路径 + 选择；存放位置固定不可选（见下）。
-- **开源前终审（2026-09-16 深夜）**：`L.en` 改为由 `L.pairs` 数组去重构造（字典字面量的重复键会在英文环境启动即崩，`--selftest l10n` 守着）；
-  P / S 改为 ⌘P / ⌘S（字母单键归搜索）；导入拒绝整个 Library / Application Support 等过宽目录、最多读 6 个库，
-  重活（解码、HEIC、缩略图、hash）在 `ClipStore.prepareImport` 里离主线程做，`commitImport` 只写文件和索引；
-  GIF 转换失败回到预览窗、MP4 不删；搜索用全文而不是 400 字预览；卡片非当天显示「月/日 时:分」；
-  更新检查 404 显示「暂无发布版本」；右键「复制并关闭」和 ⏎ 一样不粘贴；导出默认文件名 `Pastory <日期>.png`。
-- **货架键盘（2026-09-16 第五轮审查后）**：设置页打开时只认 ⎋（返回）和 ⌘F，不会对看不见的卡片执行删除 / Pin / 复制；
-  搜索框里 ⏎ 直接复制高亮结果并收起、↑↓ 在结果间移动（IME 候选框打开时这些键交还给输入法）；导航 / 功能键（U+F700 私用区）不会打进搜索框；
-  首个字母先存进 `pendingQuery`，等搜索框拿到焦点后再追加，避免被全选覆盖。单击复制后货架"漂浮"期间切到第三个应用会自动收起
-  （`NSWorkspace.didActivateApplicationNotification`）。
-- **缓存**：`L.isEnglish`、`Theme.serif/script` 字体、货架排序后的列表（按 `ClipStore.version` + 快照号失效）、权限徽标（设置页 1 秒轮询一次，不在 body 里查）；
-  缩略图缓存超 100 张时只淘汰最老的三分之一；没有缩略图文件的条目记入 `thumbMissing`，显示占位图标，不再反复解码；辅助功能的系统提示每次启动只弹一次。
-- **货架细节**（2026-09-16）：面板打开、没有输入框聚焦时直接敲字母 = 开始搜索；删 Pin 住的卡（⌫、垃圾桶、右键）先弹确认，
-  没 Pin 的直接删；五个筛选标签的计数一次遍历算完；搜索用每条缓存好的小写文本（按 id + modifiedAt 失效），不再每次按键全量 lowercased。
-- **双击直接粘贴**（2026-09-16，设置里可关，默认开；⏎ 只复制并收起，单键太容易误触）：`copyAndClose(paste:)` 收起货架后重新激活之前的前台应用，确认它在前台后
-  用 CGEvent 发一次 ⌘V（`Permissions.sendPaste`）。这一步需要「辅助功能」权限：没有时第一次双击会弹系统提示，并退化为只复制并收起。
-  单击仍然只复制。分发包每次重签，权限要重新授（和屏幕录制一样）。这是唯一用到辅助功能的地方。
-- **录屏管线**（2026-09-16 改）：SCStream 的帧直接进我们自己的 `AVAssetWriter`，平均码率 = 每像素每帧 H.264 0.1 / HEVC 0.065 bit，夹在 3–30 Mbps（3200×1640 @ 30 ≈ 16 Mbps 上限；静止块编码器本来就跳过，
-  所以这是忙碌时刻的上限而不是常态）。试过硬件编码器的恒定质量模式（`AVVideoQualityKey`），真实 1× 片子被压到 314 kbps 明显发软，弃用；
-  `makeWriter(constantQuality:)` 仍保留给自测对比。停止即得，没有第二遍。
-  只收 `.complete` 帧；SCK 画面不变就不发帧，所以停止时把最后一帧按当前时刻再补一次，静止的结尾不会被截掉。
-  分辨率永远是显示器原生像素（曾有「一半」选项，Retina 上必然发虚，2026-09-16 去掉）；设置 › 剪贴板只留编码 H.264 / HEVC。
-  实测：2714×1564、9 秒、有滚动有停顿的界面录屏 1.4 MB，平均 1.2 Mbps，约 9 MB/分钟。
-  GIF 上限按时长阶梯：≤10 s 6 MB、≤30 s 10 MB、≤60 s 15 MB、更长 20 MB；超过 20 s 的按钮文案改为「会糊，建议 MP4」。
-- **缩略图是 HEIC**（2026-09-16）：长边 900px、质量 0.8，只用于货架显示，约为 PNG 的 1/4；旧的 .png 缩略图继续可读，`thumbURL` 两种都找。
-- **截图存储格式**（2026-09-16，设置 › 剪贴板 › 本地数据库截图存储方式）：默认 HEIC 质量 0.9（2026-09-16 起；ImageIO 编码，保留原色彩空间，约为 PNG 的 1/3），可选无损 PNG。只影响新截图；`contentHash` 永远是原 PNG 的 hash，去重不受格式影响；
-  `ClipStore.png(of:)` 对 HEIC 项解码后再包成 PNG 交给剪贴板 / 编辑器 / 导出（像素、色彩空间不变），Quick Look 直接看 HEIC 文件。
-- **货架焦点**：单击卡片复制后 `handBackFocus()` 把前台应用重新激活，货架留在屏幕上但不再是 key window，⌘V 落到用户的应用里
-  （之前货架一直持有键盘，⌘V 无处可去，「粘不进 Claude Code」就是这个）；此时点货架外任意位置仍会关闭，靠全局鼠标监听
-  （鼠标事件的全局监听不需要辅助功能权限）。面板在启动时 `prewarm()` 预建，缩略图后台解码并在 `show()` 时预热前 10 张。
-- **为将来同步预留的两样东西**（2026-09-15）：每条有 `modifiedAt`（任何字段改动都更新；老行 = created_at，`ALTER TABLE` 自动补列），
-  删除（手动或清理）在 `tombstones` 表留 `id + content_hash + deleted_at`，正文照删；`importEntries` 跳过墓碑里的 hash
-  （在这台机器删过的东西不会被另一份 Pastory 库导回来），墓碑 30 天后在清理时顺带清掉。新复制同样内容仍是新条目，不受墓碑影响。
-  `--selftest tombstone` 验证。
-- **去重**（2026-09-12 夜改）：再次复制历史里已有的内容（同 kind 家族、内容 hash 相同）不会生成新卡，而是把那张卡提到最前，
-  标题和 Pin 跟着；之前只和最新一条比。
-- **货架出场**：窗口固定在所在屏幕底部不越界，动画是窗口内内容上滑 28pt + 淡入，系统窗口阴影关掉
-  （之前从屏幕下方滑入 + 阴影，会在排列在下方的第二块屏顶部露出来）。
-- **SQLite 写法**（2026-09-12 晚改）：单条改动（复制置顶、Pin、标题、OCR 回写、编辑、新增、删除）走单行 upsert / delete，
-  只有清空、导入、迁移走整表重写；写失败的语义不变（`lastSaveFailed`，UI 回滚）。
-- **录屏预览 / 转 GIF 期间按截图键**只响一声，不会丢弃录像；标注阶段 ⎋ 交回画布（先取消选中 / 退出文字框，再取消整次），
-  系统级的 ⎋ 热键只在框选阶段挂着。三个快捷键录制框共用一个 suspend 计数，先后打开不会把全局键弄丢。
-- **屏幕录制权限**：在第一次截图时请求（启动时不弹，避免和自动弹出的剪贴板面板撞在一起）；系统自己的授权框每次启动最多弹一次；之后截图再被拒时弹我们的提示，第一个按钮是
-  「我已打开，重新启动 Pastory」（授权只对新进程生效，重启是唯一办法），第二个才是「打开系统设置」。
-  从终端直接启动的 Pastory，权限会记在终端名下，正式使用要从 Finder / 启动台打开。
-- **自测护栏**：会写库的子命令（clipboard / retention / shelf / settings / editors / import）必须带 `PASTORY_STORE`，
-  且路径不能在 `~/Library/Application Support` 下面（不管叫什么名字），否则直接拒绝。
-- **截图中再按截图键 = 重新框选**，不是退出；打开着的「识别文字」面板会留在原地（这样才能截它），
-  完成时只带上属于这次截图的识别文本（OCR 面板带 token）。⎋ 仍是取消。
-- **卡片标题**：输入框无论怎么离开（⏎、✓、点别处、切到别的卡、⎋）都算保存，删空即去掉标题；草稿没变就不写盘。
-- **按下截图键的一瞬间先把鼠标所在的屏幕拍下来**（2026-09-16），拍完再弹选择层；选择层把这张"冻结"的画面画在遮罩下面，
-  选区里露出的也是它。打开着的菜单 / 下拉在我们的窗口出现时会收起，但那时它已经在照片里了，用户看到的画面没有任何变化。
-  代价是按键到出现选择层多约 0.1 秒。多显示器时只冻结鼠标所在那块，在别的屏上框选仍走现场取图。
-- **取屏浮层不激活自己、框选期间也不做 key window**（2026-09-16）：遮罩是 `.nonactivatingPanel`，`canBecomeMain = false`，
-  层级 `CGShieldingWindowLevel()`（别的录屏工具的悬浮条在 screenSaver 之上，之前会盖住我们的选区），
-  而且在拍下图片之前不 `makeKey`（抢走 key 会让前台应用的下拉菜单 / popover 立刻收起，之前 Codex 的设置弹窗、会议软件的麦克风下拉就是这样丢的）。
-  框选阶段的键盘全靠系统级钩子：⎋ 取消、空格切窗口模式、F / ⏎ 整屏；十字光标靠 mouseMoved 手动设置（cursor rect 只对 key window 生效）。
-  截到图、标注器出现后才 `makeKey`，钩子同时解绑。第一下按压就开始框选（`acceptsFirstMouse`）。
-- **导入**：设置 → 剪贴板 → 「从其他剪贴板工具导入（SQLite）」：选数据库文件（任意扩展名）或一个文件夹（Pastory 库，或任何目录：按文件头找出里面的 SQLite 文件，最多向下三层，全部读），
-  `Clipboard/Importer.swift` 先复制一份再读（连同 -wal/-shm），Pastory 库按 schema 精确导，其他库按启发式：
-  文本列 / UTF-8 blob 当文本、PNG/JPEG/TIFF blob 当图片、名字像 date/time/copied 的列当时间（识别 1970 秒、2001 秒、毫秒、ISO），
-  像 pin/favorite 的列当 Pin；Core Data 子表通过整数列关联到有日期的父表，同一条的多种表示（plain+rtf、png+tiff）只留一份。
-  **Paste（wiheads，Setapp 版目录 `~/Library/Application Support/com.wiheads.paste-setapp/db.sqlite`）** 有专门读法：
-  `ZITEMENTITY`（时间 ZTIMESTAMP/ZCREATEDAT，ZLIST 指向列表，条目最多的列表当历史、其余当 Pinboard=Pin）→
-  `ZITEMDATAENTITY.ZRAWPASTEBOARDITEMS`（剪贴板项归档；大块走 Core Data 外置存储 `.db_SUPPORT/_EXTERNAL_DATA/<UUID>`，
-  实测引用 = 0x02 + UUID 文本）。blob 实测 = 0x01 + 压缩过的 plist（小的走 LZFSE 帧 `bvx…`，大的像 raw deflate，
-  `PasteboardArchive.unwrap` 按顺序试 lzfse / zlib / lz4 / lzma），plist 是 `[{types: [UTI…], data…: [bytes…]}]`，
-  `PasteboardArchive.payload` 取一张图或一段文本。用 `compression_tool` 仿造的库全部通过；真机导入结果待朋友反馈。
-  弹窗先报数量再导入，已存在的内容按 hash 跳过，Pin 保留；导入的一批保持内部先后，整体后移到比 Pastory 自己最早的一条还早
-  （导入的历史永远排在自己记录的后面）。保留期不是「永不删除」时弹窗会提醒这些旧内容下次清理就会被清，可一键改为永不删除。`--selftest import <db>` 可用假库验证。
-- **⇧⌘V 剪贴板**：底部滑出（屏高 48% 再减 36pt，最少 384pt）纸感货架：左侧侧栏（手写 Pastory、剪贴板 / 设置两行、今日暂存 + Pin 说明），
-  侧栏底部「Pin 后一直保留」和「设置」两行，设置在面板右半区内展开（`Shelf/SettingsPane`），不弹窗；
-  顶部胶囊筛选 全部 / Pin / 图片 / 录屏 / 文本 + 搜索 + ✕，深色卡片配米色内容纸面（app 图标、时间、内容、
-  「已复制」标记 = 此刻剪贴板里的那条、说明行、编辑或预览 / Pin / 保存（仅图片、录屏）/ 删除），底部滚动条带左右箭头。左 = 最新。
-  单击卡片 = 复制并停留（「已复制」胶囊 + 粉色钉子就是反馈）；⏎ = 复制并收起；双击 = 复制、收起并粘贴到刚才的应用（需辅助功能权限，可在设置关）。
-  每条记录可以起标题（右键「命名…」在卡片头部下方就地输入，点已有标题可改，文本编辑窗顶部也有标题栏）；
-  标题加粗显示在来源行下面，来源 app 名不变，搜索也匹配标题。
-  铅笔键：文本 / 链接进自己的编辑窗（`Shelf/TextEditorWindow`，⌘⏎ 保存并复制），图片进标注编辑器
-  （`Shelf/ImageEditorWindow`，复用截图的画布和工具条，✓ 保存）；保存都是回写同一条记录并复制，Pin 状态不变。
-  录屏和文件卡片是眼睛键，走 Quick Look。
-  ← → ↑ ↓ 选，⏎ 复制并收起，空格 Quick Look 预览，⌘P 固定，⌘S 保存到本地（弹对话框选位置），⌫ 删除，⌘F 搜索，直接打字即搜索，⎋ 关闭。
-  过滤：全部 / 固定 / 图片 / 录屏 / 文本。
-  卡片底栏常驻固定 / 保存 / 删除三个按钮，右键有完整菜单。
-- **录屏**：选区上方的「录屏」。点了之后遮罩撤掉、选区外围留一圈紫框、下方一个小条（计时 / 停止 / 丢弃），
-  再按一次截图快捷键也是停止。30 帧 H.264、带光标、不录声音、上限 10 分钟。停止后弹预览窗循环播放，
-  看好了再选「复制为 MP4」（⏎）/「复制为 GIF」/「丢弃」，复制完窗口自动关。GIF 有体积预算（按时长阶梯 6–20 MB）：从长边 1280、10 帧/秒起步，
-  按时长估算超预算就降帧率、再缩尺寸（长边不低于 640）；编码后若仍超出四分之一，缩一次重编。
-  预览窗保存后显示实际大小。GIF 以图片数据进剪贴板（微信 / 飞书 ⌘V 贴出来是动图），MP4 以文件进剪贴板，
-  文件名是可读的 `Rec 2026-09-11 16.10.23.mp4`（存储里 `share/` 下的硬链接）。
-  文件上剪贴板用 Finder 同款写法（NSURL 对象 + NSFilenamesPboardType），只写 public.file-url 微信会当纯文本贴出路径。
-  不做鼠标高亮、缩放、剪辑。
-- 菜单栏图标：左键开关货架，右键菜单（截图 / 显示·隐藏剪贴板 / 搜索剪贴板 / 暂停记录剪贴板 / 打开存储文件夹 / 检查更新… / 设置… / 退出）。
-- 设置分区：版本更新 / 快捷键 / 清理 / 导入 / 剪贴板 / 截图与录屏 / 位置 / 系统（语言在系统里）。图片 OCR 永远开着，没有开关。
+## 视觉
 
-## 权限
-
-屏幕录制（截图必需）。辅助功能：可选，只用于「双击后直接粘贴」那一次 ⌘V；不授权则退化为只复制并收起。
-丢权限时 `tccutil reset ScreenCapture com.cici.snipclip` 后重新启动。
+纸感：深棕桌面（`Theme.drawGround` / `drawDesk`）+ 米色纸片（`Theme.drawPaper`），当前剪贴板那张卡和选中态是浅蓝纸，按钮统一 `Theme.paperButton`，没有警告色。正文宋体，标题和「Pastory」字样手写体（Caveat；品牌字 Ysabeau Office 只用于「Pastory」）。标注调色盘 = 紫 + #E9631A / #C56F8C / #A9C2E0 / #59382C / #1E151C / #EBEBDF。标注线条是手绘感（路径打平后加低频噪声画两遍，固定 seed，预览与导出一致）。logo 与图标来自作者的品牌稿，不在仓库。
 
 ## 已知边界
 
 - 选区不跨显示器。
-- 货架不做条目合并 / 拼接，只做固定与导出。
-- 文件类型条目只存路径引用，不复制文件本体；源文件删了卡片就失效。
-- 单条文本超过 20 MB 不入库。
-- 不上云；要跨设备自行把存储目录放进 iCloud Drive。
+- 不做条目合并 / 拼接；不做鼠标高亮、缩放、剪辑。
+- 文件条目只存路径引用，源文件删了卡片就失效。
+- 不上云；要跨设备自行把存储目录放进 iCloud Drive，或用「导入」把另一台机器的 Pastory 文件夹导过来（文本 / 链接 / 图片）。

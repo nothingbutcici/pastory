@@ -146,7 +146,7 @@ final class Preferences {
 }
 
 extension Notification.Name {
-    static let shortcutsChanged = Notification.Name("snipclip.shortcutsChanged")
+    static let shortcutsChanged = Notification.Name("pastory.shortcutsChanged")
     /// Posted after (re)binding, so the settings UI can show which ones were refused.
-    static let shortcutBindingChanged = Notification.Name("snipclip.shortcutBindingChanged")
+    static let shortcutBindingChanged = Notification.Name("pastory.shortcutBindingChanged")
 }
