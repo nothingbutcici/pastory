@@ -4,7 +4,7 @@ import SwiftUI
 /// once it has actually been used; 「开始使用」 retires the card for good.
 struct WelcomeCard: View {
     @Bindable var model: ShelfModel
-    static let width: CGFloat = 620
+    static let width: CGFloat = 520
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -14,15 +14,13 @@ struct WelcomeCard: View {
             }
             Text("设置常用快捷键".l).font(.serif(13)).foregroundStyle(Color.inkMuted)
 
-            step(icon: "clipboard", title: "显示 / 隐藏剪贴板".l, key: Preferences.Key.hotkeyShelf, tag: "shelf",
-                 ready: "设置成功！按一下快捷键感受一下".l)
-                .padding(.top, 6)
+            step(icon: "clipboard", title: "显示 / 隐藏剪贴板".l, key: Preferences.Key.hotkeyShelf, tag: "shelf")
+                .padding(.top, 8)
             Rectangle().fill(Color.ink.opacity(0.12)).frame(height: 1)
-            step(icon: "crop", title: "截图".l, key: Preferences.Key.hotkeyCapture, tag: "capture",
-                 ready: "快捷键设置成功，现在截图试试看".l)
-            Text("点击修改，稍后也能在设置中调整".l).font(.serif(12)).foregroundStyle(Color.inkMuted).padding(.top, 2)
+            step(icon: "crop", title: "截图".l, key: Preferences.Key.hotkeyCapture, tag: "capture")
 
             Spacer(minLength: 4)
+            Text("点击修改，稍后也能在设置中调整".l).font(.serif(12)).foregroundStyle(Color.inkMuted)
             ticketRule.padding(.vertical, 6)
 
             HStack(spacing: 10) {
@@ -48,25 +46,23 @@ struct WelcomeCard: View {
         )
     }
 
-    /// Icon · title with a status line · check · keycaps.
-    private func step(icon: String, title: String, key: String, tag: String, ready: String) -> some View {
+    /// Icon · title · keycaps. A check appears once the shortcut has actually been used; a taken shortcut says so.
+    private func step(icon: String, title: String, key: String, tag: String) -> some View {
         let done = model.welcomeTried.contains(tag)
         let taken = HotKeyCenter.shared.failed.contains(tag)
         return HStack(spacing: 14) {
             Image(systemName: icon).font(.system(size: 18, weight: .light)).foregroundStyle(Color.ink).frame(width: 26)
             VStack(alignment: .leading, spacing: 3) {
                 Text(title).font(.serif(15)).foregroundStyle(Color.ink)
-                Text(taken ? "被其他应用占用，点击换一个".l : (done ? "完成".l : ready))
-                    .font(.serif(12)).foregroundStyle(Color.inkMuted)
+                if taken { Text("被其他应用占用，点击换一个".l).font(.serif(12)).foregroundStyle(Color.inkMuted) }
             }
             Spacer(minLength: 12)
-            Image(systemName: done ? "checkmark.circle.fill" : "circle")
-                .font(.system(size: 18, weight: .light))
-                .foregroundStyle(done ? Color.paperBlueDeep : Color.ink.opacity(0.35))
-                .padding(.trailing, 4)
+            if done {
+                Image(systemName: "checkmark.circle.fill").font(.system(size: 18)).foregroundStyle(Color.paperBlueDeep).padding(.trailing, 2)
+            }
             ShortcutRecorder(key: key, keycaps: true)
         }
-        .padding(.vertical, 7)
+        .padding(.vertical, 8)
     }
 
     /// Dashed tear-off line with the two notches on the card's edges.

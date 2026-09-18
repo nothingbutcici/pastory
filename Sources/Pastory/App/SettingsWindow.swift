@@ -94,9 +94,9 @@ struct ShortcutRecorder: View {
                     } else if shortcut.isSet {
                         ForEach(Array(shortcut.keycaps.enumerated()), id: \.offset) { _, cap in keycap(cap) }
                     } else {
-                        Text("未设置".l).font(.serif(14)).foregroundStyle(Color.inkMuted)
-                            .padding(.horizontal, 14).frame(height: 36)
-                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.ink.opacity(0.35), lineWidth: 1))
+                        Text("立即设置".l).font(.serif(14, bold: true)).foregroundStyle(Color.ink)
+                            .padding(.horizontal, 16).frame(height: 36)
+                            .background(Color.paperBlue, in: RoundedRectangle(cornerRadius: 10))
                     }
                 }
                 .contentShape(Rectangle())
