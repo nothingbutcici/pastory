@@ -29,6 +29,7 @@ struct WelcomeCard: View {
                 .overlay(alignment: .bottom) { Rectangle().fill(Color.ink.opacity(0.6)).frame(height: 1).padding(.horizontal, 18) }
 
             VStack(alignment: .leading, spacing: 0) {
+                Spacer(minLength: 6)
                 heading("设置常用快捷键".l)
                 step(icon: "clipboard", title: "显示 / 隐藏剪贴板".l, key: Preferences.Key.hotkeyShelf, tag: "shelf")
                 step(icon: "crop", title: "截图".l, key: Preferences.Key.hotkeyCapture, tag: "capture")
@@ -39,11 +40,11 @@ struct WelcomeCard: View {
                 todo(done: model.welcomeTried.contains("capture"),
                      text: captureKey.isSet ? String(format: "按 %@ 截一张图".l, captureKey.display) : "先给截图设一个快捷键".l)
                 todo(done: model.welcomeTried.contains("copy"), text: "复制一段文本".l)
-                todo(done: model.welcomeTried.contains("pin"), text: "Pin 一段文本".l, pin: true)
-
+                todo(done: model.welcomeTried.contains("pin"), text: "将一个卡片 Pin 起来".l, pin: true)
+                todo(done: false, text: "点击「开始使用」，卡片消失".l)
                 Spacer(minLength: 6)
             }
-            .padding(.horizontal, 18).padding(.top, 8)
+            .padding(.horizontal, 18)
 
             ticketRule.padding(.vertical, 4)
 
@@ -103,12 +104,17 @@ struct WelcomeCard: View {
         HStack(spacing: 10) {
             Image(systemName: done ? "checkmark.square.fill" : "square")
                 .font(.system(size: 14, weight: .light))
-                .foregroundStyle(done ? Color.paperBlueDeep : Color.ink.opacity(0.5))
+                .foregroundStyle(done ? Color.paperBlueDeep.opacity(0.6) : Color.ink.opacity(0.5))
                 .frame(width: 20)
-            Text(text).font(.serif(13)).foregroundStyle(done ? Color.inkMuted : Color.ink)
-                .strikethrough(done, color: Color.inkMuted)
-            if pin, let img = Theme.pushpin {
-                Image(nsImage: img).resizable().interpolation(.high).scaledToFit().frame(height: 18).opacity(done ? 0.5 : 1)
+            Text(text).font(.serif(13)).foregroundStyle(done ? Color.ink.opacity(0.35) : Color.ink)
+                .overlay { if done { Rectangle().fill(Color.ink.opacity(0.35)).frame(height: 1) } }   // centred on the glyphs, not the descender line
+            if pin {
+                // The same torn blue patch a pinned card wears in its action row.
+                Image(systemName: "pin.fill").font(.system(size: 11)).foregroundStyle(Color.paper)
+                    .frame(width: 22, height: 19)
+                    .background(TornPaper(top: true, right: true, bottom: true, left: true, seed: 77, amplitude: 1.2, step: 4).fill(Paint.paperBlue)
+                        .shadow(color: .black.opacity(0.2), radius: 1.5, y: 1))
+                    .opacity(done ? 0.5 : 1)
             }
         }
         .padding(.vertical, 3)

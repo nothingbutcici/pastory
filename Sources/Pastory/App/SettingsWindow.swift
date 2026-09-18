@@ -88,8 +88,7 @@ struct ShortcutRecorder: View {
             } label: {
                 HStack(spacing: 6) {
                     if capturing || !shortcut.isSet {
-                        // Same words idle and armed; armed draws the border in ink so the change of state is visible.
-                        Text(capturing ? "按下组合键…".l : "按下组合键".l).font(.serif(13)).foregroundStyle(Color.ink)
+                        Text(capturing ? "按下组合键".l : "立即设置".l).font(.serif(13)).foregroundStyle(Color.ink)
                             .padding(.horizontal, 12).frame(height: 28)
                             .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.ink.opacity(capturing ? 0.9 : 0.4), lineWidth: 1))
                     } else {
@@ -110,6 +109,7 @@ struct ShortcutRecorder: View {
         .onAppear { shortcut = Preferences.shared.shortcut(key); refreshTaken() }
         .onDisappear { stop(nil) }
         .onReceive(NotificationCenter.default.publisher(for: .shortcutBindingChanged)) { _ in refreshTaken() }
+        .onReceive(NotificationCenter.default.publisher(for: .shortcutsChanged)) { _ in if !capturing { shortcut = Preferences.shared.shortcut(key) } }
     }
 
     private func keycap(_ s: String) -> some View {
@@ -153,6 +153,7 @@ struct ShortcutRecorder: View {
         .onAppear { shortcut = Preferences.shared.shortcut(key); refreshTaken() }
         .onDisappear { stop(nil) }
         .onReceive(NotificationCenter.default.publisher(for: .shortcutBindingChanged)) { _ in refreshTaken() }
+        .onReceive(NotificationCenter.default.publisher(for: .shortcutsChanged)) { _ in if !capturing { shortcut = Preferences.shared.shortcut(key) } }
     }
 
     var isTaken: Bool { taken }

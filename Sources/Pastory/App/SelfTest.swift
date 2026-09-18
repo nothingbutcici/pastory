@@ -90,6 +90,7 @@ enum SelfTest {
                 let model = ShelfPanelController.shared.model
                 model.reset()
                 model.showWelcome = true
+                model.welcomeTried = ["shelf", "copy"]          // show both states of the checklist
                 let host = NSHostingView(rootView: ShelfView(model: model))
                 host.frame = CGRect(x: 0, y: 0, width: 1600, height: 540)
                 let w = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
