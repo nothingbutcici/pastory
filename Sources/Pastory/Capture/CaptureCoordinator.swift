@@ -100,6 +100,7 @@ final class CaptureCoordinator: AnnotateDelegate {
         guard let png = Screenshotter.pngData(image) else { finish(); return }
         let ocr = OCRPanelController.shared.token == ocrToken ? OCRPanelController.shared.currentText : nil
         let item = ClipStore.shared.insertImage(png: png, source: Self.source, ocrText: ocr)
+        ShelfPanelController.shared.model.noteWelcomeTried("capture")
         PasteboardWriter.writeImage(png: png, itemID: item?.id ?? "")
         finish()
     }

@@ -286,7 +286,15 @@ final class ShelfModel {
     var showSettings = false
     /// First launch until 「开始使用」 is pressed; the welcome card leads the row.
     var showWelcome = !Preferences.shared.didWelcome
+    var welcomeTried: Set<String> = Preferences.shared.welcomeTried
+    func noteWelcomeTried(_ what: String) {
+        guard showWelcome, !welcomeTried.contains(what) else { return }
+        welcomeTried.insert(what)
+        Preferences.shared.welcomeTried = welcomeTried
+    }
     func finishWelcome() { Preferences.shared.didWelcome = true; showWelcome = false }
+    /// Bumped when a setting that the sidebar shows (retention) changes.
+    var prefsTick = 0
     /// Card whose title is being edited inline.
     var renamingID: String?
     var filter: ShelfFilter = .all

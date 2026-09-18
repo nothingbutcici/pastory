@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem.button?.action = #selector(statusClicked)
         statusItem.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
 
+        Preferences.shared.migrateImplicitRetention()
         bindShortcuts()
         NotificationCenter.default.addObserver(forName: .shortcutsChanged, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.bindShortcuts() }
@@ -60,7 +61,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             MainActor.assumeIsolated { CaptureCoordinator.shared.start() }
         }) { taken.append("截图".l + " " + p.shortcut(Preferences.Key.hotkeyCapture).display) }
         if !HotKeyCenter.shared.bind(p.shortcut(Preferences.Key.hotkeyShelf), name: "shelf", action: {
-            MainActor.assumeIsolated { ShelfPanelController.shared.toggle() }
+            MainActor.assumeIsolated { ShelfPanelController.shared.model.noteWelcomeTried("shelf"); ShelfPanelController.shared.toggle() }
         }) { taken.append("剪贴板".l + " " + p.shortcut(Preferences.Key.hotkeyShelf).display) }
         if !HotKeyCenter.shared.bind(p.shortcut(Preferences.Key.hotkeySearch), name: "search", action: {
             MainActor.assumeIsolated { ShelfPanelController.shared.showSearch() }

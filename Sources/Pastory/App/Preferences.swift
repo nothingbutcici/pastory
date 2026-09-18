@@ -36,6 +36,18 @@ struct Shortcut: Equatable {
         return s + KeyCodeNames.name(for: keyCode)
     }
 
+    /// One string per key, modifiers first: ["⌃", "⌘", "Z"].
+    var keycaps: [String] {
+        guard isSet else { return [] }
+        var caps: [String] = []
+        if carbonModifiers & UInt32(controlKey) != 0 { caps.append("⌃") }
+        if carbonModifiers & UInt32(optionKey) != 0 { caps.append("⌥") }
+        if carbonModifiers & UInt32(shiftKey) != 0 { caps.append("⇧") }
+        if carbonModifiers & UInt32(cmdKey) != 0 { caps.append("⌘") }
+        caps.append(KeyCodeNames.name(for: keyCode))
+        return caps
+    }
+
     var encoded: String { "\(keyCode):\(carbonModifiers)" }
 
     init?(encoded: String) {
@@ -87,10 +99,23 @@ final class Preferences {
             Key.hotkeyCapture: Shortcut(keyCode: 1, carbonModifiers: UInt32(optionKey | cmdKey)).encoded,  // ⌥⌘S（⌃⌘A 被微信占用）
             Key.hotkeyShelf: Shortcut(keyCode: 9, carbonModifiers: UInt32(shiftKey | cmdKey)).encoded,     // ⇧⌘V
             Key.hotkeySearch: Shortcut(keyCode: 3, carbonModifiers: UInt32(optionKey | cmdKey)).encoded,   // ⌥⌘F
-            Key.retentionDays: 1,
+            Key.retentionDays: 0,          // new installs keep everything until the user chooses a schedule
             Key.cleanupHour: 4,
             Key.monitoringPaused: false,
         ])
+    }
+
+    /// Installs from before 1.0.4 ran with an implicit 1-day retention. Pin that down explicitly for them once,
+    /// so changing the registered default does not silently change what happens to their history.
+    func migrateImplicitRetention() {
+        guard d.object(forKey: Key.retentionDays) == nil, didWelcome else { return }
+        d.set(1, forKey: Key.retentionDays)
+    }
+
+    /// Onboarding checklist: which of the two shortcuts has actually been used once.
+    var welcomeTried: Set<String> {
+        get { Set(d.stringArray(forKey: "welcomeTried") ?? []) }
+        set { d.set(Array(newValue).sorted(), forKey: "welcomeTried") }
     }
 
     func shortcut(_ key: String) -> Shortcut {

@@ -19,7 +19,7 @@ final class SettingsWindowController {
 
 @Observable
 final class PrefsMirror {
-    var retentionDays: Int { didSet { Preferences.shared.retentionDays = retentionDays; Task { @MainActor in Retention.sweep(); Retention.reschedule() } } }
+    var retentionDays: Int { didSet { Preferences.shared.retentionDays = retentionDays; Task { @MainActor in Retention.sweep(); Retention.reschedule(); ShelfPanelController.shared.model.prefsTick += 1 } } }
     var cleanupHour: Int { didSet { Preferences.shared.cleanupHour = cleanupHour; Task { @MainActor in Retention.reschedule() } } }
     var exportDir: String { didSet { Preferences.shared.customExportDir = exportDir.isEmpty ? nil : exportDir } }
     var paused: Bool { didSet { Preferences.shared.monitoringPaused = paused } }
@@ -52,6 +52,8 @@ final class PrefsMirror {
 /// our own shortcuts, is refused on the spot and the old value stays.
 struct ShortcutRecorder: View {
     let key: String
+    /// Welcome card: one paper keycap per key instead of the compact capsule.
+    var keycaps = false
     var bindingName: String {
         switch key {
         case Preferences.Key.hotkeyCapture: return "capture"
@@ -75,6 +77,55 @@ struct ShortcutRecorder: View {
     private static let names = ["capture": "截图", "shelf": "剪贴板", "search": "搜索剪贴板"]      // translated at use
 
     var body: some View {
+        if keycaps { keycapBody } else { capsuleBody }
+    }
+
+    private var keycapBody: some View {
+        HStack(spacing: 10) {
+            if let notice, !capturing { Text(notice).font(.serif(12)).foregroundStyle(Color.inkMuted) }
+            Button {
+                if !capturing, Date().timeIntervalSince(lastCancel) > 0.4 { startCapture() }
+            } label: {
+                HStack(spacing: 6) {
+                    if capturing {
+                        Text("按下组合键".l).font(.serif(14)).foregroundStyle(Color.ink)
+                            .padding(.horizontal, 14).frame(height: 36)
+                            .background(Color.paperBlue, in: RoundedRectangle(cornerRadius: 10))
+                    } else if shortcut.isSet {
+                        ForEach(Array(shortcut.keycaps.enumerated()), id: \.offset) { _, cap in keycap(cap) }
+                    } else {
+                        Text("未设置".l).font(.serif(14)).foregroundStyle(Color.inkMuted)
+                            .padding(.horizontal, 14).frame(height: 36)
+                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.ink.opacity(0.35), lineWidth: 1))
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            if shortcut.isSet, !capturing {
+                Button { stop(Shortcut.none) } label: {
+                    Image(systemName: "xmark").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.inkMuted)
+                        .frame(width: 22, height: 36).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain).help("不设快捷键".l)
+            }
+        }
+        .onAppear { shortcut = Preferences.shared.shortcut(key); refreshTaken() }
+        .onDisappear { stop(nil) }
+        .onReceive(NotificationCenter.default.publisher(for: .shortcutBindingChanged)) { _ in refreshTaken() }
+    }
+
+    private func keycap(_ s: String) -> some View {
+        Text(s).font(.system(size: s.count > 1 ? 12 : 16, weight: .medium)).foregroundStyle(Color.ink)
+            .frame(minWidth: 36, minHeight: 36).padding(.horizontal, s.count > 1 ? 8 : 0)
+            .background(
+                RoundedRectangle(cornerRadius: 10).fill(Color.paper)
+                    .shadow(color: .black.opacity(0.18), radius: 1.5, x: 0, y: 2)
+            )
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.ink.opacity(0.18), lineWidth: 1))
+    }
+
+    private var capsuleBody: some View {
         HStack(spacing: 8) {
             if let notice, !capturing { Text(notice).font(.system(size: 12)).foregroundStyle(Color.inkMuted) }
             else if taken, !capturing { Text("被其他应用占用".l).font(.system(size: 12)).foregroundStyle(Color.inkMuted) }
@@ -107,6 +158,7 @@ struct ShortcutRecorder: View {
         .onReceive(NotificationCenter.default.publisher(for: .shortcutBindingChanged)) { _ in refreshTaken() }
     }
 
+    var isTaken: Bool { taken }
     private func refreshTaken() { taken = HotKeyCenter.shared.failed.contains(bindingName) }
 
     private func startCapture() {

@@ -73,8 +73,12 @@ struct ShelfView: View {
             navRow(icon: "gearshape", "设置".l, active: model.showSettings) { model.showSettings = true }
             Spacer()
             Rectangle().fill(Color.onBrown.opacity(0.25)).frame(height: 1).padding(.horizontal, 22)
-            Text("今日暂存".l).font(.serif(15)).foregroundStyle(Color.onBrown).padding(.leading, 22).padding(.top, 14)
-            Text("Pin 后长期保存".l).font(.serif(12)).foregroundStyle(Color.onBrownMuted).padding(.leading, 22).padding(.top, 4).padding(.bottom, 18)
+            let days = Preferences.shared.retentionDays
+            let _ = model.prefsTick
+            Text(days == 0 ? "全部保留".l : (days == 1 ? "今日暂存".l : String(format: "保留 %d 天".l, days)))
+                .font(.serif(15)).foregroundStyle(Color.onBrown).padding(.leading, 22).padding(.top, 14)
+            Text(days == 0 ? "可在设置里定时清理".l : "Pin 后长期保存".l)
+                .font(.serif(12)).foregroundStyle(Color.onBrownMuted).padding(.leading, 22).padding(.top, 4).padding(.bottom, 18)
         }
         .frame(width: 162, alignment: .leading)
         .background(Color.brownDeep.opacity(0.6))
