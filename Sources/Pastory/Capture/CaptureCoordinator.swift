@@ -68,10 +68,18 @@ final class CaptureCoordinator: AnnotateDelegate {
         Task { @MainActor in
             do {
                 let colorSpaceName = screen?.colorSpace?.cgColorSpace?.name
-                let image: CGImage
+                var image: CGImage
                 if let ready = frozen[display.displayID] { image = ready }     // the picture the user was looking at
                 else { image = try await Screenshotter.captureDisplay(display, excluding: Set(overlay.ownWindowIDs), backingScale: screen?.backingScaleFactor, colorSpaceName: colorSpaceName) }
                 guard gen == generation else { return }      // a newer capture owns the overlay now
+                // A picked window is wanted whole: fetch its own rendering (nothing in front of it, no shadow) and
+                // lay it over the frozen picture. Dragging the handles outward still reveals the screen around it.
+                if case .window(let w) = target!, let own = try? await Screenshotter.capture(.window(w), snapshot: snapshot) {
+                    guard gen == generation else { return }
+                    let scale = CGFloat(image.width) / display.frame.width
+                    let local = CGRect(x: w.frame.minX - display.frame.minX, y: w.frame.minY - display.frame.minY, width: w.frame.width, height: w.frame.height)
+                    image = Self.composite(own, over: image, atLocal: local, scale: scale) ?? image
+                }
                 fullImage = image
                 fullScale = CGFloat(image.width) / (screen?.frame.width ?? CGFloat(image.width))
                 overlay.cropProvider = { [weak self] local in self?.crop(local) }
@@ -86,6 +94,20 @@ final class CaptureCoordinator: AnnotateDelegate {
     }
 
     /// Display-local points (origin top-left) → pixels of the full capture.
+    /// Draw `top` onto `base` at a display-local point rect (top-left origin), keeping base's colour space.
+    private static func composite(_ top: CGImage, over base: CGImage, atLocal local: CGRect, scale: CGFloat) -> CGImage? {
+        guard let ctx = CGContext(data: nil, width: base.width, height: base.height, bitsPerComponent: 8, bytesPerRow: 0,
+                                  space: base.colorSpace ?? CGColorSpaceCreateDeviceRGB(),
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue) else { return nil }
+        let full = CGRect(x: 0, y: 0, width: base.width, height: base.height)
+        ctx.draw(base, in: full)
+        // CG draws bottom-up: flip the y of a top-left rect.
+        let px = CGRect(x: local.minX * scale, y: CGFloat(base.height) - (local.minY + local.height) * scale,
+                        width: local.width * scale, height: local.height * scale)
+        ctx.draw(top, in: px)
+        return ctx.makeImage()
+    }
+
     private func crop(_ local: CGRect) -> CGImage? {
         guard let fullImage else { return nil }
         let px = CGRect(x: local.minX * fullScale, y: local.minY * fullScale,

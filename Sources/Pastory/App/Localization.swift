@@ -43,8 +43,8 @@ enum L {
         ("被其他应用占用，点击换一个", "Taken by another app. Click to pick another"),
         ("全部保留", "Keeping everything"), ("可在设置里定时清理", "Schedule cleanup in Settings"), ("保留 %d 天", "Keeping %d days"),
         ("记录密码管理器复制的内容", "Record copies from password managers"),
-        ("「密码」、1Password 等应用复制的内容也会进历史；带「请勿保存」标记的仍然跳过。", "Copies from Passwords, 1Password and similar apps go into history; anything marked do-not-save is still skipped."),
-        ("「密码」、1Password 等应用复制的内容不进历史，带「请勿保存」标记的内容也不记。", "Copies from Passwords, 1Password and similar apps are never recorded, nor is anything marked do-not-save."),
+        ("从「密码管理软件」复制的内容也会进剪贴板（带「请勿保存」标记的除外）。", "Copies from password managers are recorded too (except those marked do-not-save)."),
+        ("从 1Password 等「密码管理软件」复制的内容均不进剪贴板。", "Nothing copied from password managers such as 1Password is recorded."),
         ("复制文字", "Copy Text"), ("关闭", "Close"), ("截屏", "Screenshot"), ("录屏", "Record"), ("取消", "Cancel"),
         // Menu bar / app
         ("截图", "Screenshot"), ("剪贴板", "Clipboard"), ("搜索剪贴板", "Search Clipboard"),

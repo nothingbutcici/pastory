@@ -28,7 +28,20 @@ final class ClipboardMonitor {
         return ["password", "keepass", "bitwarden", "enpass", "dashlane", "lastpass", "nordpass", "strongbox", "protonpass"].contains { id.contains($0) }
     }
 
+    /// The app that was frontmost just before the current one, with the time it lost the front. A copy made in a
+    /// password manager and followed by an immediate ⌘-Tab would otherwise be attributed to the next app.
+    private var previousFront: (bundleID: String?, until: Date)?
+    private var currentFront: String? = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+
     private init() {
+        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] n in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                let now = (n.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.bundleIdentifier
+                self.previousFront = (self.currentFront, Date())
+                self.currentFront = now
+            }
+        }
         let dnc = DistributedNotificationCenter.default()
         dnc.addObserver(forName: .init("com.apple.screenIsLocked"), object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.locked = true }
@@ -80,7 +93,10 @@ final class ClipboardMonitor {
         if Self.skipTypes.contains(where: types.contains) { return nil }
         let store = ClipStore.shared
         let source = ClipStore.Source.frontmost
-        if !Preferences.shared.recordPasswordManagers, Self.isPasswordManager(source.bundleID) { return nil }
+        if !Preferences.shared.recordPasswordManagers {
+            if Self.isPasswordManager(source.bundleID) { return nil }
+            if let prev = previousFront, Date().timeIntervalSince(prev.until) < 1.5, Self.isPasswordManager(prev.bundleID) { return nil }
+        }
 
         let hasBitmap = types.contains(.png) || types.contains(.tiff)
         let urls = (pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL]) ?? []

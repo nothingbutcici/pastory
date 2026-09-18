@@ -108,7 +108,9 @@ final class Preferences {
     /// Installs from before 1.0.4 ran with an implicit 1-day retention. Pin that down explicitly for them once,
     /// so changing the registered default does not silently change what happens to their history.
     func migrateImplicitRetention() {
-        guard d.object(forKey: Key.retentionDays) == nil, didWelcome else { return }
+        // `object(forKey:)` also sees the registered default, so ask the persistent domain whether the key was ever written.
+        let stored = d.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")?[Key.retentionDays]
+        guard stored == nil, didWelcome else { return }
         d.set(1, forKey: Key.retentionDays)
     }
 
@@ -139,9 +141,9 @@ final class Preferences {
     /// How new screenshots are stored: "heic" (quality 0.9, about a third of the size, default) or "png" (lossless).
     var imageStorage: String { get { d.string(forKey: "imageStorage") ?? "heic" } set { d.set(newValue, forKey: "imageStorage") } }
     var storesHEIC: Bool { imageStorage == "heic" }
-    /// Double-click also sends ⌘V to the app you came from (needs Accessibility). On by default; falls back to copy-only.
     /// Off: copies made in password managers (and anything marked concealed) are never recorded.
     var recordPasswordManagers: Bool { get { d.bool(forKey: "recordPasswordManagers") } set { d.set(newValue, forKey: "recordPasswordManagers") } }
+    /// Double-click also sends ⌘V to the app you came from (needs Accessibility). On by default; falls back to copy-only.
     var pasteOnDoubleClick: Bool { get { d.object(forKey: "pasteOnDoubleClick") as? Bool ?? true } set { d.set(newValue, forKey: "pasteOnDoubleClick") } }
     /// Daily update check against GitHub Releases (the app's only network request). On by default.
     var checkForUpdates: Bool { get { d.object(forKey: "checkForUpdates") as? Bool ?? true } set { d.set(newValue, forKey: "checkForUpdates") } }

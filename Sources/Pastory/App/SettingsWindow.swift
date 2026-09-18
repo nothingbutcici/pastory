@@ -167,7 +167,6 @@ struct ShortcutRecorder: View {
         .onReceive(NotificationCenter.default.publisher(for: .shortcutsChanged)) { _ in if !capturing { shortcut = Preferences.shared.shortcut(key) } }
     }
 
-    var isTaken: Bool { taken }
     private func refreshTaken() { taken = HotKeyCenter.shared.failed.contains(bindingName) }
 
     private func startCapture() {

@@ -118,8 +118,8 @@ struct SettingsPane: View {
                         section("剪贴板".l) {
                             row("暂停记录剪贴板".l) { PaperToggle(isOn: $prefs.paused) }
                             hintRow("记录密码管理器复制的内容".l,
-                                    hint: prefs.recordPasswordManagers ? "「密码」、1Password 等应用复制的内容也会进历史；带「请勿保存」标记的仍然跳过。".l
-                                                                       : "「密码」、1Password 等应用复制的内容不进历史，带「请勿保存」标记的内容也不记。".l) {
+                                    hint: prefs.recordPasswordManagers ? "从「密码管理软件」复制的内容也会进剪贴板（带「请勿保存」标记的除外）。".l
+                                                                       : "从 1Password 等「密码管理软件」复制的内容均不进剪贴板。".l) {
                                 PaperToggle(isOn: $prefs.recordPasswordManagers)
                             }
                             row("双击直接粘贴到刚才的应用".l) {

@@ -40,6 +40,8 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
     }
 
     func toggle() { isVisible ? hide() : show() }
+    /// After onboarding: drop the extra height the welcome card needed.
+    func relayoutHeight() { if isVisible { hide(); show() } }
 
     /// Open (if needed) with the search box focused.
     func showSearch() {
@@ -293,7 +295,13 @@ final class ShelfModel {
         welcomeTried.insert(what)
         Preferences.shared.welcomeTried = welcomeTried
     }
-    func finishWelcome() { Preferences.shared.didWelcome = true; showWelcome = false }
+    func finishWelcome() {
+        let p = Preferences.shared
+        p.retentionDays = p.retentionDays          // write the current value explicitly; the pre-1.0.4 migration keys off "never written"
+        p.didWelcome = true
+        showWelcome = false
+        ShelfPanelController.shared.relayoutHeight()
+    }
     /// Bumped when a setting that the sidebar shows (retention) changes.
     var prefsTick = 0
     /// Card whose title is being edited inline.
