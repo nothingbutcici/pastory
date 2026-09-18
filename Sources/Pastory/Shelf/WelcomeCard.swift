@@ -11,7 +11,6 @@ struct WelcomeCard: View {
         let _ = tick
         let shelfKey = Preferences.shared.shortcut(Preferences.Key.hotkeyShelf)
         let captureKey = Preferences.shared.shortcut(Preferences.Key.hotkeyCapture)
-        let allDone = model.welcomeTried.isSuperset(of: ["shelf", "capture"])
         VStack(alignment: .leading, spacing: 0) {
             // Header, as on a clip card: app icon · name, then a rule.
             HStack(spacing: 8) {
@@ -39,9 +38,10 @@ struct WelcomeCard: View {
                      text: shelfKey.isSet ? String(format: "按 %@ 打开或收起剪贴板".l, shelfKey.display) : "先给剪贴板设一个快捷键".l)
                 todo(done: model.welcomeTried.contains("capture"),
                      text: captureKey.isSet ? String(format: "按 %@ 截一张图".l, captureKey.display) : "先给截图设一个快捷键".l)
+                todo(done: model.welcomeTried.contains("copy"), text: "复制一段文本".l)
+                todo(done: model.welcomeTried.contains("pin"), text: "Pin 一段文本".l, pin: true)
 
-                Spacer(minLength: 4)
-                Text("稍后也能在设置中调整".l).font(.serif(12)).foregroundStyle(Color.inkMuted).padding(.bottom, 4)
+                Spacer(minLength: 6)
             }
             .padding(.horizontal, 18).padding(.top, 8)
 
@@ -52,13 +52,12 @@ struct WelcomeCard: View {
                     Image(nsImage: p).renderingMode(.template).resizable().interpolation(.high).scaledToFit()
                         .frame(width: 20, height: 20).foregroundStyle(Color.ink)
                 }
-                Text("也可以从顶部菜单栏打开".l).font(.serif(12)).foregroundStyle(Color.inkMuted)
+                Text("稍后也能在设置中调整哦".l).font(.serif(12)).foregroundStyle(Color.inkMuted)
                 Spacer()
                 Button { model.finishWelcome() } label: {
                     Text("开始使用".l).font(.serif(15, bold: true)).foregroundStyle(Color.ink)
                         .padding(.horizontal, 20).padding(.vertical, 6)
-                        .background(allDone ? Color.paperBlue : Color.clear, in: RoundedRectangle(cornerRadius: 8))
-                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.ink.opacity(allDone ? 0 : 0.5), lineWidth: 1))
+                        .background(Color.paperBlue, in: RoundedRectangle(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)
             }
@@ -100,7 +99,7 @@ struct WelcomeCard: View {
     }
 
     /// Checklist line: an empty box that fills once the thing has really been done.
-    private func todo(done: Bool, text: String) -> some View {
+    private func todo(done: Bool, text: String, pin: Bool = false) -> some View {
         HStack(spacing: 10) {
             Image(systemName: done ? "checkmark.square.fill" : "square")
                 .font(.system(size: 14, weight: .light))
@@ -108,6 +107,9 @@ struct WelcomeCard: View {
                 .frame(width: 20)
             Text(text).font(.serif(13)).foregroundStyle(done ? Color.inkMuted : Color.ink)
                 .strikethrough(done, color: Color.inkMuted)
+            if pin, let img = Theme.pushpin {
+                Image(nsImage: img).resizable().interpolation(.high).scaledToFit().frame(height: 18).opacity(done ? 0.5 : 1)
+            }
         }
         .padding(.vertical, 3)
     }

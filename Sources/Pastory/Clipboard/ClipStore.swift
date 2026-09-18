@@ -413,6 +413,7 @@ final class ClipStore {
         items[i].modifiedAt = Date()
         guard persist(items[i]) else { items[i].pinned.toggle(); return }      // UI must not claim a pin the disk does not have
         if !items[i].pinned { Retention.reschedule() }             // an un-pinned old item may be the next to expire
+        else { ShelfPanelController.shared.model.noteWelcomeTried("pin") }
     }
 
     /// Self-test only.

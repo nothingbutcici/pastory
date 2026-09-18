@@ -63,7 +63,10 @@ final class ClipboardMonitor {
         guard count != lastCount else { return }
         lastCount = count
         guard !locked, !Preferences.shared.monitoringPaused else { return }
-        if let item = ingest(pb) { onChange?(item) }
+        if let item = ingest(pb) {
+            if item.kind == .text || item.kind == .url { ShelfPanelController.shared.model.noteWelcomeTried("copy") }
+            onChange?(item)
+        }
     }
 
     /// Reads the current pasteboard into the store. Returns the resulting item (new or bumped).

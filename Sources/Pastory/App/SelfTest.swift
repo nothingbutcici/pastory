@@ -91,7 +91,7 @@ enum SelfTest {
                 model.reset()
                 model.showWelcome = true
                 let host = NSHostingView(rootView: ShelfView(model: model))
-                host.frame = CGRect(x: 0, y: 0, width: 1600, height: 500)
+                host.frame = CGRect(x: 0, y: 0, width: 1600, height: 540)
                 let w = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
                 w.contentView = host
                 w.isReleasedWhenClosed = false
