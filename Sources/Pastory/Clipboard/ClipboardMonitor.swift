@@ -17,6 +17,17 @@ final class ClipboardMonitor {
         .init("com.agilebits.onepassword"),
     ]
 
+    /// Apps whose copies are secrets by default. Most password managers mark their copies with the
+    /// "concealed" pasteboard type above; Apple's Passwords app does not, so the source app is checked too.
+    static func isPasswordManager(_ bundleID: String?) -> Bool {
+        guard let id = bundleID?.lowercased() else { return false }
+        let known = ["com.apple.passwords", "com.apple.keychainaccess", "com.1password.1password", "com.agilebits.onepassword7",
+                     "com.agilebits.onepassword-osx", "com.bitwarden.desktop", "org.keepassxc.keepassxc", "in.sinew.enpass-desktop",
+                     "com.lastpass.lastpass", "com.dashlane.dashlane", "com.nordpass.macos", "me.proton.pass.macos"]
+        if known.contains(id) { return true }
+        return ["password", "keepass", "bitwarden", "enpass", "dashlane", "lastpass", "nordpass", "strongbox", "protonpass"].contains { id.contains($0) }
+    }
+
     private init() {
         let dnc = DistributedNotificationCenter.default()
         dnc.addObserver(forName: .init("com.apple.screenIsLocked"), object: nil, queue: .main) { [weak self] _ in
@@ -66,6 +77,7 @@ final class ClipboardMonitor {
         if Self.skipTypes.contains(where: types.contains) { return nil }
         let store = ClipStore.shared
         let source = ClipStore.Source.frontmost
+        if !Preferences.shared.recordPasswordManagers, Self.isPasswordManager(source.bundleID) { return nil }
 
         let hasBitmap = types.contains(.png) || types.contains(.tiff)
         let urls = (pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL]) ?? []

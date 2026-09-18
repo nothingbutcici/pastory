@@ -115,6 +115,8 @@ final class Preferences {
     var imageStorage: String { get { d.string(forKey: "imageStorage") ?? "heic" } set { d.set(newValue, forKey: "imageStorage") } }
     var storesHEIC: Bool { imageStorage == "heic" }
     /// Double-click also sends ⌘V to the app you came from (needs Accessibility). On by default; falls back to copy-only.
+    /// Off: copies made in password managers (and anything marked concealed) are never recorded.
+    var recordPasswordManagers: Bool { get { d.bool(forKey: "recordPasswordManagers") } set { d.set(newValue, forKey: "recordPasswordManagers") } }
     var pasteOnDoubleClick: Bool { get { d.object(forKey: "pasteOnDoubleClick") as? Bool ?? true } set { d.set(newValue, forKey: "pasteOnDoubleClick") } }
     /// Daily update check against GitHub Releases (the app's only network request). On by default.
     var checkForUpdates: Bool { get { d.object(forKey: "checkForUpdates") as? Bool ?? true } set { d.set(newValue, forKey: "checkForUpdates") } }

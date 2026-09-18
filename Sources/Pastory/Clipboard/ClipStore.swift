@@ -444,6 +444,7 @@ final class ClipStore {
         guard unpersist(item.id) else { items.insert(item, at: i); return }    // index first; files only once the index agrees
         bury([item])
         deleteFiles(item)
+        db?.checkpoint()
     }
 
     func removeAll(where pred: (ClipItem) -> Bool) {
@@ -454,6 +455,7 @@ final class ClipStore {
         guard save() else { items = before; return }
         bury(gone)
         gone.forEach(deleteFiles)
+        db?.checkpoint()
     }
 
     /// Deleted is deleted: remember the id and content hash so an import (or, one day, a sync) cannot resurrect it.

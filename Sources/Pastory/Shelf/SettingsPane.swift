@@ -117,6 +117,11 @@ struct SettingsPane: View {
                     VStack(spacing: 16) {
                         section("剪贴板".l) {
                             row("暂停记录剪贴板".l) { PaperToggle(isOn: $prefs.paused) }
+                            hintRow("记录密码管理器复制的内容".l,
+                                    hint: prefs.recordPasswordManagers ? "「密码」、1Password 等应用复制的内容也会进历史；带「请勿保存」标记的仍然跳过。".l
+                                                                       : "「密码」、1Password 等应用复制的内容不进历史，带「请勿保存」标记的内容也不记。".l) {
+                                PaperToggle(isOn: $prefs.recordPasswordManagers)
+                            }
                             row("双击直接粘贴到刚才的应用".l) {
                                 HStack(spacing: 8) {
                                     if prefs.pasteOnDoubleClick {
@@ -219,6 +224,20 @@ struct SettingsPane: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 9)
+    }
+
+    /// A row whose label carries a one-line explanation underneath.
+    private func hintRow<V: View>(_ label: String, hint: String, @ViewBuilder _ trailing: () -> V) -> some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(label).font(.serif(15)).foregroundStyle(Color.ink).lineLimit(1).truncationMode(.middle)
+                Text(hint).font(.serif(12)).foregroundStyle(Color.inkMuted).fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 12)
+            trailing()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 7)
     }
 
     /// Short segmented choice; the selected option's explanation sits under the row label in small type.

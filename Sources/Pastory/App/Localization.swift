@@ -40,6 +40,9 @@ enum L {
         ("被占用就换一个；以后随时在设置里改。", "Taken by another app? Pick a different one. You can change these in Settings any time."),
         ("菜单栏右上角的手写 P 也能打开我。现在随便复制点什么，它会出现在右边。", "The handwritten P in the menu bar opens me too. Copy anything now and it shows up on the right."),
         ("开始使用", "Get Started"),
+        ("记录密码管理器复制的内容", "Record copies from password managers"),
+        ("「密码」、1Password 等应用复制的内容也会进历史；带「请勿保存」标记的仍然跳过。", "Copies from Passwords, 1Password and similar apps go into history; anything marked do-not-save is still skipped."),
+        ("「密码」、1Password 等应用复制的内容不进历史，带「请勿保存」标记的内容也不记。", "Copies from Passwords, 1Password and similar apps are never recorded, nor is anything marked do-not-save."),
         ("复制文字", "Copy Text"), ("关闭", "Close"), ("截屏", "Screenshot"), ("录屏", "Record"), ("取消", "Cancel"),
         // Menu bar / app
         ("截图", "Screenshot"), ("剪贴板", "Clipboard"), ("搜索剪贴板", "Search Clipboard"),

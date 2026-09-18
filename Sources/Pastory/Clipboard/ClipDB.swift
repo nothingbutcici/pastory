@@ -16,6 +16,7 @@ final class ClipDB {
         sqlite3_busy_timeout(db, 3000)          // a second instance or a slow disk waits instead of failing
         try exec("PRAGMA journal_mode=WAL")
         try exec("PRAGMA synchronous=NORMAL")
+        try exec("PRAGMA secure_delete=ON")      // deleted rows are overwritten with zeros, not just unlinked
         try exec("""
             CREATE TABLE IF NOT EXISTS items (
                 id TEXT PRIMARY KEY, kind TEXT NOT NULL, created_at REAL NOT NULL,
@@ -67,6 +68,12 @@ final class ClipDB {
         var out = Set<Int>()
         while sqlite3_step(stmt) == SQLITE_ROW { out.insert(Int(sqlite3_column_int64(stmt, 0))) }
         return out
+    }
+
+    /// Fold the write-ahead log back into the main file and truncate it, so page images of deleted rows do not
+    /// linger in pastory.sqlite-wal. Called after sweeps and deletes; harmless if nothing is pending.
+    func checkpoint() {
+        _ = try? exec("PRAGMA wal_checkpoint(TRUNCATE)")
     }
 
     func purgeTombstones(before date: Date) throws {

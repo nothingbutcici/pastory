@@ -85,7 +85,7 @@ enum SelfTest {
                 print("skip markers present: \(markers.filter { types.contains($0) })")
                 print("source app: \(NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "?")")
                 ok = true
-
+            case "welcome":
                 await seedStore()
                 let model = ShelfPanelController.shared.model
                 model.reset()
@@ -437,6 +437,7 @@ enum SelfTest {
 
     @MainActor
     private static func seedStore() async {
+        precondition(Sandbox.store != nil, "seedStore() outside PASTORY_STORE: refusing to touch the real store")
         let store = ClipStore.shared
         guard store.items.isEmpty else { return }
         let mov = FileManager.default.temporaryDirectory.appendingPathComponent("pastory-seed.mp4")
