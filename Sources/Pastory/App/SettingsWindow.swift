@@ -89,8 +89,8 @@ struct ShortcutRecorder: View {
                 HStack(spacing: 6) {
                     if capturing || !shortcut.isSet {
                         // Same words idle and armed; armed draws the border in ink so the change of state is visible.
-                        Text(capturing ? "按下组合键…".l : "按下组合键".l).font(.serif(14)).foregroundStyle(Color.ink)
-                            .padding(.horizontal, 14).frame(height: 32)
+                        Text(capturing ? "按下组合键…".l : "按下组合键".l).font(.serif(13)).foregroundStyle(Color.ink)
+                            .padding(.horizontal, 12).frame(height: 28)
                             .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.ink.opacity(capturing ? 0.9 : 0.4), lineWidth: 1))
                     } else {
                         ForEach(Array(shortcut.keycaps.enumerated()), id: \.offset) { _, cap in keycap(cap) }
@@ -102,7 +102,7 @@ struct ShortcutRecorder: View {
             if shortcut.isSet, !capturing {
                 Button { stop(Shortcut.none) } label: {
                     Image(systemName: "xmark").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.inkMuted)
-                        .frame(width: 22, height: 32).contentShape(Rectangle())
+                        .frame(width: 20, height: 28).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain).help("不设快捷键".l)
             }
@@ -113,13 +113,13 @@ struct ShortcutRecorder: View {
     }
 
     private func keycap(_ s: String) -> some View {
-        Text(s).font(.system(size: s.count > 1 ? 12 : 15, weight: .medium)).foregroundStyle(Color.ink)
-            .frame(minWidth: 32, minHeight: 32).padding(.horizontal, s.count > 1 ? 8 : 0)
+        Text(s).font(.system(size: s.count > 1 ? 11 : 13, weight: .medium)).foregroundStyle(Color.ink)
+            .frame(minWidth: 28, minHeight: 28).padding(.horizontal, s.count > 1 ? 7 : 0)
             .background(
-                RoundedRectangle(cornerRadius: 10).fill(Color.paper)
+                RoundedRectangle(cornerRadius: 8).fill(Color.paper)
                     .shadow(color: .black.opacity(0.18), radius: 1.5, x: 0, y: 2)
             )
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.ink.opacity(0.18), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.ink.opacity(0.18), lineWidth: 1))
     }
 
     private var capsuleBody: some View {

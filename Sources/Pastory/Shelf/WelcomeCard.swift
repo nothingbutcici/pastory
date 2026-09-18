@@ -34,9 +34,7 @@ struct WelcomeCard: View {
                 step(icon: "clipboard", title: "显示 / 隐藏剪贴板".l, key: Preferences.Key.hotkeyShelf, tag: "shelf")
                 step(icon: "crop", title: "截图".l, key: Preferences.Key.hotkeyCapture, tag: "capture")
 
-                Rectangle().fill(Color.ink.opacity(0.15)).frame(height: 1).padding(.vertical, 6)
-
-                heading("试一试".l)
+                heading("试一试".l).padding(.top, 10)
                 todo(done: model.welcomeTried.contains("shelf"),
                      text: shelfKey.isSet ? String(format: "按 %@ 打开或收起剪贴板".l, shelfKey.display) : "先给剪贴板设一个快捷键".l)
                 todo(done: model.welcomeTried.contains("capture"),
@@ -50,7 +48,11 @@ struct WelcomeCard: View {
             ticketRule.padding(.vertical, 4)
 
             HStack(spacing: 10) {
-                Text("也可从菜单栏点 P 打开".l).font(.serif(12)).foregroundStyle(Color.inkMuted)
+                if let p = Theme.menuIcon {
+                    Image(nsImage: p).renderingMode(.template).resizable().interpolation(.high).scaledToFit()
+                        .frame(width: 20, height: 20).foregroundStyle(Color.ink)
+                }
+                Text("也可以从顶部菜单栏打开".l).font(.serif(12)).foregroundStyle(Color.inkMuted)
                 Spacer()
                 Button { model.finishWelcome() } label: {
                     Text("开始使用".l).font(.serif(15, bold: true)).foregroundStyle(Color.ink)
@@ -79,16 +81,16 @@ struct WelcomeCard: View {
     }
 
     private func heading(_ s: String) -> some View {
-        Text(s).font(.serif(14, bold: true)).foregroundStyle(Color.ink).padding(.bottom, 2)
+        Text(s).font(.serif(13, bold: true)).foregroundStyle(Color.inkMuted).padding(.bottom, 2)
     }
 
     /// Icon · title · keycaps. A taken shortcut says so under the title.
     private func step(icon: String, title: String, key: String, tag: String) -> some View {
         let taken = HotKeyCenter.shared.failed.contains(tag)
         return HStack(spacing: 12) {
-            Image(systemName: icon).font(.system(size: 15, weight: .light)).foregroundStyle(Color.ink).frame(width: 22)
+            Image(systemName: icon).font(.system(size: 14, weight: .light)).foregroundStyle(Color.ink).frame(width: 20)
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.serif(14)).foregroundStyle(Color.ink)
+                Text(title).font(.serif(13)).foregroundStyle(Color.ink)
                 if taken { Text("被其他应用占用，点击换一个".l).font(.serif(12)).foregroundStyle(Color.inkMuted) }
             }
             Spacer(minLength: 10)
@@ -101,10 +103,10 @@ struct WelcomeCard: View {
     private func todo(done: Bool, text: String) -> some View {
         HStack(spacing: 10) {
             Image(systemName: done ? "checkmark.square.fill" : "square")
-                .font(.system(size: 15, weight: .light))
+                .font(.system(size: 14, weight: .light))
                 .foregroundStyle(done ? Color.paperBlueDeep : Color.ink.opacity(0.5))
-                .frame(width: 22)
-            Text(text).font(.serif(14)).foregroundStyle(done ? Color.inkMuted : Color.ink)
+                .frame(width: 20)
+            Text(text).font(.serif(13)).foregroundStyle(done ? Color.inkMuted : Color.ink)
                 .strikethrough(done, color: Color.inkMuted)
         }
         .padding(.vertical, 3)
