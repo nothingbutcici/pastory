@@ -70,10 +70,24 @@ final class SelectionOverlayController {
         }
         // Never activate: the app in front keeps its popovers and menus open, and they end up in the picture.
         overlays.forEach { $0.orderFrontRegardless() }
-        updateHover(at: NSEvent.mouseLocation)
+        let mouse = NSEvent.mouseLocation
+        // The 截屏 / 录屏 bar is up from the first frame, on the screen under the pointer.
+        if let host = overlays.first(where: { $0.screenRef.frame.contains(mouse) }) ?? overlays.first {
+            let top = TopBar()
+            top.onClose = { [weak self] in self?.finish(nil, viewRect: nil, on: nil) }
+            let size = top.fittingSize
+            let b = host.overlayView.bounds
+            top.frame = CGRect(x: (b.midX - size.width / 2).rounded(), y: b.maxY - 28 - size.height, width: size.width, height: size.height)
+            host.overlayView.addSubview(top)
+            topBar = top
+        }
+        updateHover(at: mouse)
         NSCursor.crosshair.set()
         refreshAll()
     }
+
+    /// 录屏 chosen on the bar before the selection was made.
+    var wantsRecording: Bool { topBar?.wantsRecording ?? false }
 
     /// F / ⏎ during picking: the whole display under the pointer.
     func pickWholeScreen() {
@@ -128,10 +142,12 @@ final class SelectionOverlayController {
         win.overlayView.addSubview(canvas)
         let bar = AnnotateToolbar(canvas: canvas)
         win.overlayView.addSubview(bar)
-        let top = TopBar()
+        // Keep the bar that has been up since the picker opened; it may live on another screen's overlay.
+        let top = topBar ?? TopBar()
+        if top.superview !== win.overlayView { top.removeFromSuperview(); win.overlayView.addSubview(top) }
+        top.immediateRecord = true
         top.onRecord = { [weak canvas] in canvas?.requestRecord() }
         top.onClose = { [weak canvas] in canvas?.cancel() }
-        win.overlayView.addSubview(top)
         annotator = canvas
         toolbar = bar
         topBar = top
@@ -360,7 +376,7 @@ final class OverlayView: NSView {
                 o.stroke()
             }
         }
-        drawBadge(for: hole)
+        if held || dragStart != nil { drawBadge(for: hole) }      // hovering a window shows no label, just the light
     }
 
     /// "918 × 502" pill at the top-right, outside the frame when there is room.
@@ -467,6 +483,8 @@ final class OverlayView: NSView {
 
     override func mouseMoved(with event: NSEvent) {
         guard !held else { return }
+        let p = convert(event.locationInWindow, from: nil)
+        if subviews.contains(where: { $0 is TopBar && $0.frame.contains(p) }) { NSCursor.arrow.set(); return }
         NSCursor.crosshair.set()          // cursor rects need a key window; while picking we deliberately are not one
         controller?.updateHover(at: NSEvent.mouseLocation)
     }

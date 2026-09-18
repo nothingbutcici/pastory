@@ -2,6 +2,9 @@ import AppKit
 
 /// Brand bar above everything while capturing:  [logo] Pastory   [ 截屏 | 录屏 ]  │  ✕
 final class TopBar: NSView {
+    /// While picking, 录屏 only marks the intent; once a picture is on the canvas it starts recording right away.
+    var immediateRecord = false
+    private(set) var wantsRecording = false
     var onRecord: (() -> Void)?
     var onClose: (() -> Void)?
     private let shot = NSButton(title: "截屏".l, target: nil, action: nil)
@@ -95,8 +98,21 @@ final class TopBar: NSView {
         }
     }
 
-    @objc private func pickShot() { style(active: shot) }
-    @objc private func pickRec() { style(active: rec); onRecord?() }
+    @objc private func pickShot() { style(active: shot); wantsRecording = false }
+    @objc private func pickRec() {
+        style(active: rec)
+        wantsRecording = true
+        if immediateRecord { onRecord?() }
+    }
+
+    // The picker keeps a crosshair everywhere else; over the bar the pointer should be an arrow.
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(rect: bounds, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self))
+    }
+    override func mouseEntered(with event: NSEvent) { NSCursor.arrow.set() }
+    override func mouseExited(with event: NSEvent) { if !immediateRecord { NSCursor.crosshair.set() } }
     @objc private func closeTapped() { onClose?() }
 
     // Drag the bar anywhere on its ground.

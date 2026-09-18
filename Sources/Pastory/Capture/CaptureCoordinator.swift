@@ -62,6 +62,7 @@ final class CaptureCoordinator: AnnotateDelegate {
         guard target != nil, let snapshot else { finish(); return }
         let overlay = SelectionOverlayController.shared
         guard let display = overlay.heldDisplay else { finish(); return }
+        if overlay.wantsRecording { annotateRequestRecord(); return }      // 录屏 was chosen on the bar: straight to recording
         let screen = snapshot.screen(for: display)
         let gen = generation
         Task { @MainActor in
