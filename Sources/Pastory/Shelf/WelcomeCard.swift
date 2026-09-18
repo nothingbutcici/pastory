@@ -5,6 +5,7 @@ import SwiftUI
 struct WelcomeCard: View {
     @Bindable var model: ShelfModel
     @State private var tick = 0                      // re-read the shortcuts after the recorder changes them
+    @State private var status: [String: String?] = [:]   // per-row notice from the recorder, shown under the title
     static let width: CGFloat = 440
 
     var body: some View {
@@ -86,15 +87,16 @@ struct WelcomeCard: View {
 
     /// Icon · title · keycaps. A taken shortcut says so under the title.
     private func step(icon: String, title: String, key: String, tag: String) -> some View {
-        let taken = HotKeyCenter.shared.failed.contains(tag)
+        let note = status[tag] ?? nil
+        let binding = Binding<String?>(get: { status[tag] ?? nil }, set: { status[tag] = $0 })
         return HStack(spacing: 12) {
             Image(systemName: icon).font(.system(size: 14, weight: .light)).foregroundStyle(Color.ink).frame(width: 20)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.serif(13)).foregroundStyle(Color.ink)
-                if taken { Text("被其他应用占用，点击换一个".l).font(.serif(12)).foregroundStyle(Color.inkMuted) }
+                if let note { Text(note).font(.serif(11)).foregroundStyle(Color.ink.opacity(0.45)).fixedSize(horizontal: false, vertical: true) }
             }
             Spacer(minLength: 10)
-            ShortcutRecorder(key: key, keycaps: true)
+            ShortcutRecorder(key: key, keycaps: true, status: binding)
         }
         .padding(.vertical, 3)
     }

@@ -54,6 +54,8 @@ struct ShortcutRecorder: View {
     let key: String
     /// Welcome card: one paper keycap per key instead of the compact capsule.
     var keycaps = false
+    /// Welcome card: notices ("taken", "at least two keys"…) go to the row's own status line instead of inline.
+    var status: Binding<String?>? = nil
     var bindingName: String {
         switch key {
         case Preferences.Key.hotkeyCapture: return "capture"
@@ -82,7 +84,7 @@ struct ShortcutRecorder: View {
 
     private var keycapBody: some View {
         HStack(spacing: 10) {
-            if let notice, !capturing { Text(notice).font(.serif(12)).foregroundStyle(Color.inkMuted) }
+            if status == nil, let notice, !capturing { Text(notice).font(.serif(12)).foregroundStyle(Color.inkMuted) }
             Button {
                 if !capturing, Date().timeIntervalSince(lastCancel) > 0.4 { startCapture() }
             } label: {
@@ -106,10 +108,19 @@ struct ShortcutRecorder: View {
                 .buttonStyle(.plain).help("不设快捷键".l)
             }
         }
-        .onAppear { shortcut = Preferences.shared.shortcut(key); refreshTaken() }
+        .onAppear { shortcut = Preferences.shared.shortcut(key); refreshTaken(); publishStatus() }
         .onDisappear { stop(nil) }
-        .onReceive(NotificationCenter.default.publisher(for: .shortcutBindingChanged)) { _ in refreshTaken() }
+        .onReceive(NotificationCenter.default.publisher(for: .shortcutBindingChanged)) { _ in refreshTaken(); publishStatus() }
         .onReceive(NotificationCenter.default.publisher(for: .shortcutsChanged)) { _ in if !capturing { shortcut = Preferences.shared.shortcut(key) } }
+        .onChange(of: notice) { _, _ in publishStatus() }
+        .onChange(of: capturing) { _, _ in publishStatus() }
+        .onChange(of: taken) { _, _ in publishStatus() }
+    }
+
+    private func publishStatus() {
+        guard let status else { return }
+        let text: String? = capturing ? nil : (notice ?? (taken ? "被其他应用占用，点击换一个".l : nil))
+        if status.wrappedValue != text { status.wrappedValue = text }
     }
 
     private func keycap(_ s: String) -> some View {

@@ -70,8 +70,7 @@ final class SelectionOverlayController {
         }
         // Never activate: the app in front keeps its popovers and menus open, and they end up in the picture.
         overlays.forEach { $0.orderFrontRegardless() }
-        let mouse = NSEvent.mouseLocation
-        if mode == .window { updateHover(at: mouse) }
+        updateHover(at: NSEvent.mouseLocation)
         NSCursor.crosshair.set()
         refreshAll()
     }
@@ -88,12 +87,13 @@ final class SelectionOverlayController {
     func toggleMode() {
         mode = mode == .region ? .window : .region
         hoveredWindow = nil
-        if mode == .window { updateHover(at: NSEvent.mouseLocation) }
+        updateHover(at: NSEvent.mouseLocation)
         refreshAll()
     }
 
+    /// The window under the pointer is lit in both modes: in region mode a plain click takes it, a drag takes a region.
     func updateHover(at p: CGPoint) {
-        guard mode == .window, let overlay = overlays.first else { return }
+        guard let overlay = overlays.first else { return }
         let hit = overlay.overlayView.candidates.first { $0.1.contains(p) }?.0
         if hit?.windowID != hoveredWindow?.windowID {
             hoveredWindow = hit
@@ -315,7 +315,7 @@ final class OverlayView: NSView {
         }
         NSColor(calibratedWhite: 0, alpha: 0.5).setFill()
         bounds.fill()
-        let hole: CGRect? = held ? heldRect : (controller?.mode == .window ? hoveredRectInView : selectionRect)
+        let hole: CGRect? = held ? heldRect : (dragStart != nil ? selectionRect : hoveredRectInView)
         guard let hole else { return }
         if let backdrop {
             // Punch the hole in the dimming only: the frozen picture shows through undimmed.
@@ -366,7 +366,7 @@ final class OverlayView: NSView {
     /// "918 × 502" pill at the top-right, outside the frame when there is room.
     private func drawBadge(for rect: CGRect) {
         let text: String
-        if !held, controller?.mode == .window, let w = controller?.hoveredWindow {
+        if !held, dragStart == nil, let w = controller?.hoveredWindow {
             let app = w.owningApplication?.applicationName ?? ""
             let title = w.title ?? ""
             text = title.isEmpty ? app : "\(app) — \(title)"
@@ -402,7 +402,7 @@ final class OverlayView: NSView {
         }
         dragStart = p
         dragCurrent = p
-        needsDisplay = true
+        needsDisplay = true          // the hovered window's highlight gives way to the region as soon as the drag moves
     }
 
     override func mouseDragged(with event: NSEvent) {
@@ -448,7 +448,14 @@ final class OverlayView: NSView {
         }
         defer { dragStart = nil; dragCurrent = nil }
         guard let rect = selectionRect, rect.width >= 8, rect.height >= 8 else {
-            controller?.finish(nil, viewRect: nil, on: nil)      // a plain click is the escape hatch
+            // A plain click takes the window under the pointer; on bare desktop it cancels.
+            controller?.updateHover(at: NSEvent.mouseLocation)
+            if let w = controller?.hoveredWindow {
+                let r = windowRectInView(CoordinateSpace.cocoaRect(fromCG: w.frame))
+                controller?.finish(.window(w), viewRect: r, on: overlayWindow)
+            } else {
+                controller?.finish(nil, viewRect: nil, on: nil)
+            }
             return
         }
         let snapped = rect.integral
@@ -461,7 +468,7 @@ final class OverlayView: NSView {
     override func mouseMoved(with event: NSEvent) {
         guard !held else { return }
         NSCursor.crosshair.set()          // cursor rects need a key window; while picking we deliberately are not one
-        if controller?.mode == .window { controller?.updateHover(at: NSEvent.mouseLocation) }
+        controller?.updateHover(at: NSEvent.mouseLocation)
     }
     override func mouseEntered(with event: NSEvent) { if !held { NSCursor.crosshair.set() } }
 
