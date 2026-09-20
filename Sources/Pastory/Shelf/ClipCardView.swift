@@ -79,10 +79,10 @@ struct ClipCardView: View, Equatable {
             HStack(spacing: 8) {
                 ZStack(alignment: .leading) {
                     if draftTitle.isEmpty && !titleFocused {
-                        Text("输入标题".l).font(.script(26)).foregroundColor(Color.inkMuted).allowsHitTesting(false)
+                        Text("输入标题".l).font(.script(22)).foregroundColor(Color.inkMuted).allowsHitTesting(false)
                     }
                     TextField("", text: $draftTitle)
-                        .textFieldStyle(.plain).font(.script(26))
+                        .textFieldStyle(.plain).font(.script(22))
                         .foregroundColor(Color.ink).tint(Color.ink)
                         .focused($titleFocused)
                         .onSubmit { renaming = false }
@@ -102,22 +102,24 @@ struct ClipCardView: View, Equatable {
                 if t != (item.title ?? "") { ClipStore.shared.setTitle(t, for: item.id) }
             }
         } else if let t = item.title, !t.isEmpty {
-            Text(t).font(.script(30)).foregroundStyle(Color.ink).lineLimit(1)
+            Text(t).font(.script(24)).foregroundStyle(Color.ink).lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 18).padding(.top, 6).padding(.bottom, 2)
                 .overlay(alignment: .bottom) { Rectangle().fill(Color.ink.opacity(0.6)).frame(height: 1).padding(.horizontal, 18) }
                 .contentShape(Rectangle())
+                .onTapGesture(count: 2, perform: onCopyAndClose)      // a double-click is a paste wherever it lands
                 .onTapGesture { renaming = true }
                 .help("点击重命名".l)
         } else {
             HStack(spacing: 0) {
-                if selected { Text("+ 加个标题".l).font(.script(26)).foregroundStyle(Color.inkMuted.opacity(0.8)) }
+                if selected { Text("+ 加个标题".l).font(.script(17)).foregroundStyle(Color.inkMuted.opacity(0.8)) }
                 Spacer(minLength: 0)
             }
-            .frame(height: 34)
-            .padding(.horizontal, 18).padding(.top, 4).padding(.bottom, 2)
+            .frame(height: 22)
+            .padding(.horizontal, 18).padding(.top, 3).padding(.bottom, 2)
             .overlay(alignment: .bottom) { if selected { Rectangle().fill(Color.ink.opacity(0.6)).frame(height: 1).padding(.horizontal, 18) } }
             .contentShape(Rectangle())
+            .onTapGesture(count: 2, perform: onCopyAndClose)
             .onTapGesture { if selected { renaming = true } else { onCopy() } }
         }
     }

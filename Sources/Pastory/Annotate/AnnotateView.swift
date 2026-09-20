@@ -38,6 +38,8 @@ final class AnnotateView: NSView, NSTextViewDelegate {
     private var editor: AnnotationTextView?
     private var editorAnchor: CGPoint = .zero
     private var editorBoxSize: CGSize = .zero
+    /// A box nobody has resized follows its text; dragging a grip fixes the width and turns wrapping on.
+    private var editorAutoWidth = true
     private var editingID: UUID?
 
     init(frame: CGRect, image: CGImage) {
@@ -143,7 +145,14 @@ final class AnnotateView: NSView, NSTextViewDelegate {
     override func mouseDown(with event: NSEvent) {
         window?.makeFirstResponder(self)
         let p = convert(event.locationInWindow, from: nil)
-        if editor != nil { commitTextEditor() }
+        if let a = editingAnnotation {
+            // A click outside an open text box only confirms it: the frame goes away and nothing new starts.
+            // (Its own grips and delete chip still work on the confirmed box.)
+            let onChrome = AnnotationRenderer.deleteRect(a).contains(p)
+                || AnnotationRenderer.selectionHandles(a).contains { hypot(p.x - $0.x, p.y - $0.y) <= AnnotationRenderer.handleRadius + 4 }
+            commitTextEditor()
+            if !onChrome { selectedID = nil; needsDisplay = true; return }
+        }
         moved = false
         pendingEdit = nil
 
@@ -259,7 +268,10 @@ final class AnnotateView: NSView, NSTextViewDelegate {
 
     private func beginTextEditor(at p: CGPoint, text: String, replacing: UUID?) {
         let existing = replacing.flatMap { id in annotations.first { $0.id == id } }
-        editorBoxSize = existing?.bounds.size ?? CGSize(width: max(32, min(320, bounds.width - p.x)), height: 0)
+        editorAutoWidth = existing?.textBoxSize == nil
+        editorBoxSize = existing?.bounds.size ?? .zero
+        editorAnchorForSizing = p
+        if editorAutoWidth { editorBoxSize = CGSize(width: autoWidth(for: text), height: 0) }
         let tv = AnnotationTextView(frame: CGRect(origin: p, size: editorBoxSize))
         tv.isRichText = false
         tv.importsGraphics = false
@@ -289,7 +301,26 @@ final class AnnotateView: NSView, NSTextViewDelegate {
         return Annotation(tool: .text, color: color, size: size, points: [editorAnchor], text: tv.string, textBoxSize: editorBoxSize)
     }
 
+    private var editorAnchorForSizing: CGPoint = .zero
+    /// Width that just fits the longest line (or the placeholder), never past the right edge of the picture.
+    private func autoWidth(for text: String) -> CGFloat {
+        let attrs: [NSAttributedString.Key: Any] = [.font: HandFont.font(size: size.fontSize)]
+        let measured = ((text.isEmpty ? "输入文字".l : text) as NSString).size(withAttributes: attrs).width
+        return max(32, min(ceil(measured) + 6, bounds.width - editorAnchorForSizing.x - 6))
+    }
+
+    /// nil = "hug the text". A box that ran into the right edge wrapped there, so it keeps that width.
+    private func committedBoxSize(for text: String) -> CGSize? {
+        guard editorAutoWidth else { return editorBoxSize }
+        let natural = ceil((text as NSString).size(withAttributes: [.font: HandFont.font(size: size.fontSize)]).width) + 6
+        return natural <= editorBoxSize.width + 0.5 ? nil : editorBoxSize
+    }
+
     private func layoutEditor() {
+        if editorAutoWidth, let tv = editor {
+            editorBoxSize = CGSize(width: autoWidth(for: tv.string), height: 0)
+            tv.textContainer?.containerSize = CGSize(width: editorBoxSize.width, height: .greatestFiniteMagnitude)
+        }
         guard let tv = editor, let a = editingAnnotation else { return }
         tv.frame = a.bounds
         tv.needsDisplay = true
@@ -323,13 +354,13 @@ final class AnnotateView: NSView, NSTextViewDelegate {
             if text.isEmpty { annotations.remove(at: i); selectedID = nil } else {
                 annotations[i].text = text
                 annotations[i].points = [editorAnchor]
-                annotations[i].textBoxSize = editorBoxSize
+                annotations[i].textBoxSize = committedBoxSize(for: text)
             }
             needsDisplay = true
             return
         }
         if !text.isEmpty {
-            let a = Annotation(tool: .text, color: color, size: size, points: [editorAnchor], text: text, textBoxSize: editorBoxSize)
+            let a = Annotation(tool: .text, color: color, size: size, points: [editorAnchor], text: text, textBoxSize: committedBoxSize(for: text))
             annotations.append(a)
             selectedID = a.id
         }

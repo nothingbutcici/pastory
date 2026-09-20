@@ -164,12 +164,14 @@ enum AnnotationRenderer {
     }
 
     static let handleRadius: CGFloat = 4.5
+    /// How far the outline sits from a text box's glyphs.
+    static let textInset: CGFloat = 4
     static let deleteRadius: CGFloat = 10
 
     /// Text grips sit on the outline, clear of the glyphs, while model handles describe the text box itself.
     static func selectionHandles(_ a: Annotation) -> [CGPoint] {
         guard a.tool == .text else { return a.handles }
-        let r = a.bounds.insetBy(dx: -8, dy: -8)
+        let r = a.bounds.insetBy(dx: -textInset, dy: -textInset)
         return [CGPoint(x: r.minX, y: r.minY), CGPoint(x: r.maxX, y: r.minY), CGPoint(x: r.minX, y: r.maxY), CGPoint(x: r.maxX, y: r.maxY),
                 CGPoint(x: r.minX, y: r.midY), CGPoint(x: r.maxX, y: r.midY), CGPoint(x: r.midX, y: r.minY), CGPoint(x: r.midX, y: r.maxY)]
     }
@@ -191,19 +193,24 @@ enum AnnotationRenderer {
         ctx.setStrokeColor(Theme.paperBlueDeep.cgColor)
         ctx.setLineWidth(1)
         if a.tool != .arrow && a.tool != .line {
-            ctx.setLineDash(phase: 0, lengths: [4, 3])
-            ctx.stroke(a.bounds.insetBy(dx: -8, dy: -8))
+            // Rounded outline drawn twice: a soft dark line, then cream dashes on top. One of the two always shows,
+            // on a white page as well as on a dark one.
+            let inset = a.tool == .text ? textInset : 8
+            let box = CGPath(roundedRect: a.bounds.insetBy(dx: -inset, dy: -inset), cornerWidth: 5, cornerHeight: 5, transform: nil)
+            ctx.addPath(box); ctx.setStrokeColor(Theme.ink.withAlphaComponent(0.45).cgColor); ctx.setLineWidth(1.5); ctx.strokePath()
+            ctx.addPath(box); ctx.setStrokeColor(Theme.paper.cgColor); ctx.setLineWidth(1.5); ctx.setLineDash(phase: 0, lengths: [5, 4]); ctx.strokePath()
             ctx.setLineDash(phase: 0, lengths: [])
         }
-        // Grips: one size everywhere. Small rounded squares for boxes and text, dots for the two ends of a line.
-        ctx.setFillColor(Theme.paper.cgColor)
-        ctx.setStrokeColor(Theme.paperBlueDeep.cgColor)
-        ctx.setLineWidth(1.2)
-        let g: CGFloat = 3.5
-        for p in selectionHandles(a) {
-            let d = CGRect(x: p.x - g, y: p.y - g, width: 2 * g, height: 2 * g)
-            let path = a.tool == .arrow || a.tool == .line ? CGPath(ellipseIn: d, transform: nil) : CGPath(roundedRect: d, cornerWidth: 1.5, cornerHeight: 1.5, transform: nil)
-            ctx.addPath(path); ctx.drawPath(using: .fillStroke)
+        // Grips: none on text (its edges and corners drag, and the pointer says so). Shapes and lines get small dots.
+        if a.tool != .text {
+            ctx.setFillColor(Theme.paper.cgColor)
+            ctx.setStrokeColor(Theme.ink.withAlphaComponent(0.6).cgColor)
+            ctx.setLineWidth(1)
+            let g: CGFloat = 3
+            for p in selectionHandles(a) {
+                let d = CGRect(x: p.x - g, y: p.y - g, width: 2 * g, height: 2 * g)
+                ctx.fillEllipse(in: d); ctx.strokeEllipse(in: d)
+            }
         }
         let c = deleteCenter(a)
         let d = deleteRect(a)

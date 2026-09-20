@@ -65,8 +65,11 @@ enum AnnotationTextSelfTest {
         click(CGPoint(x: 80, y: 80))
         guard let editor = activeEditor() else { check("opens a multiline editor", false); return false }
         editor.insertText(sample, replacementRange: editor.selectedRange())
+        // A new box hugs its text, up to the right edge of the picture (where it starts to wrap).
+        let natural = ceil((sample as NSString).size(withAttributes: [.font: HandFont.font(size: canvas.size.fontSize)]).width) + 6
+        let room = canvas.bounds.width - 80 - 6
         let expected = Annotation(tool: .text, color: canvas.color, size: canvas.size, points: [CGPoint(x: 80, y: 80)], text: sample,
-                                  textBoxSize: CGSize(width: 320, height: 0))
+                                  textBoxSize: natural <= room ? nil : CGSize(width: room, height: 0))
         check("typing grows the editor to fit the wrapped content", editor.frame == expected.bounds)
         editor.layoutManager?.ensureLayout(for: editor.textContainer!)
         check("live editor and export have the same line layout", ceil(editor.layoutManager!.usedRect(for: editor.textContainer!).maxY) == expected.textLayout.height)
@@ -75,9 +78,10 @@ enum AnnotationTextSelfTest {
         let edge = AnnotationRenderer.selectionHandles(expected)[5]
         check("editor lets the canvas receive resize handles", canvas.hitTest(canvas.convert(edge, to: canvas.superview)) === canvas)
         canvas.mouseDown(with: mouse(.leftMouseDown, at: edge))
-        canvas.mouseDragged(with: mouse(.leftMouseDragged, at: CGPoint(x: 288, y: edge.y)))
-        canvas.mouseDragged(with: mouse(.leftMouseDragged, at: CGPoint(x: 268, y: edge.y)))
-        canvas.mouseUp(with: mouse(.leftMouseUp, at: CGPoint(x: 268, y: edge.y)))
+        let target = 80 + 180 + AnnotationRenderer.textInset      // right edge grip → a 180 pt wide box
+        canvas.mouseDragged(with: mouse(.leftMouseDragged, at: CGPoint(x: target + 20, y: edge.y)))
+        canvas.mouseDragged(with: mouse(.leftMouseDragged, at: CGPoint(x: target, y: edge.y)))
+        canvas.mouseUp(with: mouse(.leftMouseUp, at: CGPoint(x: target, y: edge.y)))
         guard let resized = canvas.selected else { check("resize commits the edited text", false); return false }
         check("dragging an active editor commits and resizes it", activeEditor() == nil && resized.text == sample && resized.bounds.width == 180)
         check("successive drag events keep the original anchor", resized.bounds.origin == expected.bounds.origin)
@@ -109,6 +113,11 @@ enum AnnotationTextSelfTest {
         window.sendEvent(key([]))
         check("Return routed through the window still reaches the text box", activeEditor() != nil && lineEditor.string == sample + " ✓\n\n")
         print("     first responder: \(type(of: window.firstResponder as Any))")
+        let before = canvas.annotations.count
+        click(CGPoint(x: 600, y: 480))
+        check("a click outside confirms the box and starts nothing new", activeEditor() == nil && canvas.annotations.count == before && canvas.selected == nil)
+        click(CGPoint(x: 600, y: 480))
+        check("the next click starts a new box", activeEditor() != nil)
         canvas.commitTextEditor()
         let flat = canvas.renderedImage()
         check("export keeps the original image resolution", flat.width == image.width && flat.height == image.height)

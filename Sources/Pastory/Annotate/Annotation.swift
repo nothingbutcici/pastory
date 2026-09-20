@@ -76,7 +76,7 @@ struct Annotation: Identifiable {
     }
 
     private var textWidth: CGFloat {
-        max(32, textBoxSize?.width ?? ceil((text as NSString).size(withAttributes: textAttributes).width))
+        max(32, textBoxSize?.width ?? ceil((text as NSString).size(withAttributes: textAttributes).width) + 6)      // same slack the editor uses, so nothing re-wraps on confirm
     }
 
     /// Bounding box in canvas points, used for selection and hit testing.

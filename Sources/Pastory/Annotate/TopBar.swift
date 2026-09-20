@@ -105,6 +105,7 @@ final class TopBar: NSView {
         if immediateRecord { onRecord?() }
     }
 
+    override func resetCursorRects() { addCursorRect(bounds, cursor: .arrow) }
     // The picker keeps a crosshair everywhere else; over the bar the pointer should be an arrow.
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
