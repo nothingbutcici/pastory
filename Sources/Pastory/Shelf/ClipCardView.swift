@@ -25,6 +25,9 @@ struct ClipCardView: View, Equatable {
     private static let stubHeight: CGFloat = 96      // caption row + action row below the perforation
     @State private var draftTitle = ""
     @FocusState private var titleFocused: Bool
+    /// One size and one row height for the placeholder, the field and the finished title, so nothing jumps between them.
+    private static let titleSize: CGFloat = 20
+    private static let titleRowHeight: CGFloat = 26
     /// For one double-click interval after a click opened the title field, a second click still means "paste".
     @State private var catchSecondClick = false
 
@@ -79,22 +82,18 @@ struct ClipCardView: View, Equatable {
     private var titleRow: some View {
         if renaming {
             HStack(spacing: 8) {
-                ZStack(alignment: .leading) {
-                    if draftTitle.isEmpty && !titleFocused {
-                        Text("输入标题".l).font(.script(22)).foregroundColor(Color.inkMuted).allowsHitTesting(false)
-                    }
-                    TextField("", text: $draftTitle)
-                        .textFieldStyle(.plain).font(.script(22))
-                        .foregroundColor(Color.ink).tint(Color.ink)
-                        .focused($titleFocused)
-                        .onSubmit { renaming = false }
-                }
+                TextField("", text: $draftTitle)
+                    .textFieldStyle(.plain).font(.script(Self.titleSize))
+                    .foregroundColor(Color.ink).tint(Color.ink)
+                    .focused($titleFocused)
+                    .onSubmit { renaming = false }
                 Button { renaming = false } label: {
                     Image(systemName: "checkmark").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.ink)
                 }
                 .buttonStyle(.plain).help("保存 ⏎".l)
             }
-            .padding(.horizontal, 18).padding(.top, 8).padding(.bottom, 4)
+            .frame(height: Self.titleRowHeight)
+            .padding(.horizontal, 18).padding(.top, 4).padding(.bottom, 2)
             .overlay(alignment: .bottom) { Rectangle().fill(Color.ink.opacity(0.6)).frame(height: 1).padding(.horizontal, 18) }
             .overlay {
                 // The field opens on the first click with no wait; if that click turns out to be the first half of a
@@ -111,9 +110,10 @@ struct ClipCardView: View, Equatable {
                 if t != (item.title ?? "") { ClipStore.shared.setTitle(t, for: item.id) }
             }
         } else if let t = item.title, !t.isEmpty {
-            Text(t).font(.script(24)).foregroundStyle(Color.ink).lineLimit(1)
+            Text(t).font(.script(Self.titleSize)).foregroundStyle(Color.ink).lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 18).padding(.top, 6).padding(.bottom, 2)
+                .frame(height: Self.titleRowHeight)
+                .padding(.horizontal, 18).padding(.top, 4).padding(.bottom, 2)
                 .overlay(alignment: .bottom) { Rectangle().fill(Color.ink.opacity(0.6)).frame(height: 1).padding(.horizontal, 18) }
                 .contentShape(Rectangle())
                 .onTapGesture { beginRenameFromClick() }
@@ -123,8 +123,8 @@ struct ClipCardView: View, Equatable {
                 if selected { Text("+ 加个标题".l).font(.script(17)).foregroundStyle(Color.inkMuted.opacity(0.8)) }
                 Spacer(minLength: 0)
             }
-            .frame(height: 22)
-            .padding(.horizontal, 18).padding(.top, 3).padding(.bottom, 2)
+            .frame(height: Self.titleRowHeight)
+            .padding(.horizontal, 18).padding(.top, 4).padding(.bottom, 2)
             .overlay(alignment: .bottom) { if selected { Rectangle().fill(Color.ink.opacity(0.6)).frame(height: 1).padding(.horizontal, 18) } }
             .contentShape(Rectangle())
             .onTapGesture { if selected { beginRenameFromClick() } else { onCopy() } }

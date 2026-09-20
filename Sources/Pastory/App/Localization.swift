@@ -78,7 +78,7 @@ enum L {
         ("… 共 %d 项", "… %d items"), ("%@ · %d 秒%@", "%@ · %d s%@"),
         ("这不是 SQLite 数据库文件", "Not a SQLite database"), ("请选择某个剪贴板工具自己的数据文件夹，而不是整个资源库", "Pick the clipboard app's own data folder, not the whole Library"), ("没有找到能导入的文本或图片", "No importable text or images found"),
         // Cards
-        ("输入标题", "Title"), ("保存 ⏎", "Save ⏎"), ("点击重命名", "Click to rename"), ("已复制", "Copied"), ("编辑标注", "Annotate"),
+        ("保存 ⏎", "Save ⏎"), ("点击重命名", "Click to rename"), ("已复制", "Copied"), ("编辑标注", "Annotate"),
         ("编辑文字", "Edit Text"), ("预览", "Preview"), ("保存到本地…", "Save to Disk…"), ("删除", "Delete"), ("取消 Pin", "Unpin"),
         ("Pin 住，不会被自动清理", "Pin: never auto-deleted"), ("%d 字", "%d chars"), ("%d 项", "%d items"),
         ("保存", "Save"), ("保存到这里", "Save Here"), ("选择一个文件夹，把这些文件复制过去", "Choose a folder to copy these files into"),
