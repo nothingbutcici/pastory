@@ -70,6 +70,7 @@ final class SelectionOverlayController {
         }
         // Never activate: the app in front keeps its popovers and menus open, and they end up in the picture.
         overlays.forEach { $0.orderFrontRegardless() }
+        Self.allowBackgroundCursor()
         let mouse = NSEvent.mouseLocation
         // The 截屏 / 录屏 bar is up from the first frame, on the screen under the pointer.
         if let host = overlays.first(where: { $0.screenRef.frame.contains(mouse) }) ?? overlays.first {
@@ -84,6 +85,21 @@ final class SelectionOverlayController {
         updateHover(at: mouse)
         NSCursor.crosshair.set()
         refreshAll()
+    }
+
+    /// The picker never becomes the active app (menus and popovers of the app in front must stay open), and the
+    /// window server ignores cursor changes from background apps — so the pointer kept whatever the app underneath
+    /// had set, often an I-beam. This per-connection switch lifts that rule for us. Looked up at run time: if the
+    /// symbols ever go away the picker simply keeps the old behaviour.
+    private static var cursorAllowed = false
+    private static func allowBackgroundCursor() {
+        guard !cursorAllowed, let h = dlopen(nil, RTLD_NOW),
+              let conn = dlsym(h, "_CGSDefaultConnection"), let setp = dlsym(h, "CGSSetConnectionProperty") else { return }
+        typealias ConnFn = @convention(c) () -> Int32
+        typealias SetFn = @convention(c) (Int32, Int32, CFString, CFTypeRef) -> Int32
+        let cid = unsafeBitCast(conn, to: ConnFn.self)()
+        _ = unsafeBitCast(setp, to: SetFn.self)(cid, cid, "SetsCursorInBackground" as CFString, kCFBooleanTrue)
+        cursorAllowed = true
     }
 
     /// 录屏 chosen on the bar before the selection was made.

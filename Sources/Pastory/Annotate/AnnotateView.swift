@@ -274,6 +274,7 @@ final class AnnotateView: NSView, NSTextViewDelegate {
         tv.textContainer?.containerSize = CGSize(width: editorBoxSize.width, height: .greatestFiniteMagnitude)
         tv.string = text
         tv.delegate = self
+        tv.onCommit = { [weak self] in self?.commitTextEditor() }
         addSubview(tv)
         editor = tv
         editorAnchor = p
@@ -336,10 +337,6 @@ final class AnnotateView: NSView, NSTextViewDelegate {
 
     func textView(_ textView: NSTextView, doCommandBy sel: Selector) -> Bool {
         if textView.hasMarkedText() { return false }
-        if sel == #selector(NSResponder.insertNewline(_:)) {
-            commitTextEditor()
-            return true
-        }
         if sel == #selector(NSResponder.cancelOperation(_:)) {
             editor?.string = ""
             editingID = nil

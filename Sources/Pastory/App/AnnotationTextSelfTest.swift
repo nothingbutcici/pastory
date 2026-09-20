@@ -94,15 +94,17 @@ enum AnnotationTextSelfTest {
         click(CGPoint(x: 100, y: 100))
         guard let finalEditor = activeEditor() else { return false }
         finalEditor.insertText(" ✓", replacementRange: finalEditor.selectedRange())
-        check("Return commits multiline editing", canvas.textView(finalEditor, doCommandBy: #selector(NSResponder.insertNewline(_:))) && activeEditor() == nil)
+        func key(_ flags: NSEvent.ModifierFlags) -> NSEvent {
+            NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: flags, timestamp: 0, windowNumber: window.windowNumber, context: nil,
+                             characters: "\r", charactersIgnoringModifiers: "\r", isARepeat: false, keyCode: UInt16(kVK_Return))!
+        }
+        finalEditor.keyDown(with: key(.command))
+        check("⌘Return commits multiline editing", activeEditor() == nil)
         check("editing preserves the resized width", canvas.selected?.bounds.width == 180 && canvas.selected?.text == sample + " ✓")
         click(CGPoint(x: 100, y: 100))
         guard let lineEditor = activeEditor() else { return false }
-        let shiftReturn = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: .shift, timestamp: 0,
-                                          windowNumber: window.windowNumber, context: nil, characters: "\r", charactersIgnoringModifiers: "\r",
-                                          isARepeat: false, keyCode: UInt16(kVK_Return))!
-        lineEditor.keyDown(with: shiftReturn)
-        check("Shift+Return inserts a line break and keeps editing", activeEditor() != nil && lineEditor.string == sample + " ✓\n")
+        lineEditor.keyDown(with: key([]))
+        check("Return inserts a line break and keeps editing", activeEditor() != nil && lineEditor.string == sample + " ✓\n")
         canvas.commitTextEditor()
         let flat = canvas.renderedImage()
         check("export keeps the original image resolution", flat.width == image.width && flat.height == image.height)

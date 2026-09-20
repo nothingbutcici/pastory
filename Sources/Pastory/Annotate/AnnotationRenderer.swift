@@ -191,54 +191,29 @@ enum AnnotationRenderer {
         ctx.setStrokeColor(Theme.paperBlueDeep.cgColor)
         ctx.setLineWidth(1)
         if a.tool != .arrow && a.tool != .line {
-            if a.tool != .text { ctx.setLineDash(phase: 0, lengths: [4, 3]) }
+            ctx.setLineDash(phase: 0, lengths: [4, 3])
             ctx.stroke(a.bounds.insetBy(dx: -8, dy: -8))
             ctx.setLineDash(phase: 0, lengths: [])
         }
-        if a.tool == .text {
-            // Corners and edge grips continue the outline itself, with no separate button shapes.
-            ctx.setLineWidth(2)
-            ctx.setLineCap(.square)
-            for (i, p) in selectionHandles(a).enumerated() {
-                let length: CGFloat = 6
-                if i < 4 {
-                    let dx: CGFloat = i % 2 == 0 ? length : -length
-                    let dy: CGFloat = i < 2 ? length : -length
-                    ctx.move(to: CGPoint(x: p.x + dx, y: p.y))
-                    ctx.addLine(to: p)
-                    ctx.addLine(to: CGPoint(x: p.x, y: p.y + dy))
-                } else if i < 6 {
-                    ctx.move(to: CGPoint(x: p.x, y: p.y - length))
-                    ctx.addLine(to: CGPoint(x: p.x, y: p.y + length))
-                } else {
-                    ctx.move(to: CGPoint(x: p.x - length, y: p.y))
-                    ctx.addLine(to: CGPoint(x: p.x + length, y: p.y))
-                }
-            }
-            ctx.strokePath()
-        } else {
-            ctx.setFillColor(Theme.paper.cgColor)
-            ctx.setStrokeColor(Theme.ink.cgColor)
-            ctx.setLineWidth(1.2)
-            for p in a.handles {
-                let d = CGRect(x: p.x - handleRadius, y: p.y - handleRadius, width: 2 * handleRadius, height: 2 * handleRadius)
-                ctx.fillEllipse(in: d)
-                ctx.strokeEllipse(in: d)
-            }
+        ctx.setFillColor(Theme.paper.cgColor)
+        ctx.setStrokeColor(Theme.ink.cgColor)
+        ctx.setLineWidth(1.2)
+        for (i, p) in selectionHandles(a).enumerated() {
+            let r = a.tool == .text && i >= 4 ? handleRadius - 1.5 : handleRadius      // edge grips a little smaller than corners
+            let d = CGRect(x: p.x - r, y: p.y - r, width: 2 * r, height: 2 * r)
+            ctx.fillEllipse(in: d)
+            ctx.strokeEllipse(in: d)
         }
-        // Text uses a plain × in the outline color; shapes retain their paper delete button.
         let c = deleteCenter(a)
         let d = deleteRect(a)
-        if a.tool != .text {
-            ctx.saveGState()
-            ctx.setShadow(offset: CGSize(width: 0, height: 1), blur: 3, color: NSColor(calibratedWhite: 0, alpha: 0.3).cgColor)
-            ctx.setFillColor(Theme.paper.cgColor)
-            ctx.fillEllipse(in: d)
-            ctx.restoreGState()
-            ctx.setStrokeColor(Theme.ink.cgColor)
-            ctx.setLineWidth(1)
-            ctx.strokeEllipse(in: d.insetBy(dx: 0.5, dy: 0.5))
-        }
+        ctx.saveGState()
+        ctx.setShadow(offset: CGSize(width: 0, height: 1), blur: 3, color: NSColor(calibratedWhite: 0, alpha: 0.3).cgColor)
+        ctx.setFillColor(Theme.paper.cgColor)
+        ctx.fillEllipse(in: d)
+        ctx.restoreGState()
+        ctx.setStrokeColor(Theme.ink.cgColor)
+        ctx.setLineWidth(1)
+        ctx.strokeEllipse(in: d.insetBy(dx: 0.5, dy: 0.5))
         ctx.setLineWidth(1.8)
         ctx.setLineCap(.round)
         let k: CGFloat = 3.4

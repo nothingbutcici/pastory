@@ -119,7 +119,7 @@ Colors are captured in the display's own color space, so nothing shifts.
 
 **Annotations are in the style of Obsidian's Excalidraw plugin** (if you've used it, you'll be happy to see this): rectangle, ellipse, arrow, line, pen, text, and mosaic, with seven low-saturation colors. The pictures you share will look good.
 
-**Text boxes:** drag a corner or edge to resize. Text wraps to the width while keeping its font size. Return finishes editing; Shift+Return inserts a line break.
+**Text boxes:** drag a corner or edge to resize. Text wraps to the width while keeping its font size. Return starts a new line; ⌘Return or a click outside finishes.
 
 **Text recognition:** powered by Apple's on-device OCR. Recognized text is stored with the image in the clipboard, so you can use it later.
 

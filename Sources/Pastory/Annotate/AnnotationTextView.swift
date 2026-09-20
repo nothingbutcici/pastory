@@ -3,10 +3,12 @@ import Carbon.HIToolbox
 
 /// A multiline editor whose zero insets match AnnotationTextLayout exactly.
 final class AnnotationTextView: NSTextView {
+    var onCommit: (() -> Void)?
     override func keyDown(with event: NSEvent) {
+        // Return breaks the line, as in every other screenshot tool; ⌘Return (or a click outside) finishes the box.
         let isReturn = [kVK_Return, kVK_ANSI_KeypadEnter].contains(Int(event.keyCode))
-        if isReturn, event.modifierFlags.contains(.shift), !hasMarkedText() {
-            insertNewlineIgnoringFieldEditor(nil)
+        if isReturn, !hasMarkedText() {
+            if event.modifierFlags.contains(.command) { onCommit?() } else { insertNewlineIgnoringFieldEditor(nil) }
             return
         }
         super.keyDown(with: event)
