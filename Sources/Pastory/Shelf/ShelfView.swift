@@ -185,6 +185,7 @@ struct ShelfView: View {
                                      onPreview: { model.selectedID = item.id; model.previewSelected() },
                                      onEdit: { model.selectedID = item.id; model.edit(item) },
                                      onDelete: { model.delete(item) })
+                            .equatable()
                             .id(item.id)
                             .contextMenu { menu(for: item) }
                     }
@@ -199,7 +200,7 @@ struct ShelfView: View {
                 return [min(1, max(0, g.contentOffset.x / max(1, w))), min(1, g.containerSize.width / max(1, g.contentSize.width)), w]
             }, action: { _, v in scrollFraction = v[0]; scrollVisible = v[1]; scrollRange = v[2] })
             .onChange(of: model.selectedID) { _, id in
-                if let id { withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(id, anchor: .center) } }
+                if let id { withAnimation(.easeOut(duration: 0.1)) { proxy.scrollTo(id, anchor: .center) } }
             }
         }
     }

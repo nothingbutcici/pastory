@@ -2,7 +2,13 @@ import SwiftUI
 
 /// A paper ticket: header rule, handwritten title, serif body, perforation with side notches, then the stubs.
 /// The card that is currently on the pasteboard is the blue one.
-struct ClipCardView: View {
+struct ClipCardView: View, Equatable {
+    /// Closures only capture the model and the item, so data equality is enough; with `.equatable()` the arrow keys
+    /// re-render the two cards whose `selected` changed instead of the whole row.
+    static func == (a: ClipCardView, b: ClipCardView) -> Bool {
+        a.item == b.item && a.selected == b.selected && a.onClipboard == b.onClipboard && a.index == b.index && a.renaming == b.renaming
+    }
+
     let item: ClipItem
     let selected: Bool
     let onClipboard: Bool
@@ -40,7 +46,7 @@ struct ClipCardView: View {
         .background(ticket.fill(paperPaint).shadow(color: .black.opacity(selected ? 0.55 : 0.4), radius: selected ? 14 : 9, x: 2, y: selected ? 9 : 6))
         .overlay(alignment: .top) { decoration }
         .offset(y: selected ? -6 : 0)
-        .animation(.easeOut(duration: 0.12), value: selected)
+        .animation(.easeOut(duration: 0.1), value: selected)
         .contentShape(Rectangle())
         .onTapGesture(count: 2, perform: onCopyAndClose)
         .onTapGesture(count: 1, perform: onCopy)
@@ -60,7 +66,7 @@ struct ClipCardView: View {
                 Spacer()
                 Text(Self.when(item.createdAt)).font(.serif(14)).foregroundStyle(Color.ink.opacity(0.75))
             }
-            .padding(.horizontal, 18).padding(.top, hasPin ? 34 : 14).padding(.bottom, 8)
+            .padding(.horizontal, 18).padding(.top, 30).padding(.bottom, 8)      // every card leaves room for the pin, so moving it shifts nothing
             Rectangle().fill(Color.ink.opacity(0.7)).frame(height: 1).padding(.horizontal, 18)
         }
     }

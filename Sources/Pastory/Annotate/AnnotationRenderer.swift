@@ -195,28 +195,29 @@ enum AnnotationRenderer {
             ctx.stroke(a.bounds.insetBy(dx: -8, dy: -8))
             ctx.setLineDash(phase: 0, lengths: [])
         }
+        // Grips: one size everywhere. Small rounded squares for boxes and text, dots for the two ends of a line.
         ctx.setFillColor(Theme.paper.cgColor)
-        ctx.setStrokeColor(Theme.ink.cgColor)
+        ctx.setStrokeColor(Theme.paperBlueDeep.cgColor)
         ctx.setLineWidth(1.2)
-        for (i, p) in selectionHandles(a).enumerated() {
-            let r = a.tool == .text && i >= 4 ? handleRadius - 1.5 : handleRadius      // edge grips a little smaller than corners
-            let d = CGRect(x: p.x - r, y: p.y - r, width: 2 * r, height: 2 * r)
-            ctx.fillEllipse(in: d)
-            ctx.strokeEllipse(in: d)
+        let g: CGFloat = 3.5
+        for p in selectionHandles(a) {
+            let d = CGRect(x: p.x - g, y: p.y - g, width: 2 * g, height: 2 * g)
+            let path = a.tool == .arrow || a.tool == .line ? CGPath(ellipseIn: d, transform: nil) : CGPath(roundedRect: d, cornerWidth: 1.5, cornerHeight: 1.5, transform: nil)
+            ctx.addPath(path); ctx.drawPath(using: .fillStroke)
         }
         let c = deleteCenter(a)
         let d = deleteRect(a)
+        // Delete: a small dark chip with a light ×. Quieter than an outlined button, and it reads on any picture.
+        let chip = d.insetBy(dx: 2, dy: 2)
         ctx.saveGState()
-        ctx.setShadow(offset: CGSize(width: 0, height: 1), blur: 3, color: NSColor(calibratedWhite: 0, alpha: 0.3).cgColor)
-        ctx.setFillColor(Theme.paper.cgColor)
-        ctx.fillEllipse(in: d)
+        ctx.setShadow(offset: CGSize(width: 0, height: 1), blur: 2, color: NSColor(calibratedWhite: 0, alpha: 0.25).cgColor)
+        ctx.setFillColor(Theme.ink.withAlphaComponent(0.85).cgColor)
+        ctx.fillEllipse(in: chip)
         ctx.restoreGState()
-        ctx.setStrokeColor(Theme.ink.cgColor)
-        ctx.setLineWidth(1)
-        ctx.strokeEllipse(in: d.insetBy(dx: 0.5, dy: 0.5))
-        ctx.setLineWidth(1.8)
+        ctx.setStrokeColor(Theme.paper.cgColor)
+        ctx.setLineWidth(1.4)
         ctx.setLineCap(.round)
-        let k: CGFloat = 3.4
+        let k: CGFloat = 2.6
         ctx.move(to: CGPoint(x: c.x - k, y: c.y - k)); ctx.addLine(to: CGPoint(x: c.x + k, y: c.y + k))
         ctx.move(to: CGPoint(x: c.x + k, y: c.y - k)); ctx.addLine(to: CGPoint(x: c.x - k, y: c.y + k))
         ctx.strokePath()

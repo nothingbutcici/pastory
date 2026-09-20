@@ -70,7 +70,6 @@ final class SelectionOverlayController {
         }
         // Never activate: the app in front keeps its popovers and menus open, and they end up in the picture.
         overlays.forEach { $0.orderFrontRegardless() }
-        Self.allowBackgroundCursor()
         let mouse = NSEvent.mouseLocation
         // The 截屏 / 录屏 bar is up from the first frame, on the screen under the pointer.
         if let host = overlays.first(where: { $0.screenRef.frame.contains(mouse) }) ?? overlays.first {
@@ -84,22 +83,11 @@ final class SelectionOverlayController {
         }
         updateHover(at: mouse)
         NSCursor.crosshair.set()
+        if let host = overlays.first(where: { $0.screenRef.frame.contains(mouse) }) {
+            let local = CGPoint(x: mouse.x - host.screenRef.frame.minX, y: mouse.y - host.screenRef.frame.minY)
+            host.overlayView.placeCrosshair(at: local, visible: true)
+        }
         refreshAll()
-    }
-
-    /// The picker never becomes the active app (menus and popovers of the app in front must stay open), and the
-    /// window server ignores cursor changes from background apps — so the pointer kept whatever the app underneath
-    /// had set, often an I-beam. This per-connection switch lifts that rule for us. Looked up at run time: if the
-    /// symbols ever go away the picker simply keeps the old behaviour.
-    private static var cursorAllowed = false
-    private static func allowBackgroundCursor() {
-        guard !cursorAllowed, let h = dlopen(nil, RTLD_NOW),
-              let conn = dlsym(h, "_CGSDefaultConnection"), let setp = dlsym(h, "CGSSetConnectionProperty") else { return }
-        typealias ConnFn = @convention(c) () -> Int32
-        typealias SetFn = @convention(c) (Int32, Int32, CFString, CFTypeRef) -> Int32
-        let cid = unsafeBitCast(conn, to: ConnFn.self)()
-        _ = unsafeBitCast(setp, to: SetFn.self)(cid, cid, "SetsCursorInBackground" as CFString, kCFBooleanTrue)
-        cursorAllowed = true
     }
 
     /// 录屏 chosen on the bar before the selection was made.
@@ -152,6 +140,7 @@ final class SelectionOverlayController {
     /// Place the brand bar and the annotation canvas over the frozen selection.
     func showAnnotator(image: CGImage, delegate: AnnotateDelegate) {
         guard let win = heldWindow, let rect = win.overlayView.heldRect else { return }
+        overlays.forEach { $0.overlayView.crosshair.isHidden = true }
         for o in overlays where o !== win { o.ignoresMouseEvents = true }
         let canvas = AnnotateView(frame: rect, image: image)
         canvas.delegate = delegate
@@ -277,7 +266,35 @@ final class OverlayWindow: NSPanel {
     override var canBecomeMain: Bool { false }
 }
 
+/// The picker never becomes the active app, and macOS ignores cursor changes from background apps, so the system
+/// pointer keeps whatever the app underneath set (often an I-beam). This small sprite is our crosshair instead:
+/// it follows the pointer, takes no clicks, and costs a few pixels of redraw per move.
+final class CrosshairView: NSView {
+    static let side: CGFloat = 41
+    init() { super.init(frame: CGRect(x: 0, y: 0, width: Self.side, height: Self.side)); isHidden = true }
+    required init?(coder: NSCoder) { fatalError() }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    override var isOpaque: Bool { false }
+    func center(at p: CGPoint) { frame.origin = CGPoint(x: (p.x - Self.side / 2).rounded(), y: (p.y - Self.side / 2).rounded()) }
+    override func draw(_ dirtyRect: NSRect) {
+        let c = CGPoint(x: bounds.midX, y: bounds.midY), gap: CGFloat = 4, arm = bounds.width / 2
+        func arms(_ width: CGFloat, _ color: NSColor) {
+            let path = NSBezierPath()
+            path.lineWidth = width
+            path.lineCapStyle = .round
+            for (dx, dy) in [(1.0, 0.0), (-1.0, 0.0), (0.0, 1.0), (0.0, -1.0)] {
+                path.move(to: CGPoint(x: c.x + CGFloat(dx) * gap, y: c.y + CGFloat(dy) * gap))
+                path.line(to: CGPoint(x: c.x + CGFloat(dx) * (arm - 2), y: c.y + CGFloat(dy) * (arm - 2)))
+            }
+            color.setStroke(); path.stroke()
+        }
+        arms(3.5, NSColor(calibratedWhite: 0, alpha: 0.55))      // dark halo so it reads on white pages
+        arms(1.5, .white)
+    }
+}
+
 final class OverlayView: NSView {
+    let crosshair = CrosshairView()
     weak var controller: SelectionOverlayController?
     var screenRef: NSScreen!
     var display: SCDisplay!
@@ -460,6 +477,7 @@ final class OverlayView: NSView {
         }
         guard controller?.mode == .region, dragStart != nil else { return }
         dragCurrent = p
+        placeCrosshair(at: p, visible: true)
         needsDisplay = true
     }
 
@@ -498,13 +516,22 @@ final class OverlayView: NSView {
     override func rightMouseUp(with event: NSEvent) { if !held { controller?.finish(nil, viewRect: nil, on: nil) } }
 
     override func mouseMoved(with event: NSEvent) {
-        guard !held else { return }
+        guard !held else { crosshair.isHidden = true; return }
         let p = convert(event.locationInWindow, from: nil)
-        if subviews.contains(where: { $0 is TopBar && $0.frame.contains(p) }) { NSCursor.arrow.set(); return }
-        NSCursor.crosshair.set()          // cursor rects need a key window; while picking we deliberately are not one
+        let overBar = subviews.contains(where: { $0 is TopBar && $0.frame.contains(p) })
+        placeCrosshair(at: p, visible: !overBar)
+        if overBar { NSCursor.arrow.set(); return }
+        NSCursor.crosshair.set()          // only takes effect if we happen to be the active app; the sprite covers the rest
         controller?.updateHover(at: NSEvent.mouseLocation)
     }
     override func mouseEntered(with event: NSEvent) { if !held { NSCursor.crosshair.set() } }
+    override func mouseExited(with event: NSEvent) { crosshair.isHidden = true }      // pointer went to another display
+
+    func placeCrosshair(at p: CGPoint, visible: Bool) {
+        if crosshair.superview !== self { addSubview(crosshair) }
+        crosshair.center(at: p)
+        crosshair.isHidden = !visible || held
+    }
 
     override func keyDown(with event: NSEvent) {
         guard !held else { super.keyDown(with: event); return }

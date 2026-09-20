@@ -105,6 +105,10 @@ enum AnnotationTextSelfTest {
         guard let lineEditor = activeEditor() else { return false }
         lineEditor.keyDown(with: key([]))
         check("Return inserts a line break and keeps editing", activeEditor() != nil && lineEditor.string == sample + " ✓\n")
+        // The same key delivered the way AppKit delivers it: through the window, to whoever is first responder.
+        window.sendEvent(key([]))
+        check("Return routed through the window still reaches the text box", activeEditor() != nil && lineEditor.string == sample + " ✓\n\n")
+        print("     first responder: \(type(of: window.firstResponder as Any))")
         canvas.commitTextEditor()
         let flat = canvas.renderedImage()
         check("export keeps the original image resolution", flat.width == image.width && flat.height == image.height)
