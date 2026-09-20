@@ -25,8 +25,7 @@ actor ClipSearchIndex {
 
     private struct Entry {
         let document: Document
-        let text: String
-        let literalText: NSString
+        let literalText: NSString      // lower-cased, precomposed; the only copy kept
     }
 
     private var entries: [String: Entry] = [:]
@@ -71,16 +70,13 @@ actor ClipSearchIndex {
                 try Task.checkCancellation()
                 let text = [body, document.ocr, document.source, document.title].joined(separator: "\n")
                     .lowercased().precomposedStringWithCanonicalMapping
-                entry = Entry(document: document, text: text, literalText: text as NSString)
+                entry = Entry(document: document, literalText: text as NSString)
                 entries[item.id] = cacheable ? entry : nil
             }
             guard !query.isEmpty else { continue }
-            // A fast literal rejection avoids Swift's expensive grapheme scan for most documents.
-            // Confirm candidates with contains() to retain grapheme boundaries (emoji, CRLF, etc.).
-            if entry.literalText.range(of: query, options: .literal).location != NSNotFound,
-               entry.text.contains(query) {
-                matches.insert(item.id)
-            }
+            // Literal match on precomposed text. Deliberately not grapheme-strict: 👍 should find 👍🏽 and 👩 should
+            // find 👨‍👩‍👧, which a cluster-by-cluster comparison refuses. It is also the fast path.
+            if entry.literalText.range(of: query, options: .literal).location != NSNotFound { matches.insert(item.id) }
         }
         try Task.checkCancellation()
         return matches

@@ -18,15 +18,20 @@ enum SearchSelfTest {
         let directory = root.appendingPathComponent("items")
         let index = ClipSearchIndex()
         do {
+            var emojiHits = 0
             for query in ["tailneedle", "中文", "CAFÉ", "e\u{301}", "👍", "👩", "\n", "last", "fixture title", "search fixture", "missing"] {
-                let normalized = query.trimmingCharacters(in: .whitespaces).lowercased()
+                // Reference semantics: a literal search over the lower-cased, precomposed full text.
+                let normalized = query.trimmingCharacters(in: .whitespaces).lowercased().precomposedStringWithCanonicalMapping
                 let expected = Set(store.items.filter { item in
-                    [store.text(of: item) ?? item.snippet, item.ocrText ?? "", item.sourceAppName ?? "", item.title ?? ""]
-                        .joined(separator: "\n").lowercased().contains(normalized)
+                    let text = [store.text(of: item) ?? item.snippet, item.ocrText ?? "", item.sourceAppName ?? "", item.title ?? ""]
+                        .joined(separator: "\n").lowercased().precomposedStringWithCanonicalMapping as NSString
+                    return text.range(of: normalized, options: .literal).location != NSNotFound
                 }.map(\.id))
                 let actual = try await index.search(query, items: store.items, directory: directory)
-                check("matches legacy full-text semantics for \(query.debugDescription)", actual == expected)
+                check("full-text match for \(query.debugDescription)", actual == expected)
+                if ["👍", "👩"].contains(query), actual.contains(first.id) { emojiHits += 1 }
             }
+            check("a base emoji finds its skin-tone and family variants", emojiHits == 2)
             let reads = await index.payloadReadCount
             check("repeated queries load each payload only once", reads == 2)
             var changed = store.items
