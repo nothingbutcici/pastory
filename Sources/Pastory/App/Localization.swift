@@ -96,7 +96,7 @@ enum L {
         ("本地数据库截图存储方式", "How screenshots are stored locally"), ("高质量有损压缩，体积约为 PNG 的三分之一", "High-quality lossy; about a third the size of PNG"), ("无损，体积最大", "Lossless; largest files"),
         ("直接粘贴到刚才的应用", "Paste into the app you came from"), ("paste|关闭", "Off"), ("双击", "Double-click"), ("双击 + 回车", "Double-click + Return"),
         ("双击和回车都只复制并收起", "Double-click and Return only copy and close"), ("双击卡片，内容直接贴进刚才的应用", "Double-click a card to paste it into the app you came from"),
-        ("用方向键或鼠标选中卡片后，回车也会直接粘贴", "After picking a card with the arrow keys or the mouse, Return pastes it too"), ("清理", "Cleanup"), ("截图与录屏", "Screenshots & Recording"), ("需要辅助功能权限", "Needs Accessibility"), ("辅助功能已授权", "Accessibility granted"), ("去授权", "Grant…"),
+        ("用方向键选中卡片后，回车也会直接粘贴", "After picking a card with the arrow keys, Return pastes it too"), ("清理", "Cleanup"), ("截图与录屏", "Screenshots & Recording"), ("需要辅助功能权限", "Needs Accessibility"), ("去授权", "Grant…"),
         ("这条是 Pin 住的，确定删除？", "This one is pinned. Delete it?"), ("Pin 住的内容不会被自动清理，只有这样手动删除才会消失，而且不能恢复。", "Pinned items are never cleaned up automatically; deleting by hand is the only way they go, and it cannot be undone."),
         ("版本更新", "Updates"), ("当前版本 %@", "Current version %@"), ("检查中…", "Checking…"), ("已是最新版本", "Up to date"), ("有新版本 %@", "New version %@"), ("检查失败：%@", "Check failed: %@"),
         ("每天自动检查一次（app 唯一的联网请求，不带任何标识）", "Check once a day (the app's only network request; carries no identifier)"), ("手动检查更新", "Check Now"), ("检查更新…", "Check for Updates…"),

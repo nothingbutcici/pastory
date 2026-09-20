@@ -68,7 +68,8 @@ actor ClipSearchIndex {
                     }
                 } else { body = item.snippet }
                 try Task.checkCancellation()
-                let text = [body, document.ocr, document.source, document.title].joined(separator: "\n")
+                // One pasted log file must not sit in memory for the life of the app: the first 200k characters are searchable.
+                let text = [String(body.prefix(200_000)), document.ocr, document.source, document.title].joined(separator: "\n")
                     .lowercased().precomposedStringWithCanonicalMapping
                 entry = Entry(document: document, literalText: text as NSString)
                 entries[item.id] = cacheable ? entry : nil

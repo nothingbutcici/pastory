@@ -9,7 +9,7 @@ struct SettingsPane: View {
     @State private var storeSize: String?
     @State private var updateNote: String?
     @State private var checkingUpdate = false
-    @State private var hasAX = Permissions.hasAccessibility
+    @State private var hasAX = Permissions.hasAccessibility && ProcessInfo.processInfo.environment["PASTORY_NOAX"] == nil      // self-test: render the not-granted state
     @State private var hasSR = Permissions.hasScreenRecording
 
 
@@ -38,7 +38,7 @@ struct SettingsPane: View {
             .task {
                 // Permission badges: re-check every second while the pane is up (each check is an XPC call; not per body).
                 while !Task.isCancelled {
-                    hasAX = Permissions.hasAccessibility; hasSR = Permissions.hasScreenRecording
+                    hasAX = Permissions.hasAccessibility && ProcessInfo.processInfo.environment["PASTORY_NOAX"] == nil; hasSR = Permissions.hasScreenRecording
                     try? await Task.sleep(nanoseconds: 1_000_000_000)
                 }
             }
@@ -138,7 +138,7 @@ struct SettingsPane: View {
                             choice("直接粘贴到刚才的应用".l,
                                    options: [("off", "关闭".l("paste"), "双击和回车都只复制并收起".l),
                                              ("double", "双击".l, "双击卡片，内容直接贴进刚才的应用".l),
-                                             ("return", "双击 + 回车".l, "用方向键或鼠标选中卡片后，回车也会直接粘贴".l)],
+                                             ("return", "双击 + 回车".l, "用方向键选中卡片后，回车也会直接粘贴".l)],
                                    selected: prefs.pasteMode,
                                    accessory: prefs.pasteMode == "off" || hasAX ? nil : ("需要辅助功能权限".l, "去授权".l, { Permissions.requestAccessibility(); Permissions.openSettings("Privacy_Accessibility") })) { prefs.pasteMode = $0 }
                         }
@@ -236,18 +236,17 @@ struct SettingsPane: View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(label).font(.serif(15)).foregroundStyle(Color.ink).lineLimit(1).truncationMode(.middle)
-                Text(options.first { $0.code == selected }?.hint ?? "").font(.serif(12)).foregroundStyle(Color.inkMuted)
+                Text(options.first { $0.code == selected }?.hint ?? "").font(.serif(12)).foregroundStyle(Color.inkMuted).fixedSize(horizontal: false, vertical: true)      // the hint wraps; the segments never do
+                if let accessory {       // under the hint, not beside the segments: the English row has no room for both
+                    HStack(spacing: 8) { tag(accessory.tag, on: false); pill(accessory.action, accessory.run) }.padding(.top, 4)
+                }
             }
             Spacer(minLength: 12)
-            if let accessory {
-                tag(accessory.tag, on: false)
-                pill(accessory.action, accessory.run)
-            }
             HStack(spacing: 4) {
                 ForEach(options, id: \.code) { o in
                     let on = o.code == selected
                     Button { set(o.code) } label: {
-                        Text(o.title).font(.system(size: 12.5, weight: on ? .semibold : .medium))
+                        Text(o.title).font(.system(size: 12.5, weight: on ? .semibold : .medium)).lineLimit(1).fixedSize()
                             .foregroundStyle(Color.ink)
                             .padding(.horizontal, 12).padding(.vertical, 6)
                             .background(on ? Color.paperBlue : Color.clear, in: Capsule())
@@ -257,6 +256,7 @@ struct SettingsPane: View {
             }
             .padding(3)
             .overlay(Capsule().stroke(Color.ink.opacity(0.5), lineWidth: 1))
+            .layoutPriority(1)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 7)

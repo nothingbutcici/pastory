@@ -74,7 +74,7 @@ final class SelectionOverlayController {
         // The screen under the pointer was photographed before this point, so whatever the app in front closes when it
         // loses focus is already in the picture. Becoming the active app is what makes the crosshair possible: macOS
         // ignores cursor changes from background apps. Focus goes back to that app in release().
-        if let front = NSWorkspace.shared.frontmostApplication, front.processIdentifier != ProcessInfo.processInfo.processIdentifier { appToRestore = front }
+        if let front = NSWorkspace.shared.frontmostApplication, front.processIdentifier != ProcessInfo.processInfo.processIdentifier { appToRestore = front }      // on a restart we are frontmost: keep the one we have
         NSApp.activate(ignoringOtherApps: true)
         (overlays.first(where: { $0.screenRef.frame.contains(mouse) }) ?? overlays.first)?.makeKey()
         overlays.forEach { $0.invalidateCursorRects(for: $0.overlayView) }
@@ -221,8 +221,12 @@ final class SelectionOverlayController {
         return CGRect(x: x.rounded(), y: y.rounded(), width: size.width, height: size.height)
     }
 
-    /// Tear everything down.
-    func release() {
+    /// A picked window is captured live: give the front app its focus back first, so it is drawn active.
+    func reactivateFrontApp() { if let app = appToRestore, !app.isTerminated { app.activate() } }
+
+    /// Tear everything down. `restoreFocus: false` is the restart path (hotkey pressed again mid-capture): the picker
+    /// comes straight back, and the app to return to must survive until the capture really ends.
+    func release(restoreFocus: Bool = true) {
         isPresenting = false
         completion = nil
         cropProvider = nil
@@ -236,10 +240,11 @@ final class SelectionOverlayController {
         toolbar = nil
         topBar = nil
         overlays.forEach { $0.orderOut(nil); $0.close() }
-        overlays.removeAll()        // Hand the keyboard back to whoever had it, unless one of our own windows (OCR panel, preview, editor) wants it.
-        if let app = appToRestore, !app.isTerminated, NSApp.windows.contains(where: { $0.isVisible && $0.canBecomeKey && !($0 is OverlayWindow) && $0.level.rawValue < Int(CGShieldingWindowLevel()) && $0.isKeyWindow }) == false {
-            app.activate()
-        }
+        overlays.removeAll()
+        guard restoreFocus else { return }
+        // Hand the keyboard back, unless one of our own titled windows (image editor, text editor, recording preview,
+        // OCR panel) has it.
+        if let app = appToRestore, !app.isTerminated, NSApp.keyWindow?.styleMask.contains(.titled) != true { app.activate() }
         appToRestore = nil
     }
 }
@@ -508,7 +513,7 @@ final class OverlayView: NSView {
         case kVK_Space: controller?.toggleMode()
         case kVK_ANSI_F, kVK_Return, kVK_ANSI_KeypadEnter:
             controller?.finish(.display(display), viewRect: bounds, on: overlayWindow)
-        default: super.keyDown(with: event)
+        default: break          // we are the key window now; an unbound key is ignored, not beeped at
         }
     }
 

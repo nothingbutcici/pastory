@@ -65,14 +65,18 @@ final class AnnotateView: NSView, NSTextViewDelegate {
         }
     }
 
+    /// A text box's grips and delete chip. Points inside the box itself are text, never a grip: the hit zones are
+    /// wider than the 4 pt gap to the outline, and would otherwise swallow a click on the first or last glyph.
+    static func onTextChrome(_ a: Annotation, _ p: CGPoint) -> Bool {
+        if AnnotationRenderer.deleteRect(a).contains(p) { return true }
+        if a.bounds.contains(p) { return false }
+        return AnnotationRenderer.selectionHandles(a).contains { hypot(p.x - $0.x, p.y - $0.y) <= AnnotationRenderer.handleRadius + 4 }
+    }
+
     override func hitTest(_ point: NSPoint) -> NSView? {
         // The editor fills its box, but its resize handles still belong to the canvas.
         let p = convert(point, from: superview)
-        if let a = editingAnnotation,
-           AnnotationRenderer.selectionHandles(a).contains(where: { hypot(p.x - $0.x, p.y - $0.y) <= AnnotationRenderer.handleRadius + 4 })
-            || AnnotationRenderer.deleteRect(a).contains(p) {
-            return self
-        }
+        if let a = editingAnnotation, Self.onTextChrome(a, p) { return self }
         return super.hitTest(point)
     }
 
@@ -148,10 +152,9 @@ final class AnnotateView: NSView, NSTextViewDelegate {
         if let a = editingAnnotation {
             // A click outside an open text box only confirms it: the frame goes away and nothing new starts.
             // (Its own grips and delete chip still work on the confirmed box.)
-            let onChrome = AnnotationRenderer.deleteRect(a).contains(p)
-                || AnnotationRenderer.selectionHandles(a).contains { hypot(p.x - $0.x, p.y - $0.y) <= AnnotationRenderer.handleRadius + 4 }
+            let onChrome = Self.onTextChrome(a, p)
             commitTextEditor()
-            if !onChrome { selectedID = nil; needsDisplay = true; return }
+            if !onChrome || selected == nil { selectedID = nil; needsDisplay = true; return }      // an empty box leaves nothing to grab
         }
         moved = false
         pendingEdit = nil
@@ -161,7 +164,8 @@ final class AnnotateView: NSView, NSTextViewDelegate {
             let a = annotations[i]
             let c = AnnotationRenderer.deleteCenter(a)
             if hypot(p.x - c.x, p.y - c.y) <= AnnotationRenderer.deleteRadius + 2 { deleteSelected(); return }
-            if let h = AnnotationRenderer.selectionHandles(a).firstIndex(where: { hypot(p.x - $0.x, p.y - $0.y) <= AnnotationRenderer.handleRadius + 4 }) {
+            if !(a.tool == .text && a.bounds.contains(p)),
+               let h = AnnotationRenderer.selectionHandles(a).firstIndex(where: { hypot(p.x - $0.x, p.y - $0.y) <= AnnotationRenderer.handleRadius + 4 }) {
                 drag = .handle(h, original: a, offset: CGPoint(x: p.x - a.handles[h].x, y: p.y - a.handles[h].y))
                 return
             }
@@ -345,7 +349,8 @@ final class AnnotateView: NSView, NSTextViewDelegate {
     func commitTextEditor() {
         guard let tv = editor else { return }
         editor = nil
-        let text = tv.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "" : tv.string
+        // Trailing line breaks go: Return is a new line now, and the habit of pressing it before clicking away would leave a taller box.
+        let text = tv.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "" : String(tv.string.reversed().drop(while: { $0.isNewline }).reversed())
         tv.removeFromSuperview()
         window?.makeFirstResponder(self)
         let replacing = editingID

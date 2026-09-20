@@ -74,6 +74,13 @@ final class CaptureCoordinator: AnnotateDelegate {
                 guard gen == generation else { return }      // a newer capture owns the overlay now
                 // A picked window is wanted whole: fetch its own rendering (nothing in front of it, no shadow) and
                 // lay it over the frozen picture. Dragging the handles outward still reveals the screen around it.
+                if case .window(let w) = target! {
+                    // We became the active app to show the crosshair, so by now that window is drawn inactive (grey
+                    // traffic lights, no caret). Hand the focus back and give it a moment to redraw before the shot.
+                    overlay.reactivateFrontApp()
+                    try? await Task.sleep(nanoseconds: 180_000_000)
+                    guard gen == generation else { return }
+                }
                 if case .window(let w) = target!, let own = try? await Screenshotter.capture(.window(w), snapshot: snapshot) {
                     guard gen == generation else { return }
                     let scale = CGFloat(image.width) / display.frame.width
@@ -164,7 +171,7 @@ final class CaptureCoordinator: AnnotateDelegate {
         frozen = [:]
         ShelfPanelController.shared.holdOpen = false
         if !keepOCRPanel { OCRPanelController.shared.close() }
-        SelectionOverlayController.shared.release()
+        SelectionOverlayController.shared.release(restoreFocus: !keepOCRPanel)      // keepOCRPanel = the restart path
         snapshot = nil
         isBusy = false
     }

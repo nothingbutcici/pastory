@@ -99,6 +99,7 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
     private static let slide: CGFloat = 28
 
     func hide() {
+        model.cancelPendingHandBack()
         if let m = outsideClickMonitor { NSEvent.removeMonitor(m); outsideClickMonitor = nil }
         keepOpenOnResign = false
         guard let p = panel, p.isVisible else { return }
@@ -155,7 +156,7 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
 
     /// After copying with a single click: the shelf stays, the keyboard goes back to the app you were in.
     func handBackFocus() {
-        guard let p = panel, p.isVisible, let app = previousApp, !app.isTerminated else { return }
+        guard let p = panel, p.isVisible, let app = previousApp, !app.isTerminated, model.renamingID == nil else { return }
         keepOpenOnResign = p.isKeyWindow          // only a real resign should be swallowed
         app.activate()
     }
@@ -411,7 +412,7 @@ final class ShelfModel {
 
     private func selectAvailableItem() {
         let list = items
-        if !list.contains(where: { $0.id == selectedID }) { selectedID = list.first?.id }
+        if !list.contains(where: { $0.id == selectedID }) { selectedID = list.first?.id; pickedByHand = false }
     }
 
     var items: [ClipItem] {
@@ -420,8 +421,8 @@ final class ShelfModel {
         // empty between keystrokes. Actions are what must not touch stale results: `selected` is nil meanwhile.
         let matches = searchResult
         if !request.query.isEmpty, matches?.request != request {
-            let live = Set(store.items.map(\.id))
-            return lastShown.filter { live.contains($0.id) }          // a deleted card leaves at once, even mid-search
+            let live = Dictionary(uniqueKeysWithValues: store.items.map { ($0.id, $0) })
+            return lastShown.compactMap { live[$0.id] }               // live values; a deleted card leaves at once, even mid-search
         }
         let key = ListKey(request: request, snapshot: snapshotID, filter: filter)
         if let cached = listCache, cached.key == key { return cached.items }
@@ -486,7 +487,11 @@ final class ShelfModel {
     }
     /// ⏎ / double-click: copy, close, and (with Accessibility) paste into the app you came from.
     @ObservationIgnored private var pendingHandBack: DispatchWorkItem?
+    func cancelPendingHandBack() { pendingHandBack?.cancel(); pendingHandBack = nil }
+    @ObservationIgnored private var lastCloseAt = Date.distantPast
     func copyAndClose(_ item: ClipItem, paste: Bool = true) {
+        guard Date().timeIntervalSince(lastCloseAt) > 0.6 else { return }      // the shelf is already on its way out
+        lastCloseAt = Date()
         copy(item)
         pendingHandBack?.cancel()
         ShelfPanelController.shared.hide()
@@ -511,12 +516,13 @@ final class ShelfModel {
     func exportSelected() { if let s = selected { Exporter.export(s) } }
     func deleteSelected() {
         // Only a card that is actually highlighted in the current list; never a silent fallback.
-        guard let id = selectedID, let s = items.first(where: { $0.id == id }) else { return }
+        guard let s = selected else { return }
         let list = items
         let i = list.firstIndex { $0.id == s.id } ?? 0
         guard delete(s) else { return }
         let rest = items
         selectedID = rest.isEmpty ? nil : rest[min(i, rest.count - 1)].id
+        pickedByHand = false          // the neighbour was chosen for you
     }
 
     /// The one way to delete from the shelf: a pinned card asks first, everything else goes straight away.

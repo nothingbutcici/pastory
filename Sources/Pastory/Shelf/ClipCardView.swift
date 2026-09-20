@@ -133,6 +133,9 @@ struct ClipCardView: View, Equatable {
     }
 
     private func beginRenameFromClick() {
+        // The second half of a double-click that began on another part of the card: still a paste.
+        if (NSApp.currentEvent?.clickCount ?? 1) >= 2 { onCopyAndClose(); return }
+        ShelfPanelController.shared.model.cancelPendingHandBack()
         renaming = true
         catchSecondClick = true
         DispatchQueue.main.asyncAfter(deadline: .now() + NSEvent.doubleClickInterval) { catchSecondClick = false }
@@ -288,7 +291,7 @@ struct ClipCardView: View, Equatable {
 
     // MARK: Stationery
 
-    /// Only the copied card wears the pink pushpin, pushed through its top margin.
+    /// The highlighted card wears the pink pushpin, pushed through its top margin.
     /// The pushpin marks the card the keyboard is on (Return acts on it). Blue paper and 已复制 mark what is on the clipboard.
     private var hasPin: Bool { selected }
 
