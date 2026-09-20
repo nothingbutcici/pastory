@@ -179,4 +179,6 @@ Swift Package Manager, Apple frameworks only. Project conventions are in [docs/D
 
 Typefaces: [Caveat](https://fonts.google.com/specimen/Caveat) and [Ysabeau Office](https://fonts.google.com/specimen/Ysabeau+Office) (SIL Open Font License). Interaction inspired by [Paste](https://pasteapp.io); annotation style after [Excalidraw](https://excalidraw.com).
 
+Thanks to [@behindthebeat](https://github.com/behindthebeat) for making search fast with large histories, and for resizable, wrapping text annotations.
+
 [MIT License](LICENSE) · © 2026 nothingbutcici

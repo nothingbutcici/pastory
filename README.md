@@ -184,4 +184,6 @@ Swift Package Manager，只用 Apple 自带框架。项目约定见 [docs/DEVELO
 
 字体 [Caveat](https://fonts.google.com/specimen/Caveat)、[Ysabeau Office](https://fonts.google.com/specimen/Ysabeau+Office)（SIL 开源字体许可）。交互受 [Paste](https://pasteapp.io) 启发，标注风格来自 [Excalidraw](https://excalidraw.com)。
 
+感谢 [@behindthebeat](https://github.com/behindthebeat) 贡献了大历史下的搜索性能优化，以及可调整大小、自动换行的文字标注。
+
 [MIT License](LICENSE) · © 2026 nothingbutcici

@@ -123,11 +123,15 @@ enum AnnotationTextSelfTest {
         check("export keeps the original image resolution", flat.width == image.width && flat.height == image.height)
         do { try Screenshotter.pngData(flat)?.write(to: url.appendingPathExtension("flat.png")) } catch { check("writes flattened output", false) }
         canvas.debugSet([original], select: 0)
-        let corner = AnnotationRenderer.selectionHandles(original)[1]
+        // The delete chip owns the top-right corner of a text box; the other three corners and the edges resize.
+        let corner = AnnotationRenderer.selectionHandles(original)[3]
         canvas.mouseDown(with: mouse(.leftMouseDown, at: corner))
         canvas.mouseDragged(with: mouse(.leftMouseDragged, at: CGPoint(x: corner.x + 20, y: corner.y)))
         canvas.mouseUp(with: mouse(.leftMouseUp, at: CGPoint(x: corner.x + 20, y: corner.y)))
-        check("top-right grip resizes without hitting delete", canvas.annotations.count == 1 && canvas.selected?.bounds.width == 440)
+        check("a corner grip resizes the box", canvas.annotations.count == 1 && canvas.selected?.bounds.width == 440)
+        canvas.debugSet([original], select: 0)
+        click(AnnotationRenderer.deleteCenter(original))
+        check("the chip on the top-right corner deletes", canvas.annotations.isEmpty)
         return ok
     }
 }

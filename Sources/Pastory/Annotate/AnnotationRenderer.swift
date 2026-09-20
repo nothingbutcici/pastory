@@ -178,9 +178,14 @@ enum AnnotationRenderer {
 
     /// Where the delete button sits for a selected annotation: just outside its top-right corner.
     static func deleteCenter(_ a: Annotation) -> CGPoint {
+        // Text: the chip sits on the outline's own top-right corner, so it stays with the box and inside the picture
+        // even when the text hugs the top or right edge. Shapes keep theirs just off the corner, clear of the corner grip.
+        if a.tool == .text {
+            let r = a.bounds.insetBy(dx: -textInset, dy: -textInset)
+            return CGPoint(x: r.maxX, y: r.minY)
+        }
         let r = a.bounds.insetBy(dx: -8, dy: -8)
-        let offset: CGFloat = a.tool == .text ? 16 : 6
-        return CGPoint(x: r.maxX + offset, y: r.minY - offset)
+        return CGPoint(x: r.maxX + 6, y: r.minY - 6)
     }
     static func deleteRect(_ a: Annotation) -> CGRect {
         let c = deleteCenter(a)
