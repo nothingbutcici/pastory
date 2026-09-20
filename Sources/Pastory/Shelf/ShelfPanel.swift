@@ -377,6 +377,7 @@ final class ShelfModel {
         let filter: ShelfFilter
     }
     @ObservationIgnored private var listCache: (key: ListKey, items: [ClipItem])?
+    @ObservationIgnored private var lastShown: [ClipItem] = []
 
     /// Start at app launch even if the shelf has not appeared yet. The first view-owned search cancels
     /// this task and takes over, retaining any entries that have already been warmed.
@@ -415,9 +416,13 @@ final class ShelfModel {
 
     var items: [ClipItem] {
         let request = searchRequest
-        // Hide stale results immediately, including from keyboard actions such as Return-to-paste.
+        // While the next result is on its way the previous list stays on screen, so the shelf does not blink to
+        // empty between keystrokes. Actions are what must not touch stale results: `selected` is nil meanwhile.
         let matches = searchResult
-        if !request.query.isEmpty, matches?.request != request { return [] }
+        if !request.query.isEmpty, matches?.request != request {
+            let live = Set(store.items.map(\.id))
+            return lastShown.filter { live.contains($0.id) }          // a deleted card leaves at once, even mid-search
+        }
         let key = ListKey(request: request, snapshot: snapshotID, filter: filter)
         if let cached = listCache, cached.key == key { return cached.items }
         let ordered = orderedItems()
@@ -432,6 +437,7 @@ final class ShelfModel {
             return request.query.isEmpty || matches?.ids.contains(item.id) == true
         }
         listCache = (key, filtered)
+        lastShown = filtered
         return filtered
     }
 
@@ -463,7 +469,7 @@ final class ShelfModel {
     }
 
     /// The highlighted card, and only that; keys never fall back to the first card silently.
-    private var selected: ClipItem? { items.first { $0.id == selectedID } }
+    private var selected: ClipItem? { isSearching ? nil : items.first { $0.id == selectedID } }      // never act on a list that is about to change
     var selectedItem: ClipItem? { selected }
 
     /// Single click: copy and stay (the 已复制 tag moves to the card).

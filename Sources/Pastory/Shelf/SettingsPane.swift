@@ -100,16 +100,29 @@ struct SettingsPane: View {
                                 }
                             }
                         }
-                        section("导入".l) {
-                            row("从其他剪贴板工具导入（SQLite）".l) {
-                                HStack(spacing: 8) {
-                                    if let importNote { Text(importNote).font(.system(size: 12)).foregroundStyle(Color.inkMuted).lineLimit(1) }
-                                    pill("选择数据库…".l) { importDatabase() }
+                        section("系统".l) {
+                            row("登录时启动".l) { PaperToggle(isOn: $prefs.launchAtLogin) }
+                            row("语言".l) {
+                                HStack(spacing: 4) {
+                                    ForEach([("system", "跟随系统".l), ("zh", "中文".l), ("en", "English")], id: \.0) { code, label in
+                                        let on = Preferences.shared.language == code
+                                        Button { Preferences.shared.language = code; model.langTick += 1 } label: {
+                                            Text(label.l).font(.system(size: 12.5, weight: on ? .semibold : .medium))
+                                                .foregroundStyle(Color.ink)
+                                                .padding(.horizontal, 11).padding(.vertical, 6)
+                                                .background(on ? Color.paperBlue : Color.clear, in: Capsule())
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
                                 }
+                                .padding(3)
+                                .overlay(Capsule().stroke(Color.ink.opacity(0.5), lineWidth: 1))
                             }
-                            if ClipStore.shared.items.contains(where: { $0.sourceAppName == ClipStore.importSourceName }) {
-                                row("移除所有导入进来的条目（来源为「导入」）".l) {
-                                    pill("移除".l) { removeImported() }
+                            if let e = prefs.loginError { Text(e).font(.system(size: 12)).foregroundStyle(Color.inkMuted).padding(.horizontal, 16) }
+                            row("屏幕录制权限（截图、录屏需要）".l) {
+                                HStack(spacing: 8) {
+                                    tag(hasSR ? "已授权".l : "未授权".l, on: hasSR)
+                                    if !hasSR { pill("去授权".l) { Permissions.openSettings("Privacy_ScreenCapture") } }
                                 }
                             }
                         }
@@ -158,29 +171,16 @@ struct SettingsPane: View {
                                 }
                             }
                         }
-                        section("系统".l) {
-                            row("登录时启动".l) { PaperToggle(isOn: $prefs.launchAtLogin) }
-                            row("语言".l) {
-                                HStack(spacing: 4) {
-                                    ForEach([("system", "跟随系统".l), ("zh", "中文".l), ("en", "English")], id: \.0) { code, label in
-                                        let on = Preferences.shared.language == code
-                                        Button { Preferences.shared.language = code; model.langTick += 1 } label: {
-                                            Text(label.l).font(.system(size: 12.5, weight: on ? .semibold : .medium))
-                                                .foregroundStyle(Color.ink)
-                                                .padding(.horizontal, 11).padding(.vertical, 6)
-                                                .background(on ? Color.paperBlue : Color.clear, in: Capsule())
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
-                                }
-                                .padding(3)
-                                .overlay(Capsule().stroke(Color.ink.opacity(0.5), lineWidth: 1))
-                            }
-                            if let e = prefs.loginError { Text(e).font(.system(size: 12)).foregroundStyle(Color.inkMuted).padding(.horizontal, 16) }
-                            row("屏幕录制权限（截图、录屏需要）".l) {
+                        section("导入".l) {
+                            row("从其他剪贴板工具导入（SQLite）".l) {
                                 HStack(spacing: 8) {
-                                    tag(hasSR ? "已授权".l : "未授权".l, on: hasSR)
-                                    if !hasSR { pill("去授权".l) { Permissions.openSettings("Privacy_ScreenCapture") } }
+                                    if let importNote { Text(importNote).font(.system(size: 12)).foregroundStyle(Color.inkMuted).lineLimit(1) }
+                                    pill("选择数据库…".l) { importDatabase() }
+                                }
+                            }
+                            if ClipStore.shared.items.contains(where: { $0.sourceAppName == ClipStore.importSourceName }) {
+                                row("移除所有导入进来的条目（来源为「导入」）".l) {
+                                    pill("移除".l) { removeImported() }
                                 }
                             }
                         }
@@ -202,6 +202,7 @@ struct SettingsPane: View {
         .background(
             RoundedRectangle(cornerRadius: 6).fill(Paint.paper)
                 .shadow(color: .black.opacity(0.35), radius: 8, x: 1, y: 4)      // the sheet casts it, the type does not
+                .padding(16).drawingGroup().padding(-16)                         // one bitmap per sheet: scrolling just moves it
         )
     }
 

@@ -66,7 +66,7 @@ enum SearchSelfTest {
             model.reset()
             await model.updateSearch()
             model.query = "replacement"
-            check("pending queries cannot paste a stale selected item", model.isSearching && model.items.isEmpty && model.selectedItem == nil)
+            check("pending queries cannot paste a stale selected item", model.isSearching && model.selectedItem == nil)      // the previous list stays visible; acting on it is what is blocked
             await model.updateSearch()
             check("results select the first matching item", !model.isSearching && model.selectedItem?.id == first.id)
             let beforeFocus = model.items
