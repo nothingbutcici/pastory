@@ -292,7 +292,10 @@ final class ShelfModel {
 
     init(store: ClipStore? = nil) { self.store = store ?? .shared }
 
-    var query = ""
+    var query = "" { didSet { if query != oldValue { pickedByHand = false } } }
+    /// True once the highlight was moved with the arrow keys or a click. The first search hit is highlighted
+    /// automatically; Return on that only copies, it never types into another app.
+    @ObservationIgnored private(set) var pickedByHand = false
     var showSettings = false
     /// First launch until 「开始使用」 is pressed; the welcome card leads the row.
     var showWelcome = !Preferences.shared.didWelcome
@@ -447,6 +450,7 @@ final class ShelfModel {
         refreshOrder()
         filter = .all
         selectedID = store.items.first?.id
+        pickedByHand = false
     }
 
     func move(_ delta: Int) {
@@ -455,6 +459,7 @@ final class ShelfModel {
         let i = list.firstIndex { $0.id == selectedID } ?? -1
         let n = min(max(0, i + delta), list.count - 1)
         selectedID = list[n].id
+        pickedByHand = true
     }
 
     /// The highlighted card, and only that; keys never fall back to the first card silently.
@@ -465,6 +470,7 @@ final class ShelfModel {
     func copy(_ item: ClipItem) {
         store.copyToPasteboard(item)
         selectedID = item.id
+        pickedByHand = true
         ShelfPanelController.shared.handBackFocus()
     }
     /// ⏎ / double-click: copy, close, and (with Accessibility) paste into the app you came from.
@@ -473,7 +479,11 @@ final class ShelfModel {
         ShelfPanelController.shared.hide()
         if paste { ShelfPanelController.shared.pasteIntoPreviousApp() }
     }
-    func copySelected() { if let s = selected { copyAndClose(s) } }
+    /// Return: copy and close; paste too only when the setting allows it and the card was picked by hand.
+    func copySelected() {
+        guard let s = selected else { return }
+        copyAndClose(s, paste: Preferences.shared.pasteOnReturn && pickedByHand)
+    }
     func previewSelected() { ShelfPanelController.shared.toggleQuickLook() }
 
     /// Text → our editor window; image → the annotation editor. Saving rewrites the item and copies it.

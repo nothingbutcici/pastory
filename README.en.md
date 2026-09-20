@@ -31,7 +31,7 @@
 <p align="center">
 Pin what you use often. Pinned items are never removed, even with automatic cleanup on.<br>
 Give important items a title so you can spot them at a glance.<br>
-Click to copy. Double-click or press Return on a selected card to paste into the app you were using.
+Click to copy. Double-click to paste directly into the app you were using.
 </p>
 
 <p align="center">Everything stays on your Mac. No account, and no network access apart from a daily update check. Your data is 100% yours.</p>
@@ -94,7 +94,7 @@ So Pastory brings all of that together.
 Open it with a shortcut of your choice or from the menu bar icon. Everything you copy appears as a card, along with the app it came from and the time.
 
 - **Copy:** click any card to copy it, ready to paste into the field you're working in.
-- **Copy and paste in one step:** double-click a card or press Return on the selected card to paste its content into the app you were using.
+- **Copy and paste in one step:** double-click a card and its content is pasted directly into the app you were using. Prefer the keyboard? Choose "Double-click + Return" in Settings: pick a card with the arrow keys and Return pastes it too.
 - **Search:** search your history by keyword, across text, titles, and text recognized inside images.
 - **Pin to keep:** pin important items to keep them for good. Unpinned items are cleaned up on a schedule you set.
 - **Titles:** name important items so you can find them at a glance.

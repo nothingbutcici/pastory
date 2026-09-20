@@ -135,7 +135,17 @@ final class Preferences {
     /// Off: copies made in password managers (and anything marked concealed) are never recorded.
     var recordPasswordManagers: Bool { get { d.bool(forKey: "recordPasswordManagers") } set { d.set(newValue, forKey: "recordPasswordManagers") } }
     /// Double-click also sends ⌘V to the app you came from (needs Accessibility). On by default; falls back to copy-only.
-    var pasteOnDoubleClick: Bool { get { d.object(forKey: "pasteOnDoubleClick") as? Bool ?? true } set { d.set(newValue, forKey: "pasteOnDoubleClick") } }
+    /// "off" | "double" | "return". Until it is chosen, the legacy on/off switch decides between "off" and "double",
+    /// so nobody's Return key starts typing into other apps after an update.
+    var pasteMode: String {
+        get {
+            if let m = d.string(forKey: "pasteMode"), ["off", "double", "return"].contains(m) { return m }
+            return (d.object(forKey: "pasteOnDoubleClick") as? Bool ?? true) ? "double" : "off"
+        }
+        set { d.set(newValue, forKey: "pasteMode") }
+    }
+    var pasteOnDoubleClick: Bool { pasteMode != "off" }
+    var pasteOnReturn: Bool { pasteMode == "return" }
     /// Daily update check against GitHub Releases (the app's only network request). On by default.
     var checkForUpdates: Bool { get { d.object(forKey: "checkForUpdates") as? Bool ?? true } set { d.set(newValue, forKey: "checkForUpdates") } }
     var lastUpdateCheck: Date? { get { d.object(forKey: "lastUpdateCheck") as? Date } set { d.set(newValue, forKey: "lastUpdateCheck") } }

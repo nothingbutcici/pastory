@@ -122,15 +122,12 @@ struct SettingsPane: View {
                                                                        : "从 1Password 等「密码管理软件」复制的内容均不进剪贴板。".l) {
                                 PaperToggle(isOn: $prefs.recordPasswordManagers)
                             }
-                            row("双击或回车直接粘贴到刚才的应用".l) {
-                                HStack(spacing: 8) {
-                                    if prefs.pasteOnDoubleClick {
-                                        tag(hasAX ? "辅助功能已授权".l : "需要辅助功能权限".l, on: hasAX)
-                                        if !hasAX { pill("去授权".l) { Permissions.requestAccessibility(); Permissions.openSettings("Privacy_Accessibility") } }
-                                    }
-                                    PaperToggle(isOn: $prefs.pasteOnDoubleClick)
-                                }
-                            }
+                            choice("直接粘贴到刚才的应用".l,
+                                   options: [("off", "关闭".l("paste"), "双击和回车都只复制并收起".l),
+                                             ("double", "双击".l, "双击卡片，内容直接贴进刚才的应用".l),
+                                             ("return", "双击 + 回车".l, "用方向键或鼠标选中卡片后，回车也会直接粘贴".l)],
+                                   selected: prefs.pasteMode,
+                                   accessory: prefs.pasteMode == "off" || hasAX ? nil : ("需要辅助功能权限".l, "去授权".l, { Permissions.requestAccessibility(); Permissions.openSettings("Privacy_Accessibility") })) { prefs.pasteMode = $0 }
                         }
                         section("截图与录屏".l) {
                             choice("本地数据库截图存储方式".l,
@@ -241,13 +238,18 @@ struct SettingsPane: View {
     }
 
     /// Short segmented choice; the selected option's explanation sits under the row label in small type.
-    private func choice(_ label: String, options: [(code: String, title: String, hint: String)], selected: String, set: @escaping (String) -> Void) -> some View {
+    private func choice(_ label: String, options: [(code: String, title: String, hint: String)], selected: String,
+                        accessory: (tag: String, action: String, run: () -> Void)? = nil, set: @escaping (String) -> Void) -> some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(label).font(.serif(15)).foregroundStyle(Color.ink).lineLimit(1).truncationMode(.middle)
                 Text(options.first { $0.code == selected }?.hint ?? "").font(.serif(12)).foregroundStyle(Color.inkMuted)
             }
             Spacer(minLength: 12)
+            if let accessory {
+                tag(accessory.tag, on: false)
+                pill(accessory.action, accessory.run)
+            }
             HStack(spacing: 4) {
                 ForEach(options, id: \.code) { o in
                     let on = o.code == selected

@@ -24,7 +24,7 @@ final class PrefsMirror {
     var exportDir: String { didSet { Preferences.shared.customExportDir = exportDir.isEmpty ? nil : exportDir } }
     var paused: Bool { didSet { Preferences.shared.monitoringPaused = paused } }
     var imageStorage: String { get { access(keyPath: \.imageStorage); return Preferences.shared.imageStorage } set { withMutation(keyPath: \.imageStorage) { Preferences.shared.imageStorage = newValue } } }
-    var pasteOnDoubleClick: Bool { get { access(keyPath: \.pasteOnDoubleClick); return Preferences.shared.pasteOnDoubleClick } set { withMutation(keyPath: \.pasteOnDoubleClick) { Preferences.shared.pasteOnDoubleClick = newValue } } }
+    var pasteMode: String { get { access(keyPath: \.pasteMode); return Preferences.shared.pasteMode } set { withMutation(keyPath: \.pasteMode) { Preferences.shared.pasteMode = newValue } } }
     var checkForUpdates: Bool { get { access(keyPath: \.checkForUpdates); return Preferences.shared.checkForUpdates } set { withMutation(keyPath: \.checkForUpdates) { Preferences.shared.checkForUpdates = newValue } } }
     var recordPasswordManagers: Bool { get { access(keyPath: \.recordPasswordManagers); return Preferences.shared.recordPasswordManagers } set { withMutation(keyPath: \.recordPasswordManagers) { Preferences.shared.recordPasswordManagers = newValue } } }
     var recordHEVC: Bool { get { access(keyPath: \.recordHEVC); return Preferences.shared.recordHEVC } set { withMutation(keyPath: \.recordHEVC) { Preferences.shared.recordHEVC = newValue } } }
