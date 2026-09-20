@@ -25,6 +25,8 @@ struct ClipCardView: View, Equatable {
     private static let stubHeight: CGFloat = 96      // caption row + action row below the perforation
     @State private var draftTitle = ""
     @FocusState private var titleFocused: Bool
+    /// For one double-click interval after a click opened the title field, a second click still means "paste".
+    @State private var catchSecondClick = false
 
     private var paperPaint: ImagePaint { onClipboard ? Paint.paperBlue : Paint.paper }
     private var ticket: TicketShape { TicketShape(notchFromBottom: index % 2 == 0 ? Self.stubHeight : nil) }
@@ -94,6 +96,13 @@ struct ClipCardView: View, Equatable {
             }
             .padding(.horizontal, 18).padding(.top, 8).padding(.bottom, 4)
             .overlay(alignment: .bottom) { Rectangle().fill(Color.ink.opacity(0.6)).frame(height: 1).padding(.horizontal, 18) }
+            .overlay {
+                // The field opens on the first click with no wait; if that click turns out to be the first half of a
+                // double-click, the second half lands here and means what a double-click means everywhere: paste.
+                if catchSecondClick {
+                    Color.clear.contentShape(Rectangle()).onTapGesture { catchSecondClick = false; renaming = false; onCopyAndClose() }
+                }
+            }
             .onAppear { draftTitle = item.title ?? ""; titleFocused = true }
             .onChange(of: titleFocused) { _, f in if !f, renaming { renaming = false } }
             // Leaving the box, by any route, is the save. An unchanged draft writes nothing.
@@ -107,8 +116,7 @@ struct ClipCardView: View, Equatable {
                 .padding(.horizontal, 18).padding(.top, 6).padding(.bottom, 2)
                 .overlay(alignment: .bottom) { Rectangle().fill(Color.ink.opacity(0.6)).frame(height: 1).padding(.horizontal, 18) }
                 .contentShape(Rectangle())
-                .onTapGesture(count: 2, perform: onCopyAndClose)      // a double-click is a paste wherever it lands
-                .onTapGesture { renaming = true }
+                .onTapGesture { beginRenameFromClick() }
                 .help("点击重命名".l)
         } else {
             HStack(spacing: 0) {
@@ -119,9 +127,14 @@ struct ClipCardView: View, Equatable {
             .padding(.horizontal, 18).padding(.top, 3).padding(.bottom, 2)
             .overlay(alignment: .bottom) { if selected { Rectangle().fill(Color.ink.opacity(0.6)).frame(height: 1).padding(.horizontal, 18) } }
             .contentShape(Rectangle())
-            .onTapGesture(count: 2, perform: onCopyAndClose)
-            .onTapGesture { if selected { renaming = true } else { onCopy() } }
+            .onTapGesture { if selected { beginRenameFromClick() } else { onCopy() } }
         }
+    }
+
+    private func beginRenameFromClick() {
+        renaming = true
+        catchSecondClick = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + NSEvent.doubleClickInterval) { catchSecondClick = false }
     }
 
     // MARK: Content
