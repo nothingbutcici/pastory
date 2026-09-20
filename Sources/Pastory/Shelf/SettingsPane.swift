@@ -138,12 +138,9 @@ struct SettingsPane: View {
                                    selected: prefs.recordHEVC ? "hevc" : "h264") { prefs.recordHEVC = $0 == "hevc" }
                         }
                         section("位置".l) {
-                            row("「保存到本地」默认打开的文件夹".l) {
-                                HStack(spacing: 8) {
-                                    Text((Preferences.shared.exportDirectory().path as NSString).abbreviatingWithTildeInPath)
-                                        .font(.system(size: 12)).foregroundStyle(Color.inkMuted).lineLimit(1).truncationMode(.middle).frame(maxWidth: 260, alignment: .trailing)
-                                    pill("选择…".l) { chooseFolder() }
-                                }
+                            hintRow("「保存到本地」默认打开的文件夹".l,
+                                    hint: ((prefs.exportDir.isEmpty ? Preferences.shared.exportDirectory().path : prefs.exportDir) as NSString).abbreviatingWithTildeInPath) {      // reads prefs so the line follows a new choice at once
+                                pill("选择…".l) { chooseFolder() }
                             }
                             hintRow("剪贴板内容临时存放位置".l,
                                     hint: "SQLite 数据库".l + " · " + (ClipStore.shared.root.path as NSString).abbreviatingWithTildeInPath + (storeSize.map { " " + $0 } ?? "")) {
