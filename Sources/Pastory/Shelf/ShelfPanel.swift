@@ -471,11 +471,18 @@ final class ShelfModel {
         store.copyToPasteboard(item)
         selectedID = item.id
         pickedByHand = true
-        ShelfPanelController.shared.handBackFocus()
+        // The copy and the highlight are immediate. Only the hand-back of the keyboard waits out a possible second
+        // click, so a double-click still finds the shelf exactly as it was.
+        pendingHandBack?.cancel()
+        let work = DispatchWorkItem { ShelfPanelController.shared.handBackFocus() }
+        pendingHandBack = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + NSEvent.doubleClickInterval, execute: work)
     }
     /// ⏎ / double-click: copy, close, and (with Accessibility) paste into the app you came from.
+    @ObservationIgnored private var pendingHandBack: DispatchWorkItem?
     func copyAndClose(_ item: ClipItem, paste: Bool = true) {
         copy(item)
+        pendingHandBack?.cancel()
         ShelfPanelController.shared.hide()
         if paste { ShelfPanelController.shared.pasteIntoPreviousApp() }
     }

@@ -46,6 +46,7 @@ enum L {
         ("记录密码管理器复制的内容", "Record copies from password managers"),
         ("从 1Password 等「密码管理软件」复制的内容也会进剪贴板。", "Copies from password managers such as 1Password are recorded too."),
         ("从 1Password 等「密码管理软件」复制的内容均不进剪贴板。", "Nothing copied from password managers such as 1Password is recorded."),
+        ("SQLite 数据库", "SQLite database"), ("查看", "Show"),
         ("复制文字", "Copy Text"), ("关闭", "Close"), ("截屏", "Screenshot"), ("录屏", "Record"), ("取消", "Cancel"),
         // Menu bar / app
         ("截图", "Screenshot"), ("剪贴板", "Clipboard"), ("搜索剪贴板", "Search Clipboard"),

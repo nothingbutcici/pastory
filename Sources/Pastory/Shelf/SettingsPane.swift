@@ -145,14 +145,9 @@ struct SettingsPane: View {
                                     pill("选择…".l) { chooseFolder() }
                                 }
                             }
-                            row("剪贴板内容临时存放位置".l) {
-                                HStack(spacing: 8) {
-                                    tag("SQLite", on: false)
-                                    Text((ClipStore.shared.root.appendingPathComponent("pastory.sqlite").path as NSString).abbreviatingWithTildeInPath)
-                                        .font(.system(size: 12)).foregroundStyle(Color.inkMuted).lineLimit(1).truncationMode(.middle).frame(maxWidth: 340, alignment: .trailing)
-                                        .textSelection(.enabled)
-                                    if let storeSize { Text(storeSize).font(.system(size: 12)).foregroundStyle(Color.inkMuted) }
-                                }
+                            hintRow("剪贴板内容临时存放位置".l,
+                                    hint: "SQLite 数据库".l + " · " + (ClipStore.shared.root.path as NSString).abbreviatingWithTildeInPath + (storeSize.map { " " + $0 } ?? "")) {
+                                pill("查看".l) { NSWorkspace.shared.open(ClipStore.shared.root) }
                                 .task {
                                     let root = ClipStore.shared.root, n = ClipStore.shared.items.count
                                     let bytes = await Task.detached { () -> Int64 in

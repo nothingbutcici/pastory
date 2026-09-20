@@ -53,8 +53,9 @@ struct ClipCardView: View, Equatable {
         .offset(y: selected ? -6 : 0)
         .animation(.easeOut(duration: 0.1), value: selected)
         .contentShape(Rectangle())
-        .onTapGesture(count: 2, perform: onCopyAndClose)
-        .onTapGesture(count: 1, perform: onCopy)
+        // One handler for both: with a separate double-tap gesture SwiftUI holds every single click back for the whole
+        // double-click interval. The first click copies at once; if a second follows, it pastes.
+        .onTapGesture { (NSApp.currentEvent?.clickCount ?? 1) >= 2 ? onCopyAndClose() : onCopy() }
     }
 
     // MARK: Header
