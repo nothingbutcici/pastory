@@ -226,6 +226,7 @@ enum SelfTest {
                 panel.cancel(nil)
                 ok = panel.isVisible || waited < 30
             case "annotate": ok = renderAnnotate(out: rest.first ?? "pastory-annotate.png")
+            case "annotationtext": ok = AnnotationTextSelfTest.run(out: rest.first ?? "/tmp/pastory-annotationtext.png", snapshot: snapshot)
             default: print("unknown selftest \(cmd)")
             }
             exit(ok ? 0 : 1)

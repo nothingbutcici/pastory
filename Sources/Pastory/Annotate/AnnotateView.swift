@@ -15,7 +15,7 @@ extension AnnotateDelegate { func annotateMoveRegion(dx: CGFloat, dy: CGFloat) {
 /// The frozen capture with vector annotations on top. Flipped: y grows downward, like the image.
 /// The current tool stays active. Clicking a drawn element selects it instead of drawing:
 /// drag to move, pull a handle to reshape, hit the ✕ bubble or ⌫ to delete, click selected text to edit it.
-final class AnnotateView: NSView, NSTextFieldDelegate {
+final class AnnotateView: NSView, NSTextViewDelegate {
     private(set) var image: CGImage
     private var nsImage: NSImage
     weak var delegate: AnnotateDelegate?
@@ -29,14 +29,15 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
     private var draft: Annotation?
     private(set) var selectedID: UUID? { didSet { needsDisplay = true; window?.invalidateCursorRects(for: self); onStateChange?() } }
 
-    private enum Drag { case move(last: CGPoint), handle(Int), region(lastWindow: CGPoint) }
+    private enum Drag { case move(last: CGPoint), handle(Int, original: Annotation, offset: CGPoint), region(lastWindow: CGPoint) }
     private var drag: Drag?
     private var moved = false
     /// Set when a click lands on already-selected text; becomes an edit if the mouse does not move.
     private var pendingEdit: UUID?
 
-    private var editor: NSTextField?
+    private var editor: AnnotationTextView?
     private var editorAnchor: CGPoint = .zero
+    private var editorBoxSize: CGSize = .zero
     private var editingID: UUID?
 
     init(frame: CGRect, image: CGImage) {
@@ -53,12 +54,24 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
         let c: NSCursor = tool == nil ? .arrow : (tool == .text ? .iBeam : .crosshair)
         addCursorRect(bounds, cursor: c)
         // Selection chrome gets the pointer: the delete button and the handles are buttons, not canvas.
-        if let a = selected {
+        if let a = editingAnnotation ?? selected {
             addCursorRect(AnnotationRenderer.deleteRect(a).insetBy(dx: -2, dy: -2), cursor: .pointingHand)
-            for h in a.handles {
-                addCursorRect(CGRect(x: h.x - 8, y: h.y - 8, width: 16, height: 16), cursor: .arrow)
+            for (i, h) in AnnotationRenderer.selectionHandles(a).enumerated() {
+                let cursor: NSCursor = a.tool == .text && i >= 4 ? (i < 6 ? .resizeLeftRight : .resizeUpDown) : .arrow
+                addCursorRect(CGRect(x: h.x - 8, y: h.y - 8, width: 16, height: 16), cursor: cursor)
             }
         }
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        // The editor fills its box, but its resize handles still belong to the canvas.
+        let p = convert(point, from: superview)
+        if let a = editingAnnotation,
+           AnnotationRenderer.selectionHandles(a).contains(where: { hypot(p.x - $0.x, p.y - $0.y) <= AnnotationRenderer.handleRadius + 4 })
+            || AnnotationRenderer.deleteRect(a).contains(p) {
+            return self
+        }
+        return super.hitTest(point)
     }
 
     var canUndo: Bool { !annotations.isEmpty }
@@ -99,6 +112,7 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
 
     /// Region resized: new crop, new frame; annotations stay put on screen.
     func replaceImage(_ img: CGImage, frame newFrame: CGRect) {
+        commitTextEditor()
         let d = CGPoint(x: frame.minX - newFrame.minX, y: newFrame.maxY - frame.maxY)   // view is flipped: y from the top edge
         for i in annotations.indices { annotations[i].translate(d) }
         image = img
@@ -121,7 +135,7 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
         let ppp = CGFloat(image.width) / bounds.width
         for a in annotations where a.id != editingID { AnnotationRenderer.draw(a, in: ctx, source: image, pixelsPerPoint: ppp) }
         if let draft { AnnotationRenderer.draw(draft, in: ctx, source: image, pixelsPerPoint: ppp) }
-        if let i = selectedIndex, editingID == nil { AnnotationRenderer.drawSelection(annotations[i], in: ctx) }
+        if let a = editingAnnotation ?? selected { AnnotationRenderer.drawSelection(a, in: ctx) }
     }
 
     // MARK: Mouse
@@ -138,8 +152,8 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
             let a = annotations[i]
             let c = AnnotationRenderer.deleteCenter(a)
             if hypot(p.x - c.x, p.y - c.y) <= AnnotationRenderer.deleteRadius + 2 { deleteSelected(); return }
-            if let h = a.handles.firstIndex(where: { hypot(p.x - $0.x, p.y - $0.y) <= AnnotationRenderer.handleRadius + 4 }) {
-                drag = .handle(h)
+            if let h = AnnotationRenderer.selectionHandles(a).firstIndex(where: { hypot(p.x - $0.x, p.y - $0.y) <= AnnotationRenderer.handleRadius + 4 }) {
+                drag = .handle(h, original: a, offset: CGPoint(x: p.x - a.handles[h].x, y: p.y - a.handles[h].y))
                 return
             }
         }
@@ -186,8 +200,11 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
         case .move(let last):
             annotations[i].translate(CGPoint(x: p.x - last.x, y: p.y - last.y))
             self.drag = .move(last: p)
-        case .handle(let h):
-            annotations[i].setHandle(h, to: p)
+        case .handle(let h, let original, let offset):
+            // Reflow can change the height; always resize from the mouse-down geometry.
+            var resized = original
+            resized.setHandle(h, to: CGPoint(x: p.x - offset.x, y: p.y - offset.y))
+            annotations[i] = resized
         case .region:
             break
         }
@@ -241,72 +258,90 @@ final class AnnotateView: NSView, NSTextFieldDelegate {
     }
 
     private func beginTextEditor(at p: CGPoint, text: String, replacing: UUID?) {
-        let font = HandFont.font(size: size.fontSize)
-        let tf = NSTextField(frame: CGRect(x: p.x - 2, y: p.y - 2, width: max(160, bounds.width - p.x + 2), height: font.pointSize * 1.5))
-        tf.font = font
-        tf.textColor = color
-        tf.stringValue = text
-        tf.isBordered = false
-        tf.drawsBackground = false
-        tf.focusRingType = .none
-        tf.placeholderAttributedString = NSAttributedString(string: "输入文字".l, attributes: [.font: font, .foregroundColor: color.withAlphaComponent(0.35)])
-        tf.delegate = self
-        tf.target = self
-        tf.action = #selector(editorReturn)
-        addSubview(tf)
-        editor = tf
+        let existing = replacing.flatMap { id in annotations.first { $0.id == id } }
+        editorBoxSize = existing?.bounds.size ?? CGSize(width: max(32, min(320, bounds.width - p.x)), height: 0)
+        let tv = AnnotationTextView(frame: CGRect(origin: p, size: editorBoxSize))
+        tv.isRichText = false
+        tv.importsGraphics = false
+        tv.allowsUndo = true
+        tv.drawsBackground = false
+        tv.textContainerInset = .zero
+        tv.isHorizontallyResizable = false
+        tv.isVerticallyResizable = false
+        tv.textContainer?.lineFragmentPadding = 0
+        tv.textContainer?.widthTracksTextView = true
+        tv.textContainer?.heightTracksTextView = false
+        tv.textContainer?.containerSize = CGSize(width: editorBoxSize.width, height: .greatestFiniteMagnitude)
+        tv.string = text
+        tv.delegate = self
+        addSubview(tv)
+        editor = tv
         editorAnchor = p
         editingID = replacing
-        window?.makeFirstResponder(tf)
-        if let fe = tf.currentEditor() as? NSTextView {
-            fe.insertionPointColor = color
-            fe.selectedRange = NSRange(location: text.count, length: 0)
-        }
+        restyleEditor()
+        window?.makeFirstResponder(tv)
+        tv.setSelectedRange(NSRange(location: text.utf16.count, length: 0))
     }
 
-    @objc private func editorReturn() { commitTextEditor() }
+    private var editingAnnotation: Annotation? {
+        guard let tv = editor else { return nil }
+        return Annotation(tool: .text, color: color, size: size, points: [editorAnchor], text: tv.string, textBoxSize: editorBoxSize)
+    }
 
-    /// Colour / size picked while a text box is open: restyle the box live, including the field editor
-    /// (which keeps its own attributes) and any text already typed into it.
+    private func layoutEditor() {
+        guard let tv = editor, let a = editingAnnotation else { return }
+        tv.frame = a.bounds
+        tv.needsDisplay = true
+        needsDisplay = true
+        window?.invalidateCursorRects(for: self)
+    }
+
+    func textDidChange(_ notification: Notification) { layoutEditor() }
+
+    /// Colour / size picked while a text box is open: keep the editor and export in sync.
     private func restyleEditor() {
-        guard let tf = editor else { return }
-        let font = HandFont.font(size: size.fontSize)
-        tf.font = font
-        tf.textColor = color
-        tf.frame.size.height = font.pointSize * 1.5
-        if let fe = tf.currentEditor() as? NSTextView {
-            fe.font = font
-            fe.textColor = color
-            fe.insertionPointColor = color
-            let all = NSRange(location: 0, length: fe.string.utf16.count)
-            fe.textStorage?.addAttributes([.foregroundColor: color, .font: font], range: all)
-            fe.typingAttributes = [.foregroundColor: color, .font: font]
-        }
+        guard let tv = editor, let a = editingAnnotation else { return }
+        tv.font = HandFont.font(size: size.fontSize)
+        tv.textColor = color
+        tv.insertionPointColor = color
+        tv.defaultParagraphStyle = a.textAttributes[.paragraphStyle] as? NSParagraphStyle
+        tv.textStorage?.setAttributes(a.textAttributes, range: NSRange(location: 0, length: tv.string.utf16.count))
+        tv.typingAttributes = a.textAttributes
+        layoutEditor()
     }
 
     func commitTextEditor() {
-        guard let tf = editor else { return }
+        guard let tv = editor else { return }
         editor = nil
-        let text = tf.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        tf.removeFromSuperview()
+        let text = tv.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "" : tv.string
+        tv.removeFromSuperview()
         window?.makeFirstResponder(self)
         let replacing = editingID
         editingID = nil
         if let replacing, let i = annotations.firstIndex(where: { $0.id == replacing }) {
-            if text.isEmpty { annotations.remove(at: i); selectedID = nil } else { annotations[i].text = text; annotations[i].points = [editorAnchor] }
+            if text.isEmpty { annotations.remove(at: i); selectedID = nil } else {
+                annotations[i].text = text
+                annotations[i].points = [editorAnchor]
+                annotations[i].textBoxSize = editorBoxSize
+            }
             needsDisplay = true
             return
         }
         if !text.isEmpty {
-            let a = Annotation(tool: .text, color: color, size: size, points: [editorAnchor], text: text)
+            let a = Annotation(tool: .text, color: color, size: size, points: [editorAnchor], text: text, textBoxSize: editorBoxSize)
             annotations.append(a)
             selectedID = a.id
         }
     }
 
-    func control(_ control: NSControl, textView: NSTextView, doCommandBy sel: Selector) -> Bool {
+    func textView(_ textView: NSTextView, doCommandBy sel: Selector) -> Bool {
+        if textView.hasMarkedText() { return false }
+        if sel == #selector(NSResponder.insertNewline(_:)) {
+            commitTextEditor()
+            return true
+        }
         if sel == #selector(NSResponder.cancelOperation(_:)) {
-            editor?.stringValue = ""
+            editor?.string = ""
             editingID = nil
             commitTextEditor()
             return true

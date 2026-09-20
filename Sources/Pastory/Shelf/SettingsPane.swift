@@ -122,7 +122,7 @@ struct SettingsPane: View {
                                                                        : "从 1Password 等「密码管理软件」复制的内容均不进剪贴板。".l) {
                                 PaperToggle(isOn: $prefs.recordPasswordManagers)
                             }
-                            row("双击直接粘贴到刚才的应用".l) {
+                            row("双击或回车直接粘贴到刚才的应用".l) {
                                 HStack(spacing: 8) {
                                     if prefs.pasteOnDoubleClick {
                                         tag(hasAX ? "辅助功能已授权".l : "需要辅助功能权限".l, on: hasAX)
