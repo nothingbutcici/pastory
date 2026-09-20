@@ -51,7 +51,7 @@ enum AnnotationRenderer {
             ctx.strokePath()
         case .text:
             guard let p = a.points.first, !a.text.isEmpty else { return }
-            (a.text as NSString).draw(at: p, withAttributes: a.textAttributes)
+            a.textLayout.draw(at: p)
         case .mosaic:
             pixelate(a.rect, block: a.size.mosaicBlock, source: source, pixelsPerPoint: pixelsPerPoint, in: ctx)
         }
@@ -166,10 +166,19 @@ enum AnnotationRenderer {
     static let handleRadius: CGFloat = 4.5
     static let deleteRadius: CGFloat = 10
 
+    /// Text grips sit on the outline, clear of the glyphs, while model handles describe the text box itself.
+    static func selectionHandles(_ a: Annotation) -> [CGPoint] {
+        guard a.tool == .text else { return a.handles }
+        let r = a.bounds.insetBy(dx: -8, dy: -8)
+        return [CGPoint(x: r.minX, y: r.minY), CGPoint(x: r.maxX, y: r.minY), CGPoint(x: r.minX, y: r.maxY), CGPoint(x: r.maxX, y: r.maxY),
+                CGPoint(x: r.minX, y: r.midY), CGPoint(x: r.maxX, y: r.midY), CGPoint(x: r.midX, y: r.minY), CGPoint(x: r.midX, y: r.maxY)]
+    }
+
     /// Where the delete button sits for a selected annotation: just outside its top-right corner.
     static func deleteCenter(_ a: Annotation) -> CGPoint {
         let r = a.bounds.insetBy(dx: -8, dy: -8)
-        return CGPoint(x: r.maxX + 6, y: r.minY - 6)
+        let offset: CGFloat = a.tool == .text ? 16 : 6
+        return CGPoint(x: r.maxX + offset, y: r.minY - offset)
     }
     static func deleteRect(_ a: Annotation) -> CGRect {
         let c = deleteCenter(a)
@@ -182,29 +191,54 @@ enum AnnotationRenderer {
         ctx.setStrokeColor(Theme.paperBlueDeep.cgColor)
         ctx.setLineWidth(1)
         if a.tool != .arrow && a.tool != .line {
-            ctx.setLineDash(phase: 0, lengths: [4, 3])
+            if a.tool != .text { ctx.setLineDash(phase: 0, lengths: [4, 3]) }
             ctx.stroke(a.bounds.insetBy(dx: -8, dy: -8))
             ctx.setLineDash(phase: 0, lengths: [])
         }
-        ctx.setFillColor(Theme.paper.cgColor)
-        ctx.setStrokeColor(Theme.ink.cgColor)
-        ctx.setLineWidth(1.2)
-        for p in a.handles {
-            let d = CGRect(x: p.x - handleRadius, y: p.y - handleRadius, width: 2 * handleRadius, height: 2 * handleRadius)
-            ctx.fillEllipse(in: d)
-            ctx.strokeEllipse(in: d)
+        if a.tool == .text {
+            // Corners and edge grips continue the outline itself, with no separate button shapes.
+            ctx.setLineWidth(2)
+            ctx.setLineCap(.square)
+            for (i, p) in selectionHandles(a).enumerated() {
+                let length: CGFloat = 6
+                if i < 4 {
+                    let dx: CGFloat = i % 2 == 0 ? length : -length
+                    let dy: CGFloat = i < 2 ? length : -length
+                    ctx.move(to: CGPoint(x: p.x + dx, y: p.y))
+                    ctx.addLine(to: p)
+                    ctx.addLine(to: CGPoint(x: p.x, y: p.y + dy))
+                } else if i < 6 {
+                    ctx.move(to: CGPoint(x: p.x, y: p.y - length))
+                    ctx.addLine(to: CGPoint(x: p.x, y: p.y + length))
+                } else {
+                    ctx.move(to: CGPoint(x: p.x - length, y: p.y))
+                    ctx.addLine(to: CGPoint(x: p.x + length, y: p.y))
+                }
+            }
+            ctx.strokePath()
+        } else {
+            ctx.setFillColor(Theme.paper.cgColor)
+            ctx.setStrokeColor(Theme.ink.cgColor)
+            ctx.setLineWidth(1.2)
+            for p in a.handles {
+                let d = CGRect(x: p.x - handleRadius, y: p.y - handleRadius, width: 2 * handleRadius, height: 2 * handleRadius)
+                ctx.fillEllipse(in: d)
+                ctx.strokeEllipse(in: d)
+            }
         }
-        // Delete button: paper disc, ink ×, soft shadow.
+        // Text uses a plain × in the outline color; shapes retain their paper delete button.
         let c = deleteCenter(a)
         let d = deleteRect(a)
-        ctx.saveGState()
-        ctx.setShadow(offset: CGSize(width: 0, height: 1), blur: 3, color: NSColor(calibratedWhite: 0, alpha: 0.3).cgColor)
-        ctx.setFillColor(Theme.paper.cgColor)
-        ctx.fillEllipse(in: d)
-        ctx.restoreGState()
-        ctx.setStrokeColor(Theme.ink.cgColor)
-        ctx.setLineWidth(1)
-        ctx.strokeEllipse(in: d.insetBy(dx: 0.5, dy: 0.5))
+        if a.tool != .text {
+            ctx.saveGState()
+            ctx.setShadow(offset: CGSize(width: 0, height: 1), blur: 3, color: NSColor(calibratedWhite: 0, alpha: 0.3).cgColor)
+            ctx.setFillColor(Theme.paper.cgColor)
+            ctx.fillEllipse(in: d)
+            ctx.restoreGState()
+            ctx.setStrokeColor(Theme.ink.cgColor)
+            ctx.setLineWidth(1)
+            ctx.strokeEllipse(in: d.insetBy(dx: 0.5, dy: 0.5))
+        }
         ctx.setLineWidth(1.8)
         ctx.setLineCap(.round)
         let k: CGFloat = 3.4

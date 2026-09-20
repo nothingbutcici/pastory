@@ -92,7 +92,7 @@ enum L {
         ("未 Pin 内容保留时间", "Keep unpinned items for"), ("1 天", "1 day"), ("3 天", "3 days"), ("7 天", "7 days"), ("30 天", "30 days"),
         ("一年", "1 year"), ("永不删除", "Forever"), ("当日清理时间", "Cleanup time"),
         ("本地数据库截图存储方式", "How screenshots are stored locally"), ("高质量有损压缩，体积约为 PNG 的三分之一", "High-quality lossy; about a third the size of PNG"), ("无损，体积最大", "Lossless; largest files"),
-        ("双击直接粘贴到刚才的应用", "Double-click pastes into the app you came from"), ("清理", "Cleanup"), ("截图与录屏", "Screenshots & Recording"), ("需要辅助功能权限", "Needs Accessibility"), ("辅助功能已授权", "Accessibility granted"), ("去授权", "Grant…"),
+        ("双击或回车直接粘贴到刚才的应用", "Double-click or Return pastes into the previous app"), ("清理", "Cleanup"), ("截图与录屏", "Screenshots & Recording"), ("需要辅助功能权限", "Needs Accessibility"), ("辅助功能已授权", "Accessibility granted"), ("去授权", "Grant…"),
         ("这条是 Pin 住的，确定删除？", "This one is pinned. Delete it?"), ("Pin 住的内容不会被自动清理，只有这样手动删除才会消失，而且不能恢复。", "Pinned items are never cleaned up automatically; deleting by hand is the only way they go, and it cannot be undone."),
         ("版本更新", "Updates"), ("当前版本 %@", "Current version %@"), ("检查中…", "Checking…"), ("已是最新版本", "Up to date"), ("有新版本 %@", "New version %@"), ("检查失败：%@", "Check failed: %@"),
         ("每天自动检查一次（app 唯一的联网请求，不带任何标识）", "Check once a day (the app's only network request; carries no identifier)"), ("手动检查更新", "Check Now"), ("检查更新…", "Check for Updates…"),

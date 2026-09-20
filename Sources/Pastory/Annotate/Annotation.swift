@@ -55,6 +55,8 @@ struct Annotation: Identifiable {
     /// rect / ellipse / arrow / line / mosaic: [start, end]. pen: the whole path. text: [anchor].
     var points: [CGPoint]
     var text: String = ""
+    /// User-sized text box. Height grows as needed so wrapping never hides any text.
+    var textBoxSize: CGSize?
     /// Fixes the hand-drawn jitter so redraws and the export look identical.
     var seed: UInt64 = .random(in: 1...UInt64.max)
 
@@ -64,7 +66,17 @@ struct Annotation: Identifiable {
     }
 
     var textAttributes: [NSAttributedString.Key: Any] {
-        [.font: HandFont.font(size: size.fontSize), .foregroundColor: color]
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineBreakMode = .byWordWrapping
+        return [.font: HandFont.font(size: size.fontSize), .foregroundColor: color, .paragraphStyle: paragraph]
+    }
+
+    var textLayout: AnnotationTextLayout {
+        AnnotationTextLayout(text: text.isEmpty ? " " : text, attributes: textAttributes, width: textWidth)
+    }
+
+    private var textWidth: CGFloat {
+        max(32, textBoxSize?.width ?? ceil((text as NSString).size(withAttributes: textAttributes).width))
     }
 
     /// Bounding box in canvas points, used for selection and hit testing.
@@ -77,8 +89,7 @@ struct Annotation: Identifiable {
             return r
         case .text:
             guard let p = points.first else { return .zero }
-            let s = (text as NSString).size(withAttributes: textAttributes)
-            return CGRect(origin: p, size: s)
+            return CGRect(origin: p, size: CGSize(width: textWidth, height: max(textBoxSize?.height ?? 0, textLayout.height)))
         default:
             return rect
         }
@@ -113,7 +124,7 @@ struct Annotation: Identifiable {
         }
     }
 
-    /// Draggable control points: both ends for lines, four corners for boxes, none for pen/text.
+    /// Endpoints for lines, corners for boxes, corners and edge midpoints for text.
     var handles: [CGPoint] {
         switch tool {
         case .arrow, .line:
@@ -122,7 +133,11 @@ struct Annotation: Identifiable {
         case .rect, .ellipse, .mosaic:
             let r = rect
             return [CGPoint(x: r.minX, y: r.minY), CGPoint(x: r.maxX, y: r.minY), CGPoint(x: r.minX, y: r.maxY), CGPoint(x: r.maxX, y: r.maxY)]
-        case .pen, .text:
+        case .text:
+            let r = bounds
+            return [CGPoint(x: r.minX, y: r.minY), CGPoint(x: r.maxX, y: r.minY), CGPoint(x: r.minX, y: r.maxY), CGPoint(x: r.maxX, y: r.maxY),
+                    CGPoint(x: r.minX, y: r.midY), CGPoint(x: r.maxX, y: r.midY), CGPoint(x: r.midX, y: r.minY), CGPoint(x: r.midX, y: r.maxY)]
+        case .pen:
             return []
         }
     }
@@ -137,6 +152,17 @@ struct Annotation: Identifiable {
             guard h.count == 4 else { return }
             let opposite = h[3 - i]
             points = [opposite, p]
+        case .text:
+            guard (0..<8).contains(i) else { return }
+            let r = bounds
+            var left = r.minX, right = r.maxX, top = r.minY, bottom = r.maxY
+            if [0, 2, 4].contains(i) { left = min(p.x, right - 32) }
+            if [1, 3, 5].contains(i) { right = max(p.x, left + 32) }
+            let minHeight = AnnotationTextLayout(text: text.isEmpty ? " " : text, attributes: textAttributes, width: right - left).height
+            if [0, 1, 6].contains(i) { top = min(p.y, bottom - minHeight) }
+            if [2, 3, 7].contains(i) { bottom = max(p.y, top + minHeight) }
+            points = [CGPoint(x: left, y: top)]
+            textBoxSize = CGSize(width: right - left, height: max(minHeight, bottom - top))
         default:
             break
         }

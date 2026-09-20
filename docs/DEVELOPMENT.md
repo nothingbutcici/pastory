@@ -70,6 +70,7 @@ PASTORY_STORE=$S "$BIN" --selftest editors <out.png>     # 文本 / 图片编辑
 PASTORY_STORE=$S "$BIN" --selftest ocrpanel <out.png>    # 识别文字面板
 PASTORY_STORE=$S "$BIN" --selftest updatewin <out.png>   # 更新进度窗
 PASTORY_STORE=$S "$BIN" --selftest annotate <out.png>    # 标注画布 + 工具条，另存 <out>.flat.png 为合成结果
+PASTORY_STORE=$S "$BIN" --selftest annotationtext <out.png> # 文字框缩放、换行、输入法和编辑/导出排版
 PASTORY_STORE=$S "$BIN" --selftest preview <out.png>     # 录屏预览窗
 PASTORY_STORE=$S "$BIN" --selftest retention | tombstone | heic | ingest | writer | gif | ocr | updater | l10n
 PASTORY_STORE=$S "$BIN" --selftest import <db>           # 用一个外来 SQLite 验证导入
@@ -86,14 +87,15 @@ PASTORY_LANG=en …                                        # 任何渲染类自�
 ## 行为约定
 
 - **快捷键**：默认 ⌥⌘S 截图、⇧⌘V 面板、⌥⌘F 搜索，都可改。录制时当场试注册：被其他应用占用或和自己的另一个重复就拒绝；没有修饰键的单键拒绝；只有 ⌘ / ⇧ 加单键允许但提示会覆盖所有应用。
-- **面板键盘**：⏎ 复制并收起（不粘贴）；双击 = 复制、收起并粘贴到刚才的应用；← → ↑ ↓ 选；空格 Quick Look；⌘P Pin；⌘S 保存到本地；⌫ 删除（Pin 项确认）；⌘F 搜索；直接打字即搜索；⎋ 依次关闭重命名框 / 返回 / 清空搜索 / 收起。设置页打开时只认 ⎋ 和 ⌘F。
-- **合成按键只走会话层**：双击粘贴的 ⌘V 通过 `CGEvent` 发到 `.cgSessionEventTap`，发送前等用户的修饰键全部松开，发送期间屏蔽本地键盘事件。**绝不发到 `.cghidEventTap`**：那一层参与系统对物理键盘的记账，曾让 Command 键整机卡住直到重启。
+- **面板键盘**：⏎ / 双击 = 复制、收起并粘贴到刚才的应用；← → ↑ ↓ 选；空格 Quick Look；⌘P Pin；⌘S 保存到本地；⌫ 删除（Pin 项确认）；⌘F 搜索；直接打字即搜索；⎋ 依次关闭重命名框 / 返回 / 清空搜索 / 收起。设置页打开时只认 ⎋ 和 ⌘F。
+- **合成按键只走会话层**：双击 / 回车粘贴的 ⌘V 通过 `CGEvent` 发到 `.cgSessionEventTap`，发送前等用户的修饰键全部松开，发送期间屏蔽本地键盘事件。**绝不发到 `.cghidEventTap`**：那一层参与系统对物理键盘的记账，曾让 Command 键整机卡住直到重启。
 - **截图流程**：按键瞬间先把鼠标所在屏幕冻结成图，再弹选择层；选择层是 `.nonactivatingPanel`、`CGShieldingWindowLevel()`，框选期间不做 key window（否则前台应用的菜单 / 下拉会收起），键盘靠无修饰键的 Carbon 热键（⎋ 空格 F ⏎），截到图、标注器出现后才 `makeKey` 并解绑热键。截图中再按截图键 = 重新框选；打开着的识别文字面板降到普通层级留在原地，可以被截。取图像素比以 `NSScreen.backingScaleFactor` 为准。
+- **文字标注**：点击输入，⏎ 结束编辑，⇧⏎ 手动换行；文字框的四角和四边都可拖动，宽度变化时保留字号并自动换行，高度至少容纳完整内容。编辑与导出共用 TextKit 排版，重新编辑保留框尺寸。
 - **外部截图工具的图**：位图 + 一个图片文件 URL 同时上剪贴板（微信 / 飞书 / CleanShot 的做法），或只有一个临时目录里的图片文件，都按图片入库；Finder 复制文件（无位图）是文件条目。规则在 `ClipboardMonitor.ingest`，`--selftest ingest` 覆盖。
 - **录屏**：SCStream 帧直接进 `AVAssetWriter`，30 fps，原生像素，平均码率每像素每帧 H.264 0.1 / HEVC 0.065 bit，夹在 3–30 Mbps；停止时把最后一帧再补一次。上限 10 分钟。GIF 预算按时长阶梯（≤10 s 6 MB、≤30 s 10 MB、≤60 s 15 MB、更长 20 MB），从长边 1280、10 fps 起步，先降帧率再缩尺寸。录屏启动窗口期点「丢弃」也必须停掉采集流。
 - **导入**（`Clipboard/Importer.swift`）：永远在临时副本上读；Pastory 库按 schema 精确导，Paste（wiheads）有专门读法，其他 SQLite 按启发式；目录扫描按文件头识别、最多三层、超过 6 个库或过宽目录（家目录、Library 等）直接拒绝；id / ext 含 `/` 或 `..` 的行跳过。导入的一批整体排在自己记录之后；保留期不是「永不删除」时只给「导入并改为永不删除」。
 - **双语**（`App/Localization.swift`）：一张 `(中文, English)` 对表，键就是代码里的中文字面量，`"…".l`，带上下文的键写成 `tab|图片` 并用 `"图片".l("tab")`。新增文案 = 写中文字面量 + `.l` + 表里加一行。`--selftest l10n` 守重复键（重复键会让英文环境启动即崩）。中文用「」和全角标点，英文用 ASCII 标点。`ClipStore.importSourceName`（"导入"）是存库标记，永不翻译，显示走「已导入」。
-- **权限**：屏幕录制在第一次截图时请求（不在启动时）；系统弹窗每次启动最多一次，之后被拒时弹自家提示，第一个按钮是「重新启动 Pastory」（授权只对新进程生效）。辅助功能只用于双击粘贴，缺失时退化为只复制并收起。从终端直接启动的 Pastory 权限会记在终端名下，正式使用要从 Finder / 启动台打开。
+- **权限**：屏幕录制在第一次截图时请求（不在启动时）；系统弹窗每次启动最多一次，之后被拒时弹自家提示，第一个按钮是「重新启动 Pastory」（授权只对新进程生效）。辅助功能只用于双击 / 回车粘贴，缺失时退化为只复制并收起。从终端直接启动的 Pastory 权限会记在终端名下，正式使用要从 Finder / 启动台打开。
 - **性能**：面板启动时预建；缩略图后台解码、缓存超 100 张淘汰最老的三分之一；搜索用按条目缓存的小写全文；设置页的权限徽标 1 秒轮询。
 
 ## 视觉
