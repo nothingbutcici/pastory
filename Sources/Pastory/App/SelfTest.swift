@@ -15,7 +15,7 @@ enum SelfTest {
         let cmd = args[i + 1]
         let rest = Array(args[(i + 2)...])
         // Anything that writes to a store must run inside PASTORY_STORE. Never against the user's data.
-        let mutating: Set<String> = ["clipboard", "retention", "shelf", "settings", "editors", "import", "ingest", "tombstone", "heic", "pbfiles", "welcome"]
+        let mutating: Set<String> = ["clipboard", "retention", "shelf", "shelfsearch", "search", "settings", "editors", "import", "ingest", "tombstone", "heic", "pbfiles", "welcome"]
         if mutating.contains(cmd) {
             let env = Sandbox.store ?? ""
             // Nothing under Application Support counts as a sandbox, whatever the folder is called.
@@ -33,6 +33,8 @@ enum SelfTest {
             case "ocr": ok = ocr(path: rest.first)
             case "clipboard": ok = await clipboard(seconds: Int(rest.first ?? "10") ?? 10)
             case "shelf": ok = await renderShelf(out: rest.first ?? "pastory-shelf.png")
+            case "shelfsearch": ok = await renderShelf(out: rest.first ?? "/tmp/pastory-search.png", searching: true)
+            case "search": ok = await SearchSelfTest.run()
             case "settings":
                 await seedStore()
                 let model = ShelfPanelController.shared.model
@@ -477,10 +479,11 @@ enum SelfTest {
     }
 
     @MainActor
-    private static func renderShelf(out: String) async -> Bool {
+    private static func renderShelf(out: String, searching: Bool = false) async -> Bool {
         await seedStore()
         let model = ShelfPanelController.shared.model
         model.reset()
+        if searching { model.showWelcome = false; model.query = "Pastory" }
         // Thumbnails decode in the background; give them a moment so the render shows pictures, not placeholders.
         let store = ClipStore.shared
         let pictures = store.items.filter { $0.kind == .image || $0.kind == .video }

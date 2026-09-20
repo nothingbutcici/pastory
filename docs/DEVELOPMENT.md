@@ -65,6 +65,8 @@ docs/                本文件、README 用图
 BIN="./build/Pastory.app/Contents/MacOS/Pastory"
 S=/tmp/pastory-test      # 任何会写库的自测都必须指到一个临时目录
 PASTORY_STORE=$S "$BIN" --selftest shelf <out.png>       # 离屏渲染剪贴板面板（含样例）
+PASTORY_STORE=$S "$BIN" --selftest shelfsearch <out.png> # 搜索等待态
+PASTORY_STORE=$S "$BIN" --selftest search                # 全文匹配、缓存失效、取消旧查询和选择状态
 PASTORY_STORE=$S "$BIN" --selftest settings <out.png>    # 设置页
 PASTORY_STORE=$S "$BIN" --selftest editors <out.png>     # 文本 / 图片编辑窗
 PASTORY_STORE=$S "$BIN" --selftest ocrpanel <out.png>    # 识别文字面板
@@ -94,7 +96,7 @@ PASTORY_LANG=en …                                        # 任何渲染类自�
 - **导入**（`Clipboard/Importer.swift`）：永远在临时副本上读；Pastory 库按 schema 精确导，Paste（wiheads）有专门读法，其他 SQLite 按启发式；目录扫描按文件头识别、最多三层、超过 6 个库或过宽目录（家目录、Library 等）直接拒绝；id / ext 含 `/` 或 `..` 的行跳过。导入的一批整体排在自己记录之后；保留期不是「永不删除」时只给「导入并改为永不删除」。
 - **双语**（`App/Localization.swift`）：一张 `(中文, English)` 对表，键就是代码里的中文字面量，`"…".l`，带上下文的键写成 `tab|图片` 并用 `"图片".l("tab")`。新增文案 = 写中文字面量 + `.l` + 表里加一行。`--selftest l10n` 守重复键（重复键会让英文环境启动即崩）。中文用「」和全角标点，英文用 ASCII 标点。`ClipStore.importSourceName`（"导入"）是存库标记，永不翻译，显示走「已导入」。
 - **权限**：屏幕录制在第一次截图时请求（不在启动时）；系统弹窗每次启动最多一次，之后被拒时弹自家提示，第一个按钮是「重新启动 Pastory」（授权只对新进程生效）。辅助功能只用于双击粘贴，缺失时退化为只复制并收起。从终端直接启动的 Pastory 权限会记在终端名下，正式使用要从 Finder / 启动台打开。
-- **性能**：面板启动时预建；缩略图后台解码、缓存超 100 张淘汰最老的三分之一；搜索用按条目缓存的小写全文；设置页的权限徽标 1 秒轮询。
+- **性能**：面板启动时预建；缩略图后台解码、缓存超 100 张淘汰最老的三分之一；全文读取、归一化和匹配在 `ClipSearchIndex` actor 中执行，空查询后台预热，输入防抖 80 ms 并取消旧查询。缓存按内容哈希与可搜索元数据失效，Pin / 复制不重读正文；快速字面量预筛后仍用 `String.contains` 保留 Unicode 字符边界。界面只读结果快照，查询或数据版本不匹配时不允许粘贴旧结果，筛选列表和计数按版本缓存；设置页的权限徽标 1 秒轮询。
 
 ## 视觉
 
