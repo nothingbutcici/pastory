@@ -61,6 +61,7 @@ struct ShelfView: View {
             }
         }
         .onChange(of: model.openTick) { _, _ in searchFocused = false }
+        .task(id: model.searchRequest) { await model.updateSearch() }
     }
 
     // MARK: Sidebar
@@ -206,9 +207,13 @@ struct ShelfView: View {
     private var empty: some View {
         VStack(spacing: 10) {
             Spacer()
-            Image(systemName: model.query.isEmpty ? "clipboard" : "magnifyingglass")
-                .font(.system(size: 34, weight: .light)).foregroundStyle(Color.onBrownMuted.opacity(0.7))
-            Text(model.query.isEmpty
+            if model.isSearching {
+                ProgressView().controlSize(.small)
+            } else {
+                Image(systemName: model.query.isEmpty ? "clipboard" : "magnifyingglass")
+                    .font(.system(size: 34, weight: .light)).foregroundStyle(Color.onBrownMuted.opacity(0.7))
+            }
+            Text(model.isSearching ? "正在搜索…".l : model.query.isEmpty
                  ? String(format: "还没有内容。复制点什么，或者按 %@ 截个图。".l, Preferences.shared.shortcut(Preferences.Key.hotkeyCapture).display)
                  : "没有匹配的内容".l)
                 .font(.serif(15)).foregroundStyle(Color.onBrownMuted)

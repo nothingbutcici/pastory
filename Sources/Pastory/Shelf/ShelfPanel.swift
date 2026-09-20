@@ -57,6 +57,7 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
         panel = p
         p.setFrame(CGRect(x: 0, y: 0, width: 1200, height: 480), display: false)
         p.contentView?.layoutSubtreeIfNeeded()
+        model.prewarmSearch()
     }
 
     func show() {
@@ -285,6 +286,12 @@ enum ShelfFilter: String, CaseIterable, Identifiable {
 @MainActor
 @Observable
 final class ShelfModel {
+    private let store: ClipStore
+    @ObservationIgnored private let searchIndex = ClipSearchIndex()
+    @ObservationIgnored private var initialWarmup: Task<Void, Never>?
+
+    init(store: ClipStore? = nil) { self.store = store ?? .shared }
+
     var query = ""
     var showSettings = false
     /// First launch until 「开始使用」 is pressed; the welcome card leads the row.
@@ -304,7 +311,7 @@ final class ShelfModel {
     var prefsTick = 0
     /// Card whose title is being edited inline.
     var renamingID: String?
-    var filter: ShelfFilter = .all
+    var filter: ShelfFilter = .all { didSet { selectAvailableItem() } }
     var selectedID: String? {
         didSet {
             if QLPreviewPanel.sharedPreviewPanelExists() { ShelfPanelController.shared.quickLookSelectionChanged() }
@@ -320,12 +327,15 @@ final class ShelfModel {
     var openTick = 0
     /// Card order is frozen while the shelf is open, so copying (which bumps the item in the store)
     /// does not make cards jump around. Rebuilt on every show.
-    private var orderSnapshot: [String: Int] = [:]
+    @ObservationIgnored private var orderSnapshot: [String: Int] = [:]
+    @ObservationIgnored private var countCache: (version: Int, counts: [ShelfFilter: Int])?
 
     /// Totals per filter (ignoring the search box), for the pills — one pass over the store, not five.
     var counts: [ShelfFilter: Int] {
+        let version = store.version
+        if let cache = countCache, cache.version == version { return cache.counts }
         var c: [ShelfFilter: Int] = [.all: 0, .pinned: 0, .images: 0, .videos: 0, .text: 0]
-        for it in ClipStore.shared.items {
+        for it in store.items {
             c[.all, default: 0] += 1
             if it.pinned { c[.pinned, default: 0] += 1 }
             switch it.kind {
@@ -335,37 +345,80 @@ final class ShelfModel {
             case .files: break
             }
         }
+        countCache = (version, c)
         return c
     }
 
     /// Store items in frozen shelf order, re-sorted only when the store or the snapshot changed.
-    private var orderedCache: (version: Int, snapshotID: Int, items: [ClipItem]) = (-1, -1, [])
+    @ObservationIgnored private var orderedCache: (version: Int, snapshotID: Int, items: [ClipItem]) = (-1, -1, [])
     private var snapshotID = 0
     private func orderedItems() -> [ClipItem] {
-        let v = ClipStore.shared.version
+        let v = store.version
         if orderedCache.version == v, orderedCache.snapshotID == snapshotID { return orderedCache.items }
-        let sorted = ClipStore.shared.items.sorted { (orderSnapshot[$0.id] ?? Int.max) < (orderSnapshot[$1.id] ?? Int.max) }   // items array is already date-sorted
+        let sorted = store.items.sorted { (orderSnapshot[$0.id] ?? Int.max) < (orderSnapshot[$1.id] ?? Int.max) }   // items array is already date-sorted
         orderedCache = (v, snapshotID, sorted)
-        if searchBlobs.count > sorted.count + 64 {                      // forget blobs of deleted items
-            let live = Set(sorted.map(\.id)); searchBlobs = searchBlobs.filter { live.contains($0.key) }
-        }
         return sorted
     }
 
-    /// Lower-cased searchable text per item, built once per (id, modifiedAt) instead of on every keystroke.
-    private var searchBlobs: [String: (Date, String)] = [:]
-    private func searchBlob(_ item: ClipItem) -> String {
-        if let hit = searchBlobs[item.id], hit.0 == item.modifiedAt { return hit.1 }
-        let body = (item.kind == .text || item.kind == .url) ? (ClipStore.shared.text(of: item) ?? item.snippet) : item.snippet   // the preview is cut at 400 chars; search the whole text
-        let blob = [body, item.ocrText ?? "", item.sourceAppName ?? "", item.title ?? ""].joined(separator: "\n").lowercased()
-        searchBlobs[item.id] = (item.modifiedAt, blob)
-        return blob
+    struct SearchRequest: Hashable {
+        let query: String
+        let version: Int
+    }
+    var searchRequest: SearchRequest { SearchRequest(query: ClipSearchIndex.normalizedQuery(query), version: store.version) }
+    private var searchResult: (request: SearchRequest, ids: Set<String>)?
+    var isSearching: Bool { !searchRequest.query.isEmpty && searchResult?.request != searchRequest }
+
+    private struct ListKey: Equatable {
+        let request: SearchRequest
+        let snapshot: Int
+        let filter: ShelfFilter
+    }
+    @ObservationIgnored private var listCache: (key: ListKey, items: [ClipItem])?
+
+    /// Start at app launch even if the shelf has not appeared yet. The first view-owned search cancels
+    /// this task and takes over, retaining any entries that have already been warmed.
+    func prewarmSearch() {
+        initialWarmup?.cancel()
+        let index = searchIndex, items = store.items, directory = store.root.appendingPathComponent("items")
+        initialWarmup = Task(priority: .utility) { _ = try? await index.search("", items: items, directory: directory) }
+    }
+
+    /// SwiftUI owns this task and cancels it when the query or store changes. An empty query prewarms
+    /// the full text in the background; nonempty queries wait briefly for a burst of typing to settle.
+    func updateSearch() async {
+        initialWarmup?.cancel()
+        initialWarmup = nil
+        let request = searchRequest
+        if searchResult?.request == request { return }
+        do {
+            if !request.query.isEmpty { try await Task.sleep(nanoseconds: 80_000_000) }
+            try Task.checkCancellation()
+            let ids = try await searchIndex.search(request.query, items: store.items, directory: store.root.appendingPathComponent("items"))
+            try Task.checkCancellation()
+            guard searchRequest == request else { return }
+            searchResult = (request, ids)
+            selectAvailableItem()
+        } catch is CancellationError {
+            // A newer query owns the result; never publish the obsolete one.
+        } catch {
+            assertionFailure("Unexpected search error: \(error)")
+        }
+    }
+
+    private func selectAvailableItem() {
+        let list = items
+        if !list.contains(where: { $0.id == selectedID }) { selectedID = list.first?.id }
     }
 
     var items: [ClipItem] {
-        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
+        let request = searchRequest
+        // Hide stale results immediately, including from keyboard actions such as Return-to-paste.
+        let matches = searchResult
+        if !request.query.isEmpty, matches?.request != request { return [] }
+        let key = ListKey(request: request, snapshot: snapshotID, filter: filter)
+        if let cached = listCache, cached.key == key { return cached.items }
         let ordered = orderedItems()
-        return ordered.filter { item in
+        let filtered = ordered.filter { item in
             switch filter {
             case .all: break
             case .pinned: if !item.pinned { return false }
@@ -373,15 +426,17 @@ final class ShelfModel {
             case .videos: if item.kind != .video { return false }
             case .text: if item.kind != .text && item.kind != .url { return false }
             }
-            guard !q.isEmpty else { return true }
-            return searchBlob(item).contains(q)
+            return request.query.isEmpty || matches?.ids.contains(item.id) == true
         }
+        listCache = (key, filtered)
+        return filtered
     }
 
     /// After bulk changes (import, remove-imported) the frozen order is stale: freeze the store's current order again.
     func refreshOrder() {
-        orderSnapshot = Dictionary(uniqueKeysWithValues: ClipStore.shared.items.enumerated().map { ($1.id, $0) })
+        orderSnapshot = Dictionary(uniqueKeysWithValues: store.items.enumerated().map { ($1.id, $0) })
         snapshotID += 1
+        orderedCache = (store.version, snapshotID, store.items)
     }
 
     func reset() {
@@ -389,10 +444,9 @@ final class ShelfModel {
         showSettings = false
         renamingID = nil
         openTick += 1
+        refreshOrder()
         filter = .all
-        orderSnapshot = Dictionary(uniqueKeysWithValues: ClipStore.shared.items.enumerated().map { ($1.id, $0) })
-        snapshotID += 1
-        selectedID = ClipStore.shared.items.first?.id
+        selectedID = store.items.first?.id
     }
 
     func move(_ delta: Int) {
@@ -409,7 +463,7 @@ final class ShelfModel {
 
     /// Single click: copy and stay (the 已复制 tag moves to the card).
     func copy(_ item: ClipItem) {
-        ClipStore.shared.copyToPasteboard(item)
+        store.copyToPasteboard(item)
         selectedID = item.id
         ShelfPanelController.shared.handBackFocus()
     }
@@ -432,7 +486,7 @@ final class ShelfModel {
         default: previewSelected()
         }
     }
-    func pinSelected() { if let s = selected { ClipStore.shared.togglePin(s.id) } }
+    func pinSelected() { if let s = selected { store.togglePin(s.id) } }
     func exportSelected() { if let s = selected { Exporter.export(s) } }
     func deleteSelected() {
         // Only a card that is actually highlighted in the current list; never a silent fallback.
@@ -458,7 +512,7 @@ final class ShelfModel {
             }
             guard go else { return false }
         }
-        ClipStore.shared.remove(item.id)
+        store.remove(item.id)
         return true
     }
 }
