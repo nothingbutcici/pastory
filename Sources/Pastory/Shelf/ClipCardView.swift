@@ -38,7 +38,12 @@ struct ClipCardView: View {
         .clipShape(ticket)
         // The sheet casts the shadow; shadowing the whole subtree (text, thumbnails) re-rasterised every card on every change.
         .background(ticket.fill(paperPaint).shadow(color: .black.opacity(selected ? 0.55 : 0.4), radius: selected ? 14 : 9, x: 2, y: selected ? 9 : 6))
+        // The keyboard highlight: a light outline and a small lift. Blue paper means "on the clipboard now" and does
+        // not move with the arrow keys, so selection needs a mark of its own — Return may paste this card.
+        .overlay { if selected { ticket.stroke(onClipboard ? Color.paper : Color.paperBlue, lineWidth: 3) } }     // light on the dark desk; cream on the blue card
         .overlay(alignment: .top) { decoration }
+        .offset(y: selected ? -6 : 0)
+        .animation(.easeOut(duration: 0.12), value: selected)
         .contentShape(Rectangle())
         .onTapGesture(count: 2, perform: onCopyAndClose)
         .onTapGesture(count: 1, perform: onCopy)
