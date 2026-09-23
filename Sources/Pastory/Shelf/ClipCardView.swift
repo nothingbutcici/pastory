@@ -57,16 +57,14 @@ struct ClipCardView: View, Equatable {
         .overlay(alignment: .top) { decoration }
         .overlay(alignment: .top) {
             if showDragHint {
-                HStack(spacing: 6) {
-                    Image(systemName: "arrow.up").font(.system(size: 11, weight: .semibold))
-                    Text("向上拖出面板，就能贴在桌面上".l).font(.serif(13))
+                // A handwritten aside in the pin band, the way a note is scribbled on a ticket. No box, no button look.
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text("↑").font(.system(size: 15, weight: .medium))
+                    Text("向上拖出面板，就能贴在桌面上".l).font(.script(17))
                 }
-                .foregroundStyle(Color.ink)
-                .padding(.horizontal, 12).padding(.vertical, 6)
-                .background(Color.paperBlue, in: Capsule())
-                .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
-                .padding(.top, 8)         // inside the card, over the pin band: the row above clips anything drawn outside
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                .foregroundStyle(Color.paperBlueDeep)
+                .padding(.top, 6)
+                .transition(.opacity)
                 .allowsHitTesting(false)
             }
         }

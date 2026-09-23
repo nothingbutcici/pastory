@@ -502,6 +502,7 @@ enum SelfTest {
         while waited < 3, pictures.contains(where: { !store.isThumbnailCached($0.id) }) { try? await Task.sleep(nanoseconds: 50_000_000); waited += 0.05 }
         ShelfPanelController.shared.model.showWelcome = false        // the plain shelf; `welcome` renders the card
         if let n = ProcessInfo.processInfo.environment["PASTORY_SELECT"].flatMap({ Int($0) }) { for _ in 0..<n { ShelfPanelController.shared.model.move(1) } }   // render with the highlight moved
+        if ProcessInfo.processInfo.environment["PASTORY_HINT"] != nil { ShelfPanelController.shared.model.dragHintFor = ShelfPanelController.shared.model.items.dropFirst().first?.id }
         let host = NSHostingView(rootView: ShelfView(model: model))
         host.frame = CGRect(x: 0, y: 0, width: 1600, height: 450)
         // Needs a window for materials + layout to resolve.
