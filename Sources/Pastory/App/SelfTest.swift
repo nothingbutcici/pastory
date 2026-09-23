@@ -474,6 +474,7 @@ enum SelfTest {
         store.insertText("const shelf = items.filter(i => i.pinned)\n  .map(render)\n  .join('')", rtf: nil, source: ClipStore.Source(bundleID: "com.microsoft.VSCode", name: "Code"))
         if let first = store.items.last { store.togglePin(first.id) }
         if let t = store.items.first(where: { $0.kind == .text }) { store.setTitle("翻译 prompt", for: t.id) }
+        if ProcessInfo.processInfo.environment["PASTORY_HOWTO"] != nil { HowToCard.seedIfNeeded() }      // newest → first card
     }
 
     @MainActor
