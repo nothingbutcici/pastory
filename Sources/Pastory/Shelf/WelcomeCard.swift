@@ -84,7 +84,8 @@ struct WelcomeCard: View {
                 Button { model.finishWelcome() } label: {
                     Text("开始使用".l).font(.serif(15, bold: true)).foregroundStyle(Color.ink)
                         .padding(.horizontal, 20).padding(.vertical, 6)
-                        .background(Color.paperBlue, in: RoundedRectangle(cornerRadius: 8))
+                        .background(Color.white, in: RoundedRectangle(cornerRadius: 8))
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.ink.opacity(0.35), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
             }
@@ -112,7 +113,6 @@ struct WelcomeCard: View {
         Text(s).font(.serif(14, bold: true)).foregroundStyle(Color.ink)
             .padding(.horizontal, 12).padding(.vertical, 4)
             .background(TornPaper(top: true, right: true, bottom: true, left: true, seed: 21, amplitude: 1.6, step: 6).fill(Color.white))
-            .shadow(color: .black.opacity(0.12), radius: 1.5, x: 0, y: 1)
             .padding(.bottom, 8)
     }
 
