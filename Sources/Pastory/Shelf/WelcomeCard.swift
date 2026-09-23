@@ -29,6 +29,7 @@ struct WelcomeCard: View {
                 .padding(.horizontal, 18).padding(.top, 6).padding(.bottom, 3)
                 .overlay(alignment: .bottom) { Rectangle().fill(Color.ink.opacity(0.6)).frame(height: 1).padding(.horizontal, 18) }
 
+            ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
                 Spacer(minLength: 6)
                 heading("设置常用快捷键".l)
@@ -46,8 +47,11 @@ struct WelcomeCard: View {
                 Spacer(minLength: 6)
             }
             .padding(.horizontal, 18)
+            }
+            .frame(maxHeight: .infinity)          // whatever is left between the title rule and the tear line
 
             ticketRule.padding(.vertical, 4)
+                .layoutPriority(1)
 
             HStack(spacing: 10) {
                 if let p = Theme.menuIcon {
@@ -64,6 +68,7 @@ struct WelcomeCard: View {
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 18).padding(.bottom, 12)
+            .layoutPriority(1)
         }
         .frame(width: Self.width)
         .frame(maxHeight: .infinity, alignment: .top)
@@ -87,13 +92,15 @@ struct WelcomeCard: View {
 
     /// Icon · title · keycaps. A taken shortcut says so under the title.
     private func step(icon: String, title: String, key: String, tag: String) -> some View {
-        let note = status[tag] ?? nil
+        // Short statuses only: the settings page explains the bare-⌘ caveat; here one word, one line.
+        let raw = status[tag] ?? nil
+        let note: String? = raw.map { $0.hasPrefix("已设置".l) || $0.hasPrefix("Set") ? "已设置".l : $0 }
         let binding = Binding<String?>(get: { status[tag] ?? nil }, set: { status[tag] = $0 })
         return HStack(spacing: 12) {
             Image(systemName: icon).font(.system(size: 14, weight: .light)).foregroundStyle(Color.ink).frame(width: 20)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.serif(13)).foregroundStyle(Color.ink)
-                if let note { Text(note).font(.serif(11)).foregroundStyle(Color.ink.opacity(0.45)).fixedSize(horizontal: false, vertical: true) }
+                if let note { Text(note).font(.serif(11)).foregroundStyle(Color.ink.opacity(0.45)).lineLimit(1) }
             }
             Spacer(minLength: 10)
             ShortcutRecorder(key: key, keycaps: true, status: binding)
