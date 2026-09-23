@@ -6,7 +6,7 @@ struct WelcomeCard: View {
     @Bindable var model: ShelfModel
     @State private var tick = 0                      // re-read the shortcuts after the recorder changes them
     @State private var status: [String: String?] = [:]   // per-row notice from the recorder, shown under the title
-    static let width: CGFloat = 440
+    static let width: CGFloat = 720          // wide, never tall: the card keeps the shelf's own height
 
     var body: some View {
         let _ = tick
@@ -29,14 +29,19 @@ struct WelcomeCard: View {
                 .padding(.horizontal, 18).padding(.top, 6).padding(.bottom, 3)
                 .overlay(alignment: .bottom) { Rectangle().fill(Color.ink.opacity(0.6)).frame(height: 1).padding(.horizontal, 18) }
 
+            // Two columns side by side, so the card is as tall as any other card and no taller.
             ScrollView(.vertical, showsIndicators: false) {
+            HStack(alignment: .top, spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
-                Spacer(minLength: 6)
                 heading("设置常用快捷键".l)
                 step(icon: "clipboard", title: "显示 / 隐藏剪贴板".l, key: Preferences.Key.hotkeyShelf, tag: "shelf")
                 step(icon: "crop", title: "截图".l, key: Preferences.Key.hotkeyCapture, tag: "capture")
-
-                heading("试一试".l).padding(.top, 10)
+                Spacer(minLength: 0)
+            }
+            .frame(width: 360, alignment: .leading)
+            Rectangle().fill(Color.ink.opacity(0.15)).frame(width: 1).padding(.vertical, 4).padding(.horizontal, 16)
+            VStack(alignment: .leading, spacing: 0) {
+                heading("试一试".l)
                 todo(done: model.welcomeTried.contains("shelf"),
                      text: shelfKey.isSet ? String(format: "按 %@ 打开或收起剪贴板".l, shelfKey.display) : "先给剪贴板设一个快捷键".l)
                 todo(done: model.welcomeTried.contains("capture"),
@@ -45,9 +50,10 @@ struct WelcomeCard: View {
                 todo(done: model.welcomeTried.contains("pin"), text: "将一个卡片 Pin 起来".l, pin: true)
                 todo(done: model.welcomeTried.contains("desktop"), text: "把一张卡片向上拖出面板，贴到桌面上".l)
                 todo(done: false, text: "点击「开始使用」，卡片消失".l)
-                Spacer(minLength: 6)
+                Spacer(minLength: 0)
             }
-            .padding(.horizontal, 18)
+            }
+            .padding(.horizontal, 18).padding(.top, 8)
             }
             .frame(maxHeight: .infinity)          // whatever is left between the title rule and the tear line
 

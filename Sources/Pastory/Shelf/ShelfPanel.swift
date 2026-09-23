@@ -42,8 +42,6 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
     }
 
     func toggle() { isVisible ? hide() : show() }
-    /// After onboarding: drop the extra height the welcome card needed.
-    func relayoutHeight() { if isVisible { hide(); show() } }
 
     /// Open (if needed) with the search box focused.
     func showSearch() {
@@ -80,7 +78,6 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
         }
         let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main ?? NSScreen.screens[0]
         var height = max(384, (screen.frame.height * 0.48).rounded() - 36)      // 48% minus about a centimetre; cards follow the panel
-        if model.showWelcome { height = max(height, 570) }                        // the welcome card needs the room; first launch only
         let target = CGRect(x: screen.frame.minX, y: screen.frame.minY, width: screen.frame.width, height: height)
         model.reset()
         // The window itself never leaves this screen (a display arranged below would otherwise see it slide through);
@@ -310,8 +307,7 @@ final class ShelfModel {
     }
     func finishWelcome() {
         Preferences.shared.didWelcome = true
-        showWelcome = false
-        ShelfPanelController.shared.relayoutHeight()
+        showWelcome = false          // the card goes; the shelf stays exactly as it is
     }
     /// Bumped when a setting that the sidebar shows (retention) changes.
     var prefsTick = 0
