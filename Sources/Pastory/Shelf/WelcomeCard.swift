@@ -34,7 +34,7 @@ struct WelcomeCard: View {
             GeometryReader { geo in
             ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 0) {
-            Spacer(minLength: 0)
+            Spacer(minLength: 14)
             HStack(spacing: 0) {
             Spacer(minLength: 0)
             HStack(alignment: .top, spacing: 0) {
@@ -63,7 +63,7 @@ struct WelcomeCard: View {
             .fixedSize()
             Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
+            Spacer(minLength: 10)
             }
             .frame(minHeight: geo.size.height)     // spacers centre the block when it fits; it scrolls when it does not
             .padding(.horizontal, 18)
@@ -111,7 +111,8 @@ struct WelcomeCard: View {
     private func heading(_ s: String) -> some View {
         Text(s).font(.serif(14, bold: true)).foregroundStyle(Color.ink)
             .padding(.horizontal, 12).padding(.vertical, 4)
-            .background(TornPaper(top: true, right: true, bottom: true, left: true, seed: 21, amplitude: 1.6, step: 6).fill(Paint.paperPink))
+            .background(TornPaper(top: true, right: true, bottom: true, left: true, seed: 21, amplitude: 1.6, step: 6).fill(Color.white))
+            .shadow(color: .black.opacity(0.12), radius: 1.5, x: 0, y: 1)
             .padding(.bottom, 8)
     }
 

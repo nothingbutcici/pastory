@@ -30,8 +30,8 @@ struct ContactPane: View {
 
             ScrollView(.vertical, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 16) {
-                    sheet("反馈 bug & 提功能".l, "进微信群聊，直接说。".l, qr: Theme.wechatGroup)
-                    sheet("GitHub 点个 Star 吧".l, "源码都在这里，喜欢就点一下。".l, link: ("nothingbutcici/pastory", Self.repoURL))
+                    sheet("反馈 bug & 提功能".l, "Pastory 微信小小群，交个朋友".l, qr: Theme.wechatGroup)
+                    sheet("GitHub 点个 Star 吧".l, "开源产品，喜欢就请助力一下".l, link: ("nothingbutcici/pastory", Self.repoURL))
                     sheet("关注我的 X".l, "新版本和碎碎念都在这。".l, link: ("@nothingbutcici", Self.xURL))
                     sheet("Buy me a coffee", "觉得好用，请我喝一杯。".l, qr: Theme.coffee)
                 }
@@ -48,8 +48,8 @@ struct ContactPane: View {
                 .padding(.horizontal, 16).padding(.bottom, 12)
             if let qr {
                 Image(nsImage: qr).resizable().interpolation(.high).aspectRatio(contentMode: .fit)
-                    .frame(maxWidth: .infinity)
-                    .padding(8).background(Color.white)
+                    .frame(width: 132, height: 132)
+                    .padding(6).background(Color.white)
                     .padding(.horizontal, 16).padding(.bottom, 16)
             }
             if let (label, url) = link {
