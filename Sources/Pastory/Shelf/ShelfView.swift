@@ -22,6 +22,7 @@ extension Font {
 enum Paint {
     static let paper = ImagePaint(image: Image(nsImage: Theme.paperTile))
     static let paperBlue = ImagePaint(image: Image(nsImage: Theme.paperBlueTile))
+    static let paperPink = ImagePaint(image: Image(nsImage: Theme.paperPinkTile))
     static let desk = ImagePaint(image: Image(nsImage: Theme.deskTile))
 }
 
@@ -39,6 +40,8 @@ struct ShelfView: View {
             sidebar
             if model.showSettings {
                 SettingsPane(model: model).padding(.horizontal, 24)
+            } else if model.showContact {
+                ContactPane(model: model).padding(.horizontal, 24)
             } else {
                 VStack(spacing: 0) {
                     header
@@ -70,8 +73,9 @@ struct ShelfView: View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Pastory").font(.script(42)).foregroundStyle(Color.onBrown)
                 .padding(.leading, 22).padding(.top, 10).padding(.bottom, 22)
-            navRow(icon: "clipboard", "剪贴板".l, active: !model.showSettings) { model.showSettings = false }
-            navRow(icon: "gearshape", "设置".l, active: model.showSettings) { model.showSettings = true }
+            navRow(icon: "clipboard", "剪贴板".l, active: !model.showSettings && !model.showContact) { model.showSettings = false; model.showContact = false }
+            navRow(icon: "gearshape", "设置".l, active: model.showSettings) { model.showSettings = true; model.showContact = false }
+            navRow(icon: "hand.wave", "联系我".l, active: model.showContact) { model.showContact = true; model.showSettings = false }
             Spacer()
             Color.clear.frame(height: 18)
         }

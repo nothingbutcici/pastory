@@ -15,7 +15,7 @@ enum SelfTest {
         let cmd = args[i + 1]
         let rest = Array(args[(i + 2)...])
         // Anything that writes to a store must run inside PASTORY_STORE. Never against the user's data.
-        let mutating: Set<String> = ["clipboard", "retention", "shelf", "shelfsearch", "search", "settings", "editors", "import", "ingest", "tombstone", "heic", "pbfiles", "welcome", "note"]
+        let mutating: Set<String> = ["clipboard", "retention", "shelf", "shelfsearch", "search", "settings", "editors", "import", "ingest", "tombstone", "heic", "pbfiles", "welcome", "note", "contact"]
         if mutating.contains(cmd) {
             let env = Sandbox.store ?? ""
             // Nothing under Application Support counts as a sandbox, whatever the folder is called.
@@ -87,6 +87,16 @@ enum SelfTest {
                 print("skip markers present: \(markers.filter { types.contains($0) })")
                 print("source app: \(NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "?")")
                 ok = true
+            case "contact":
+                await seedStore()
+                let model = ShelfPanelController.shared.model
+                model.reset()
+                model.showContact = true
+                let host = NSHostingView(rootView: ShelfView(model: model))
+                host.frame = CGRect(x: 0, y: 0, width: 1600, height: 560)
+                let w = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+                w.contentView = host; w.isReleasedWhenClosed = false
+                ok = snapshot(host, to: rest.first ?? "pastory-contact.png")
             case "note":
                 await seedStore()
                 guard let t = ClipStore.shared.items.first(where: { $0.kind == .text }) else { ok = false; break }

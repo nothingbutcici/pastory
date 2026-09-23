@@ -111,7 +111,7 @@ struct WelcomeCard: View {
     private func heading(_ s: String) -> some View {
         Text(s).font(.serif(14, bold: true)).foregroundStyle(Color.ink)
             .padding(.horizontal, 12).padding(.vertical, 4)
-            .background(TornPaper(top: true, right: true, bottom: true, left: true, seed: 21, amplitude: 1.6, step: 6).fill(Paint.paperBlue))
+            .background(TornPaper(top: true, right: true, bottom: true, left: true, seed: 21, amplitude: 1.6, step: 6).fill(Paint.paperPink))
             .padding(.bottom, 8)
     }
 

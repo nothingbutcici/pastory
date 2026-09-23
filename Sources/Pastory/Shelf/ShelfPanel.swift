@@ -190,9 +190,9 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
         let cmd = event.modifierFlags.contains(.command)
         let code = Int(event.keyCode)
         // Settings page: there are no cards to act on; only ⎋ (back) and ⌘F (to the shelf's search) mean anything.
-        if model.showSettings {
-            if code == kVK_Escape { model.showSettings = false; return true }
-            if code == kVK_ANSI_F, cmd { model.showSettings = false; model.focusSearch += 1; return true }
+        if model.showSettings || model.showContact {
+            if code == kVK_Escape { model.showSettings = false; model.showContact = false; return true }
+            if code == kVK_ANSI_F, cmd { model.showSettings = false; model.showContact = false; model.focusSearch += 1; return true }
             return false
         }
         switch code {
@@ -299,6 +299,7 @@ final class ShelfModel {
     /// automatically; Return on that only copies, it never types into another app.
     @ObservationIgnored private(set) var pickedByHand = false
     var showSettings = false
+    var showContact = false
     /// First launch until 「开始使用」 is pressed; the welcome card leads the row.
     var showWelcome = !Preferences.shared.didWelcome
     var welcomeTried: Set<String> = Preferences.shared.welcomeTried
@@ -452,6 +453,7 @@ final class ShelfModel {
     func reset() {
         query = ""
         showSettings = false
+        showContact = false
         renamingID = nil
         openTick += 1
         refreshOrder()

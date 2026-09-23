@@ -58,6 +58,10 @@ enum Theme {
     /// a live `blendMode(.multiply)` per card forced an offscreen pass for every card on every frame.
     static let paperTile = bakedTile(paper, grain: 0.11)
     static let paperBlueTile = bakedTile(paperBlue, grain: 0.11)
+    static let paperPink = NSColor(srgbRed: 0xF0 / 255, green: 0xD9 / 255, blue: 0xDF / 255, alpha: 1)   // #F0D9DF
+    static let paperPinkTile = bakedTile(paperPink, grain: 0.11)
+    static let wechatGroup: NSImage? = resource("WeChatGroup.png")
+    static let coffee: NSImage? = resource("Coffee.png")
     static let deskTile = bakedTile(brown, grain: 0.22)
     private static func bakedTile(_ color: NSColor, grain: CGFloat) -> NSImage {
         let n = noiseTile.size

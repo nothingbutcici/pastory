@@ -53,6 +53,9 @@ enum L {
         ("把一张卡片向上拖出面板，贴到桌面上", "Drag a card up out of the shelf onto the desktop"), ("单击卡片", "Click a card"), ("双击卡片", "Double-click a card"), ("拖动卡片", "Drag a card"),
         ("粘贴进刚才的应用", "Paste into the app you came from"), ("固定到桌面任意位置", "Stick it anywhere on the desktop"), ("未 Pin 的内容保留 %d 天", "Unpinned items kept %d days"),
         ("拖动边框调整录制范围", "Drag the frame to adjust the recording area"), ("开始录制 ⏎", "Start Recording ⏎"),
+        ("联系我", "Contact"), ("反馈 bug & 提功能", "Bugs & feature requests"), ("进微信群聊，直接说。", "Join the WeChat group and just say it."),
+        ("GitHub 点个 Star 吧", "Star it on GitHub"), ("源码都在这里，喜欢就点一下。", "The source lives here; a Star helps."), ("关注我的 X", "Follow me on X"),
+        ("新版本和碎碎念都在这。", "New versions and small notes land here."), ("觉得好用，请我喝一杯。", "If it earns its place, buy me a coffee."),
         ("复制文字", "Copy Text"), ("关闭", "Close"), ("截屏", "Screenshot"), ("录屏", "Record"), ("取消", "Cancel"),
         // Menu bar / app
         ("截图", "Screenshot"), ("剪贴板", "Clipboard"), ("搜索剪贴板", "Search Clipboard"),
