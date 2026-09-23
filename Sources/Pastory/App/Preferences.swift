@@ -111,6 +111,8 @@ final class Preferences {
         set { d.set(newValue, forKey: "desktopNotes") }
     }
 
+    /// The 「Pastory 怎么用」 card has been seeded into the store once.
+    var didSeedHowTo: Bool { get { d.bool(forKey: "didSeedHowTo") } set { d.set(newValue, forKey: "didSeedHowTo") } }
     /// Onboarding checklist: which of the two shortcuts has actually been used once.
     var welcomeTried: Set<String> {
         get { Set(d.stringArray(forKey: "welcomeTried") ?? []) }

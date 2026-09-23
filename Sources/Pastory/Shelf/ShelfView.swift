@@ -73,10 +73,7 @@ struct ShelfView: View {
             navRow(icon: "clipboard", "剪贴板".l, active: !model.showSettings) { model.showSettings = false }
             navRow(icon: "gearshape", "设置".l, active: model.showSettings) { model.showSettings = true }
             Spacer()
-            let days = Preferences.shared.retentionDays
-            let _ = model.prefsTick
-            // Always-on cheat-sheet: a small index card taped to the sidebar. Retention line only when it is finite.
-            HowToCard(days: days).padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 16)
+            Color.clear.frame(height: 18)
         }
         .frame(width: 162, alignment: .leading)
         .background(Color.brownDeep.opacity(0.6))
@@ -355,67 +352,6 @@ struct RuledBox: Shape {
         y = r.maxY - 6
         while y > r.minY { p.addLine(to: CGPoint(x: r.maxX + j(), y: y)); y -= 6 }
         p.addLine(to: CGPoint(x: r.maxX, y: r.minY))
-        return p
-    }
-}
-
-
-/// The sidebar's cheat-sheet: three pale die-cut stickers in the app's own paper colours, each a different
-/// organic shape, with a thin ink outline, a wide white edge and dark type. No glow, no gradients.
-struct HowToCard: View {
-    let days: Int
-    private static let pink = Color(red: 0xF0 / 255, green: 0xD9 / 255, blue: 0xDF / 255)     // pale pink paper
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            sticker(action: "单击卡片", result: "复制", fill: Color.paper, shape: CloudSticker(), tilt: -2)
-            sticker(action: "双击卡片", result: "粘贴进刚才的应用", fill: Color.paperBlue, shape: Ellipse(), tilt: 1.6)
-                .padding(.leading, 6)
-            sticker(action: "拖动卡片", result: "固定到桌面任意位置", fill: Self.pink, shape: RoundedRectangle(cornerRadius: 14, style: .continuous), tilt: -1)
-            if days > 0 {
-                Text(String(format: "未 Pin 的内容保留 %d 天".l, days)).font(.serif(11)).foregroundStyle(Color.onBrownMuted).padding(.leading, 6).padding(.top, 2)
-            }
-        }
-    }
-
-    private func sticker<S: Shape>(action: String, result: String, fill: Color, shape: S, tilt: Double) -> some View {
-        VStack(alignment: .center, spacing: 0) {
-            Text(action.l).font(.script(15)).foregroundStyle(Color.ink).lineLimit(1).minimumScaleFactor(0.75)
-            Text(result.l).font(.serif(10.5)).foregroundStyle(Color.ink.opacity(0.75)).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(.horizontal, 14).padding(.vertical, 9)
-        .frame(maxWidth: .infinity)
-        .background(shape.fill(fill))
-        .overlay(shape.stroke(Color.ink.opacity(0.85), lineWidth: 1))          // thin ink outline
-        .padding(3.5)
-        .background(shape.fill(Color.white))                                      // wide white die-cut edge
-        .shadow(color: .black.opacity(0.35), radius: 2, x: 0, y: 1.5)
-        .rotationEffect(.degrees(tilt))
-    }
-}
-
-/// A cloud: a rounded body with soft bumps along the top and bottom edges.
-struct CloudSticker: Shape {
-    func path(in r: CGRect) -> Path {
-        var p = Path()
-        let bumps = 4
-        let bw = r.width / CGFloat(bumps)
-        let ry = r.height * 0.22
-        p.move(to: CGPoint(x: r.minX, y: r.minY + ry))
-        // top edge, left to right
-        for k in 0..<bumps {
-            let x0 = r.minX + bw * CGFloat(k), x1 = x0 + bw
-            p.addQuadCurve(to: CGPoint(x: x1, y: r.minY + ry), control: CGPoint(x: (x0 + x1) / 2, y: r.minY - ry * 0.6))
-        }
-        // right side
-        p.addQuadCurve(to: CGPoint(x: r.maxX, y: r.maxY - ry), control: CGPoint(x: r.maxX + ry * 0.9, y: r.midY))
-        // bottom edge, right to left
-        for k in (0..<bumps).reversed() {
-            let x0 = r.minX + bw * CGFloat(k), x1 = x0 + bw
-            p.addQuadCurve(to: CGPoint(x: x0, y: r.maxY - ry), control: CGPoint(x: (x0 + x1) / 2, y: r.maxY + ry * 0.6))
-        }
-        p.addQuadCurve(to: CGPoint(x: r.minX, y: r.minY + ry), control: CGPoint(x: r.minX - ry * 0.9, y: r.midY))
-        p.closeSubpath()
         return p
     }
 }
