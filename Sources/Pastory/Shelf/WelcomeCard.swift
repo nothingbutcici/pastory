@@ -6,7 +6,7 @@ struct WelcomeCard: View {
     @Bindable var model: ShelfModel
     @State private var tick = 0                      // re-read the shortcuts after the recorder changes them
     @State private var status: [String: String?] = [:]   // per-row notice from the recorder, shown under the title
-    static let width: CGFloat = 600          // wide, never tall: the card keeps the shelf's own height
+    static let width: CGFloat = 560          // wide, never tall: the card keeps the shelf's own height
 
     var body: some View {
         let _ = tick
@@ -34,6 +34,8 @@ struct WelcomeCard: View {
             ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 0) {
             Spacer(minLength: 0)
+            HStack(spacing: 0) {
+            Spacer(minLength: 0)
             HStack(alignment: .top, spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
                 heading("设置常用快捷键".l)
@@ -55,9 +57,11 @@ struct WelcomeCard: View {
                 todo(done: false, text: "点击「开始使用」，卡片消失".l)
                 Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: true, vertical: false)
             }
-            .fixedSize(horizontal: false, vertical: true)
+            .fixedSize()
+            Spacer(minLength: 0)
+            }
             Spacer(minLength: 0)
             }
             .frame(minHeight: geo.size.height)     // spacers centre the block when it fits; it scrolls when it does not
@@ -103,7 +107,7 @@ struct WelcomeCard: View {
     }
 
     private func heading(_ s: String) -> some View {
-        Text(s).font(.serif(13, bold: true)).foregroundStyle(Color.inkMuted).padding(.bottom, 2)
+        Text(s).font(.serif(14, bold: true)).foregroundStyle(Color.inkMuted).padding(.bottom, 4)
     }
 
     /// Icon · title · keycaps. A taken shortcut says so under the title.
@@ -115,7 +119,7 @@ struct WelcomeCard: View {
         // Title line, then the keycaps on their own line underneath: narrow, and nothing has to squeeze sideways.
         return VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 8) {
-                Text(title).font(.serif(13)).foregroundStyle(Color.ink)
+                Text(title).font(.serif(14)).foregroundStyle(Color.ink)
                 if let note { Text(note).font(.serif(11)).foregroundStyle(Color.ink.opacity(0.45)).lineLimit(1) }
             }
             ShortcutRecorder(key: key, keycaps: true, status: binding)
@@ -130,7 +134,7 @@ struct WelcomeCard: View {
                 .font(.system(size: 14, weight: .light))
                 .foregroundStyle(done ? Color.paperBlueDeep.opacity(0.6) : Color.ink.opacity(0.5))
                 .frame(width: 20)
-            Text(text).font(.serif(13)).foregroundStyle(done ? Color.ink.opacity(0.35) : Color.ink)
+            Text(text).font(.serif(14)).foregroundStyle(done ? Color.ink.opacity(0.35) : Color.ink)
                 .overlay { if done { Rectangle().fill(Color.ink.opacity(0.35)).frame(height: 1) } }   // centred on the glyphs, not the descender line
             if pin {
                 // The same torn blue patch a pinned card wears in its action row.
