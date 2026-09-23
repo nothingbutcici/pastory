@@ -22,6 +22,8 @@ final class AnnotateView: NSView, NSTextViewDelegate {
     var onStateChange: (() -> Void)?
 
     /// nil = no tool: clicks only select / move; nothing gets drawn.
+    /// Record-ready: the frame is adjustable, annotations are hidden, ⏎ or a double-click starts recording.
+    var recordMode = false { didSet { if recordMode { tool = nil; selectedID = nil }; needsDisplay = true } }
     var tool: AnnotateTool? = nil { didSet { commitTextEditor(); window?.invalidateCursorRects(for: self); onStateChange?() } }
     var color: NSColor = AnnotatePalette.colors[0] { didSet { applyToSelected { $0.color = color }; restyleEditor() } }
     var size: StrokeSize = .s { didSet { applyToSelected { $0.size = size }; restyleEditor() } }
@@ -139,6 +141,7 @@ final class AnnotateView: NSView, NSTextViewDelegate {
         nsImage.draw(in: bounds, from: .zero, operation: .copy, fraction: 1, respectFlipped: true, hints: [.interpolation: NSImageInterpolation.high])
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
         let ppp = CGFloat(image.width) / bounds.width
+        guard !recordMode else { return }        // the recording will not carry annotations; do not show them
         for a in annotations where a.id != editingID { AnnotationRenderer.draw(a, in: ctx, source: image, pixelsPerPoint: ppp) }
         if let draft { AnnotationRenderer.draw(draft, in: ctx, source: image, pixelsPerPoint: ppp) }
         if let a = editingAnnotation ?? selected { AnnotationRenderer.drawSelection(a, in: ctx) }
@@ -158,6 +161,11 @@ final class AnnotateView: NSView, NSTextViewDelegate {
         }
         moved = false
         pendingEdit = nil
+        if recordMode {
+            if event.clickCount == 2 { requestRecord(); return }
+            drag = .region(lastWindow: event.locationInWindow)      // dragging the picture slides the frame
+            return
+        }
 
         // 1. Chrome of the current selection: delete bubble, handles.
         if let i = selectedIndex {
@@ -241,7 +249,7 @@ final class AnnotateView: NSView, NSTextViewDelegate {
     override func keyDown(with event: NSEvent) {
         let cmd = event.modifierFlags.contains(.command)
         switch Int(event.keyCode) {
-        case kVK_Return, kVK_ANSI_KeypadEnter: finish(); return
+        case kVK_Return, kVK_ANSI_KeypadEnter: recordMode ? requestRecord() : finish(); return
         case kVK_Escape:
             if selectedID != nil { selectedID = nil } else { cancel() }
             return

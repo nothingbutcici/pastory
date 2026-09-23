@@ -2,10 +2,11 @@ import AppKit
 
 /// Brand bar above everything while capturing:  [logo] Pastory   [ 截屏 | 录屏 ]  │  ✕
 final class TopBar: NSView {
-    /// While picking, 录屏 only marks the intent; once a picture is on the canvas it starts recording right away.
+    /// While picking, 录屏 only marks the intent; once a picture is on the canvas it switches to the record-ready frame.
     var immediateRecord = false
     private(set) var wantsRecording = false
     var onRecord: (() -> Void)?
+    var onShot: (() -> Void)?
     var onClose: (() -> Void)?
     private let shot = NSButton(title: "截屏".l, target: nil, action: nil)
     private let rec = NSButton(title: "录屏".l, target: nil, action: nil)
@@ -98,7 +99,7 @@ final class TopBar: NSView {
         }
     }
 
-    @objc private func pickShot() { style(active: shot); wantsRecording = false }
+    @objc private func pickShot() { style(active: shot); wantsRecording = false; if immediateRecord { onShot?() } }
     @objc private func pickRec() {
         style(active: rec)
         wantsRecording = true

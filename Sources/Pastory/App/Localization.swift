@@ -52,6 +52,7 @@ enum L {
         ("改为仅桌面显示", "Keep on Desktop Only"), ("改为浮于窗口上", "Float Above Windows"),
         ("把一张卡片向上拖出面板，贴到桌面上", "Drag a card up out of the shelf onto the desktop"), ("单击卡片", "Click a card"), ("双击卡片", "Double-click a card"), ("拖动卡片", "Drag a card"),
         ("粘贴进刚才的应用", "Paste into the app you came from"), ("固定到桌面任意位置", "Stick it anywhere on the desktop"), ("未 Pin 的内容保留 %d 天", "Unpinned items kept %d days"),
+        ("拖动边框调整录制范围", "Drag the frame to adjust the recording area"), ("开始录制 ⏎", "Start Recording ⏎"),
         ("复制文字", "Copy Text"), ("关闭", "Close"), ("截屏", "Screenshot"), ("录屏", "Record"), ("取消", "Cancel"),
         // Menu bar / app
         ("截图", "Screenshot"), ("剪贴板", "Clipboard"), ("搜索剪贴板", "Search Clipboard"),

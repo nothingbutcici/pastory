@@ -18,6 +18,7 @@ final class SelectionOverlayController {
     private(set) var annotator: AnnotateView?
     private var toolbar: AnnotateToolbar?
     private var topBar: TopBar?
+    private var recordBar: RecordReadyBar?
     private var appToRestore: NSRunningApplication?
     /// Display-local rect (points, origin top-left) → cropped capture. Set by the coordinator.
     var cropProvider: ((CGRect) -> CGImage?)?
@@ -149,21 +150,46 @@ final class SelectionOverlayController {
         win.overlayView.addSubview(canvas)
         let bar = AnnotateToolbar(canvas: canvas)
         win.overlayView.addSubview(bar)
-        // Keep the bar that has been up since the picker opened; it may live on another screen's overlay.
+        // Keep the bar that has been up since the picker opened; re-add so it sits above the canvas that was just added.
         let top = topBar ?? TopBar()
-        if top.superview !== win.overlayView { top.removeFromSuperview(); win.overlayView.addSubview(top) }
+        top.removeFromSuperview(); win.overlayView.addSubview(top)
         top.immediateRecord = true
-        top.onRecord = { [weak canvas] in canvas?.requestRecord() }
+        top.onRecord = { [weak self] in self?.enterRecordMode() }
+        top.onShot = { [weak self] in self?.leaveRecordMode() }
         top.onClose = { [weak canvas] in canvas?.cancel() }
         annotator = canvas
         toolbar = bar
         topBar = top
+        if top.wantsRecording { enterRecordMode() }          // 录屏 was chosen before the pick: land in the record-ready frame
         // The picture is taken; from here the canvas owns the keyboard (⎋ deselects, leaves the text box, then cancels).
         unbindPickerHooks()
         layoutChrome()
         NSCursor.arrow.set()
         win.makeKeyAndOrderFront(nil)
         win.makeFirstResponder(canvas)
+    }
+
+    /// 录屏 on the top bar: keep the frame and its handles, hide the annotation tools, offer 开始录制.
+    private func enterRecordMode() {
+        guard let win = heldWindow, let canvas = annotator, recordBar == nil else { return }
+        canvas.recordMode = true
+        toolbar?.isHidden = true
+        toolbar?.subBar.isHidden = true
+        let bar = RecordReadyBar()
+        bar.onStart = { [weak canvas] in canvas?.requestRecord() }
+        bar.onCancel = { [weak canvas] in canvas?.cancel() }
+        win.overlayView.addSubview(bar)
+        recordBar = bar
+        layoutChrome()
+    }
+
+    /// 截屏 on the top bar: back to the annotation tools.
+    private func leaveRecordMode() {
+        guard let canvas = annotator, recordBar != nil else { return }
+        recordBar?.removeFromSuperview(); recordBar = nil
+        canvas.recordMode = false
+        toolbar?.isHidden = false
+        layoutChrome()
     }
 
     /// Frame handle dragged: re-crop and re-flow the chrome.
@@ -200,11 +226,13 @@ final class SelectionOverlayController {
             bar.frame = Self.toolbarFrame(for: rect, size: bar.fittingSize, in: bounds)
             bar.didLayout()
         }
+        if let rb = recordBar { rb.frame = Self.toolbarFrame(for: rect, size: rb.fittingSize, in: bounds) }
         if let top = topBar {
             let size = top.fittingSize
             var f = CGRect(x: (bounds.midX - size.width / 2).rounded(), y: bounds.maxY - 28 - size.height, width: size.width, height: size.height)
             if f.intersects(rect.insetBy(dx: -8, dy: -8)) { f.origin.y = bounds.minY + 28 }
-            if let bar = toolbar, f.intersects(bar.frame) { f.origin.y = bounds.maxY - 28 - size.height }
+            let below: CGRect? = recordBar?.frame ?? toolbar?.frame
+            if let below, f.intersects(below) { f.origin.y = bounds.maxY - 28 - size.height }
             top.frame = f
         }
     }
@@ -234,6 +262,8 @@ final class SelectionOverlayController {
         NSCursor.arrow.set()
         annotator?.removeFromSuperview()
         toolbar?.subBar.removeFromSuperview()
+        recordBar?.removeFromSuperview()
+        recordBar = nil
         toolbar?.removeFromSuperview()
         topBar?.removeFromSuperview()
         annotator = nil
@@ -518,4 +548,42 @@ final class OverlayView: NSView {
     }
 
     override func cancelOperation(_ sender: Any?) { if !held { controller?.finish(nil, viewRect: nil, on: nil) } }
+}
+
+
+/// The bar under the frame while record-ready: a hint, 开始录制 (⏎) and 取消.
+final class RecordReadyBar: NSView {
+    var onStart: (() -> Void)?
+    var onCancel: (() -> Void)?
+    private let stack = NSStackView()
+
+    init() {
+        super.init(frame: .zero)
+        stack.orientation = .horizontal
+        stack.spacing = 12
+        stack.edgeInsets = NSEdgeInsets(top: 0, left: 16, bottom: 0, right: 10)
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor), stack.trailingAnchor.constraint(equalTo: trailingAnchor),
+            stack.topAnchor.constraint(equalTo: topAnchor), stack.bottomAnchor.constraint(equalTo: bottomAnchor),
+        ])
+        let hint = NSTextField(labelWithString: "拖动边框调整录制范围".l)
+        hint.font = Theme.serif(size: 13)
+        hint.textColor = Theme.onBrownMuted
+        stack.addArrangedSubview(hint)
+        stack.addArrangedSubview(Theme.deskDivider(height: 24))
+        let cancel = Theme.paperButton("取消".l, onGround: true, target: self, action: #selector(cancelTapped))
+        let start = Theme.paperButton("开始录制 ⏎".l, primary: true, target: self, action: #selector(startTapped))
+        stack.addArrangedSubview(cancel)
+        stack.addArrangedSubview(start)
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
+    override var fittingSize: CGSize { CGSize(width: stack.fittingSize.width, height: 56) }
+    override func draw(_ dirtyRect: NSRect) { Theme.drawDesk(NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: Theme.paperRadius, yRadius: Theme.paperRadius)) }
+    override func resetCursorRects() { addCursorRect(bounds, cursor: .arrow) }
+
+    @objc private func startTapped() { onStart?() }
+    @objc private func cancelTapped() { onCancel?() }
 }
