@@ -360,51 +360,65 @@ struct RuledBox: Shape {
 }
 
 
-/// The sidebar's cheat-sheet: a cream index card with a strip of tape, a second sheet peeking out behind it,
-/// and the three gestures written on it by hand.
+/// The sidebar's cheat-sheet: three die-cut stickers, each its own shape and colour, stuck on a little askew
+/// like on a laptop lid. Retention appears as a fourth, plain one only when it is finite.
 struct HowToCard: View {
     let days: Int
-    private let rows: [(String, String)] = [("单击卡片", "复制"), ("双击卡片", "粘贴进刚才的应用"), ("拖动卡片", "固定到桌面任意位置")]
+    private static let sky = Color(red: 0xA9 / 255, green: 0xC2 / 255, blue: 0xE0 / 255)
+    private static let orange = Color(red: 0xE9 / 255, green: 0x63 / 255, blue: 0x1A / 255)
+    private static let pink = Color(red: 0xC5 / 255, green: 0x6F / 255, blue: 0x8C / 255)
 
     var body: some View {
-        ZStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(rows, id: \.0) { action, result in
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(action.l).font(.script(16)).foregroundStyle(Color.ink)
-                        Text(result.l).font(.serif(11)).foregroundStyle(Color.inkMuted).fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding(.vertical, 5)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .overlay(alignment: .bottom) { Rectangle().fill(Color.ink.opacity(0.18)).frame(height: 1) }   // hand-ruled lines
-                }
-                if days > 0 {
-                    Text(String(format: "未 Pin 的内容保留 %d 天".l, days)).font(.serif(11)).foregroundStyle(Color.inkMuted)
-                        .padding(.top, 6)
-                }
+        VStack(alignment: .leading, spacing: 10) {
+            // 1. A ticket stub, orange, with the notch edges.
+            sticker(action: "单击卡片", result: "复制", ink: .white, fill: Self.orange, shape: TicketShape(notchFromBottom: nil, radius: 4, notch: 6), tilt: -2.5)
+                .padding(.leading, 2)
+            // 2. A rounded label, sky blue, dark ink.
+            sticker(action: "双击卡片", result: "粘贴进刚才的应用", ink: Color.ink, fill: Self.sky, shape: RoundedRectangle(cornerRadius: 12), tilt: 1.8)
+                .padding(.leading, 10)
+            // 3. A wavy seal, pink, white ink.
+            sticker(action: "拖动卡片", result: "固定到桌面任意位置", ink: .white, fill: Self.pink, shape: WavySeal(), tilt: -1.2)
+                .padding(.leading, 4)
+            if days > 0 {
+                Text(String(format: "未 Pin 的内容保留 %d 天".l, days)).font(.serif(11)).foregroundStyle(Color.onBrownMuted).padding(.leading, 6).padding(.top, 2)
             }
-            .padding(.horizontal, 12).padding(.top, 16).padding(.bottom, 10)
-            .background(
-                // The sheet underneath is the card's own size, slightly askew; the cream card on top.
-                ZStack {
-                    TornPaper(top: true, right: true, bottom: true, left: true, seed: 5, amplitude: 1.2, step: 6)
-                        .fill(Paint.paperBlue)
-                        .rotationEffect(.degrees(3.4))
-                        .offset(x: 4, y: 5)
-                        .shadow(color: .black.opacity(0.35), radius: 4, x: 1, y: 3)
-                    TornPaper(top: true, right: true, bottom: true, left: true, seed: 12, amplitude: 1.2, step: 6)
-                        .fill(Paint.paper)
-                        .shadow(color: .black.opacity(0.4), radius: 5, x: 1, y: 3)
-                }
-            )
-            .rotationEffect(.degrees(-1.2))
-            // A strip of tape over the top edge.
-            RoundedRectangle(cornerRadius: 1)
-                .fill(Color.white.opacity(0.32))
-                .frame(width: 46, height: 12)
-                .overlay(RoundedRectangle(cornerRadius: 1).stroke(Color.white.opacity(0.18), lineWidth: 0.5))
-                .rotationEffect(.degrees(-4))
-                .offset(y: -5)
         }
     }
+
+    private func sticker<S: Shape>(action: String, result: String, ink: Color, fill: Color, shape: S, tilt: Double) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(action.l).font(.script(15)).foregroundStyle(ink)
+            Text(result.l).font(.serif(10.5)).foregroundStyle(ink.opacity(0.85)).fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 12).padding(.vertical, 7)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(shape.fill(fill))
+        .padding(2.5)
+        .background(shape.fill(Color.white))                                   // the die-cut white edge
+        .shadow(color: .black.opacity(0.45), radius: 3, x: 1, y: 2)
+        .rotationEffect(.degrees(tilt))
+    }
+}
+
+/// Sticker seal: a rounded rectangle whose edge ripples gently.
+struct WavySeal: Shape {
+    func path(in r: CGRect) -> Path {
+        var p = Path()
+        let waves = 22, amp: CGFloat = 1.6
+        let steps = 200
+        for k in 0...steps {
+            let t = CGFloat(k) / CGFloat(steps) * 2 * .pi
+            // superellipse-ish outline with a ripple
+            let rx = r.width / 2, ry = r.height / 2
+            let base = CGPoint(x: r.midX + rx * sign(cos(t)) * pow(abs(cos(t)), 0.45), y: r.midY + ry * sign(sin(t)) * pow(abs(sin(t)), 0.45))
+            let wobble = amp * sin(t * CGFloat(waves))
+            let nx = base.x - r.midX, ny = base.y - r.midY
+            let len = max(1, hypot(nx, ny))
+            let pt = CGPoint(x: base.x + nx / len * wobble, y: base.y + ny / len * wobble)
+            if k == 0 { p.move(to: pt) } else { p.addLine(to: pt) }
+        }
+        p.closeSubpath()
+        return p
+    }
+    private func sign(_ v: CGFloat) -> CGFloat { v < 0 ? -1 : 1 }
 }
