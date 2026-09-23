@@ -73,22 +73,10 @@ struct ShelfView: View {
             navRow(icon: "clipboard", "剪贴板".l, active: !model.showSettings) { model.showSettings = false }
             navRow(icon: "gearshape", "设置".l, active: model.showSettings) { model.showSettings = true }
             Spacer()
-            Rectangle().fill(Color.onBrown.opacity(0.25)).frame(height: 1).padding(.horizontal, 22)
             let days = Preferences.shared.retentionDays
             let _ = model.prefsTick
-            // Always-on cheat-sheet: the three gestures a card understands. Retention only when it is finite.
-            VStack(alignment: .leading, spacing: 7) {
-                ForEach([("单击卡片", "复制"), ("双击卡片", "粘贴进刚才的应用"), ("拖动卡片", "固定到桌面任意位置")], id: \.0) { action, result in
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(action.l).font(.serif(13)).foregroundStyle(Color.onBrown)
-                        Text(result.l).font(.serif(12)).foregroundStyle(Color.onBrownMuted)
-                    }
-                }
-                if days > 0 {
-                    Text(String(format: "未 Pin 的内容保留 %d 天".l, days)).font(.serif(12)).foregroundStyle(Color.onBrownMuted).padding(.top, 4)
-                }
-            }
-            .padding(.leading, 22).padding(.trailing, 10).padding(.top, 14).padding(.bottom, 18)
+            // Always-on cheat-sheet: a small index card taped to the sidebar. Retention line only when it is finite.
+            HowToCard(days: days).padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 16)
         }
         .frame(width: 162, alignment: .leading)
         .background(Color.brownDeep.opacity(0.6))
@@ -368,5 +356,55 @@ struct RuledBox: Shape {
         while y > r.minY { p.addLine(to: CGPoint(x: r.maxX + j(), y: y)); y -= 6 }
         p.addLine(to: CGPoint(x: r.maxX, y: r.minY))
         return p
+    }
+}
+
+
+/// The sidebar's cheat-sheet: a cream index card with a strip of tape, a second sheet peeking out behind it,
+/// and the three gestures written on it by hand.
+struct HowToCard: View {
+    let days: Int
+    private let rows: [(String, String)] = [("单击卡片", "复制"), ("双击卡片", "粘贴进刚才的应用"), ("拖动卡片", "固定到桌面任意位置")]
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(rows, id: \.0) { action, result in
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(action.l).font(.script(16)).foregroundStyle(Color.ink)
+                        Text(result.l).font(.serif(11)).foregroundStyle(Color.inkMuted).fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.vertical, 5)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .overlay(alignment: .bottom) { Rectangle().fill(Color.ink.opacity(0.18)).frame(height: 1) }   // hand-ruled lines
+                }
+                if days > 0 {
+                    Text(String(format: "未 Pin 的内容保留 %d 天".l, days)).font(.serif(11)).foregroundStyle(Color.inkMuted)
+                        .padding(.top, 6)
+                }
+            }
+            .padding(.horizontal, 12).padding(.top, 16).padding(.bottom, 10)
+            .background(
+                // The sheet underneath is the card's own size, slightly askew; the cream card on top.
+                ZStack {
+                    TornPaper(top: true, right: true, bottom: true, left: true, seed: 5, amplitude: 1.2, step: 6)
+                        .fill(Paint.paperBlue)
+                        .rotationEffect(.degrees(3.4))
+                        .offset(x: 4, y: 5)
+                        .shadow(color: .black.opacity(0.35), radius: 4, x: 1, y: 3)
+                    TornPaper(top: true, right: true, bottom: true, left: true, seed: 12, amplitude: 1.2, step: 6)
+                        .fill(Paint.paper)
+                        .shadow(color: .black.opacity(0.4), radius: 5, x: 1, y: 3)
+                }
+            )
+            .rotationEffect(.degrees(-1.2))
+            // A strip of tape over the top edge.
+            RoundedRectangle(cornerRadius: 1)
+                .fill(Color.white.opacity(0.32))
+                .frame(width: 46, height: 12)
+                .overlay(RoundedRectangle(cornerRadius: 1).stroke(Color.white.opacity(0.18), lineWidth: 0.5))
+                .rotationEffect(.degrees(-4))
+                .offset(y: -5)
+        }
     }
 }
