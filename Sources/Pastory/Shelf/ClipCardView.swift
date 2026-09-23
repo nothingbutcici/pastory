@@ -57,13 +57,17 @@ struct ClipCardView: View, Equatable {
         .overlay(alignment: .top) { decoration }
         .overlay(alignment: .top) {
             if showDragHint {
-                // A handwritten aside in the pin band, the way a note is scribbled on a ticket. No box, no button look.
+                // A small paper tag on the desk colour, so it reads on cream and blue paper alike, and sits below the
+                // pin band so it never collides with the pushpin of a selected card.
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text("↑").font(.system(size: 15, weight: .medium))
-                    Text("向上拖出面板，就能贴在桌面上".l).font(.script(17))
+                    Text("↑").font(.system(size: 13, weight: .semibold))
+                    Text("向上拖出面板，就能贴在桌面上".l).font(.script(16))
                 }
-                .foregroundStyle(Color.paperBlueDeep)
-                .padding(.top, 6)
+                .foregroundStyle(Color.onBrown)
+                .padding(.horizontal, 12).padding(.vertical, 5)
+                .background(TornPaper(top: true, right: true, bottom: true, left: true, seed: 31, amplitude: 1.2, step: 5).fill(Paint.desk))
+                .shadow(color: .black.opacity(0.3), radius: 3, y: 2)
+                .padding(.top, 108)         // clear of header and title band even on the selected card; over the body
                 .transition(.opacity)
                 .allowsHitTesting(false)
             }
