@@ -31,6 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         Retention.schedule()
         ClipboardMonitor.shared.start()
         ShelfPanelController.shared.prewarm()
+        DesktopNotes.shared.restore()
         Updater.shared.schedule()
         NotificationCenter.default.addObserver(forName: .languageChanged, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.buildMainMenu() }

@@ -9,6 +9,8 @@ import SwiftUI
 final class ShelfPanelController: NSObject, NSWindowDelegate {
     static let shared = ShelfPanelController()
     private var panel: NSPanel?
+    /// Screen rect of the shelf while visible (a note dropped back onto it is a cancelled tear-out).
+    var frameOnScreen: CGRect? { panel?.isVisible == true ? panel?.frame : nil }
     let model = ShelfModel()
     /// True while a save dialog is up, so losing key status does not slide the shelf away.
     var holdOpen = false

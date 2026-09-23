@@ -105,6 +105,14 @@ final class Preferences {
         ])
     }
 
+    /// Desktop notes: "desktop" = just above the desktop, below every app window; "top" = above everything.
+    var desktopNoteLayer: String { get { d.string(forKey: "desktopNoteLayer") ?? "desktop" } set { d.set(newValue, forKey: "desktopNoteLayer") } }
+    /// Notes on the desktop: [{id, x, y}] in screen coordinates.
+    var desktopNotes: [[String: Any]] {
+        get { d.array(forKey: "desktopNotes") as? [[String: Any]] ?? [] }
+        set { d.set(newValue, forKey: "desktopNotes") }
+    }
+
     /// Onboarding checklist: which of the two shortcuts has actually been used once.
     var welcomeTried: Set<String> {
         get { Set(d.stringArray(forKey: "welcomeTried") ?? []) }

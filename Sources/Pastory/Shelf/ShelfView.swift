@@ -184,7 +184,8 @@ struct ShelfView: View {
                                      onCopyAndClose: { model.copyAndClose(item) },
                                      onPreview: { model.selectedID = item.id; model.previewSelected() },
                                      onEdit: { model.selectedID = item.id; model.edit(item) },
-                                     onDelete: { model.delete(item) })
+                                     onDelete: { model.delete(item) },
+                                     onDesktop: DesktopNotes.shared.isOnDesktop(item.id))
                             .equatable()
                             .id(item.id)
                             .contextMenu { menu(for: item) }
@@ -264,6 +265,12 @@ struct ShelfView: View {
         }
         Button("预览".l) { model.selectedID = item.id; model.previewSelected() }
         Button(item.pinned ? "取消 Pin".l : "Pin") { ClipStore.shared.togglePin(item.id) }
+        if DesktopNotes.shared.isOnDesktop(item.id) {
+            Button("在桌面上显示".l) { DesktopNotes.shared.bringToFront(item.id) }
+            Button("从桌面收起".l) { DesktopNotes.shared.close(item.id) }
+        } else {
+            Button("贴到桌面".l) { DesktopNotes.shared.place(item.id) }
+        }
         Button("保存到本地…".l) { Exporter.export(item) }
         if item.kind == .files {
             Button("在 Finder 中显示".l) { NSWorkspace.shared.activateFileViewerSelecting(ClipStore.shared.fileURLs(of: item)) }

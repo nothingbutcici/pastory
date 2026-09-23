@@ -446,6 +446,7 @@ final class ClipStore {
         bury([item])
         deleteFiles(item)
         db?.checkpoint()
+        DesktopNotes.shared.itemsGone([item.id])
     }
 
     func removeAll(where pred: (ClipItem) -> Bool) {
@@ -457,6 +458,7 @@ final class ClipStore {
         bury(gone)
         gone.forEach(deleteFiles)
         db?.checkpoint()
+        DesktopNotes.shared.itemsGone(gone.map(\.id))
     }
 
     /// Deleted is deleted: remember the id and content hash so an import (or, one day, a sync) cannot resurrect it.

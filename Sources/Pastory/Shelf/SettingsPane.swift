@@ -102,6 +102,10 @@ struct SettingsPane: View {
                         }
                         section("系统".l) {
                             row("登录时启动".l) { PaperToggle(isOn: $prefs.launchAtLogin) }
+                            choice("桌面便签".l,
+                                   options: [("desktop", "只在桌面显示".l, "贴在桌面上，被应用窗口盖住；显示桌面时可见".l),
+                                             ("top", "始终置顶".l, "浮在所有窗口之上".l)],
+                                   selected: prefs.desktopNoteLayer) { prefs.desktopNoteLayer = $0 }
                             row("语言".l) {
                                 HStack(spacing: 4) {
                                     ForEach([("system", "跟随系统".l), ("zh", "中文".l), ("en", "English")], id: \.0) { code, label in

@@ -6,7 +6,7 @@ struct ClipCardView: View, Equatable {
     /// Closures only capture the model and the item, so data equality is enough; with `.equatable()` the arrow keys
     /// re-render the two cards whose `selected` changed instead of the whole row.
     static func == (a: ClipCardView, b: ClipCardView) -> Bool {
-        a.item == b.item && a.selected == b.selected && a.onClipboard == b.onClipboard && a.index == b.index && a.renaming == b.renaming
+        a.item == b.item && a.selected == b.selected && a.onClipboard == b.onClipboard && a.index == b.index && a.renaming == b.renaming && a.onDesktop == b.onDesktop
     }
 
     let item: ClipItem
@@ -20,6 +20,9 @@ struct ClipCardView: View, Equatable {
     let onPreview: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
+    /// The card also lives on the desktop as a sticky note.
+    var onDesktop = false
+    @State private var tearing = false
 
     static let width: CGFloat = 288
     private static let stubHeight: CGFloat = 96      // caption row + action row below the perforation
@@ -56,6 +59,24 @@ struct ClipCardView: View, Equatable {
         // One handler for both: with a separate double-tap gesture SwiftUI holds every single click back for the whole
         // double-click interval. The first click copies at once; if a second follows, it pastes.
         .onTapGesture { (NSApp.currentEvent?.clickCount ?? 1) >= 2 ? onCopyAndClose() : onCopy() }
+        .opacity(tearing ? 0.35 : 1)
+        // Drag a card up and out of the shelf: it becomes a sticky note under the pointer. Sideways drags belong to
+        // the row's own scrolling, so only a clearly upward pull starts the tear.
+        .gesture(DragGesture(minimumDistance: 14, coordinateSpace: .global)
+            .onChanged { g in
+                if !tearing {
+                    guard g.translation.height < -36, abs(g.translation.height) > abs(g.translation.width) else { return }
+                    tearing = true
+                    DesktopNotes.shared.beginTear(item.id, at: NSEvent.mouseLocation)
+                } else {
+                    DesktopNotes.shared.moveTear(to: NSEvent.mouseLocation)
+                }
+            }
+            .onEnded { _ in
+                guard tearing else { return }
+                tearing = false
+                DesktopNotes.shared.endTear(over: ShelfPanelController.shared.frameOnScreen)
+            })
     }
 
     // MARK: Header
@@ -70,6 +91,9 @@ struct ClipCardView: View, Equatable {
                 .frame(width: 22, height: 22)
                 Text(sourceTitle).font(.serif(16)).foregroundStyle(Color.ink).lineLimit(1)
                 Spacer()
+                if onDesktop {
+                    Image(systemName: "note.text").font(.system(size: 12, weight: .medium)).foregroundStyle(Color.inkMuted).help("已贴在桌面".l)
+                }
                 Text(Self.when(item.createdAt)).font(.serif(14)).foregroundStyle(Color.ink.opacity(0.75))
             }
             .padding(.horizontal, 18).padding(.top, 30).padding(.bottom, 8)      // every card leaves room for the pin, so moving it shifts nothing
