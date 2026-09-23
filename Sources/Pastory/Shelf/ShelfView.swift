@@ -185,13 +185,13 @@ struct ShelfView: View {
                                      onPreview: { model.selectedID = item.id; model.previewSelected() },
                                      onEdit: { model.selectedID = item.id; model.edit(item) },
                                      onDelete: { model.delete(item) },
-                                     onDesktop: DesktopNotes.shared.isOnDesktop(item.id))
+                                     onDesktop: DesktopNotes.shared.isOnDesktop(item.id), showDragHint: model.dragHintFor == item.id)
                             .equatable()
                             .id(item.id)
                             .contextMenu { menu(for: item) }
                     }
                 }
-                .padding(.top, 16)              // just enough for the pushpin's head
+                .padding(.top, 16)              // just enough for the pushpin's head (the one-time drag hint overflows above; the header is not clipped)
                 .padding(.bottom, 6)
                 .padding(.horizontal, 4)
             }

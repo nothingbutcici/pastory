@@ -12,11 +12,13 @@ struct DesktopNoteView: View {
     private static let side: CGFloat = 18
     @State private var copiedTick = 0
     @State private var showCopied = false
+    @State private var layerTick = 0
 
     private var item: ClipItem? { ClipStore.shared.items.first { $0.id == itemID } }
 
     var body: some View {
         if let item {
+            let _ = layerTick
             VStack(spacing: 0) {
                 header(item)
                 if let t = item.title, !t.isEmpty {
@@ -42,6 +44,13 @@ struct DesktopNoteView: View {
                     }
                     if item.kind == .text || item.kind == .url || item.kind == .image {
                         action("pencil", "编辑".l) { edit(item) }
+                    }
+                    if !measuring {
+                        let top = DesktopNotes.shared.isOnTop(itemID)
+                        action(top ? "square.3.layers.3d.top.filled" : "square.3.layers.3d.bottom.filled",
+                               top ? "浮于窗口上（点击改为仅桌面显示）".l : "仅桌面显示（点击改为浮于窗口上）".l) {
+                            DesktopNotes.shared.setOnTop(itemID, !top); layerTick += 1
+                        }
                     }
                     action("xmark", "从桌面关闭".l) { DesktopNotes.shared.close(itemID) }
                 }
@@ -77,6 +86,7 @@ struct DesktopNoteView: View {
             .contextMenu {
                 if item.kind == .text || item.kind == .url || item.kind == .image { Button("编辑".l) { edit(item) } }
                 Button("保存到本地…".l) { Exporter.export(item) }
+                Button(DesktopNotes.shared.isOnTop(itemID) ? "改为仅桌面显示".l : "改为浮于窗口上".l) { DesktopNotes.shared.setOnTop(itemID, !DesktopNotes.shared.isOnTop(itemID)); layerTick += 1 }
                 Divider()
                 Button("从桌面关闭".l) { DesktopNotes.shared.close(itemID) }
             }

@@ -49,8 +49,9 @@ enum L {
         ("SQLite 数据库", "SQLite database"), ("查看", "Show"),
         ("已设置", "Set"),
         ("贴到桌面", "Stick to Desktop"), ("从桌面收起", "Remove from Desktop"), ("在桌面上显示", "Show on Desktop"), ("从桌面关闭", "Close on Desktop"),
-        ("已贴在桌面", "On the desktop"), ("桌面便签", "Desktop notes"), ("只在桌面显示", "Desktop only"), ("始终置顶", "Always on top"),
-        ("贴在桌面上，被应用窗口盖住；显示桌面时可见", "Sit on the desktop, behind app windows; visible when you show the desktop"), ("浮在所有窗口之上", "Float above every window"),
+        ("已贴在桌面", "On the desktop"),         ("浮于窗口上（点击改为仅桌面显示）", "Floating above windows (click: desktop only)"), ("仅桌面显示（点击改为浮于窗口上）", "Desktop only (click: float above windows)"),
+        ("改为仅桌面显示", "Keep on Desktop Only"), ("改为浮于窗口上", "Float Above Windows"),
+        ("把一张卡片向上拖出面板，贴到桌面上", "Drag a card up out of the shelf onto the desktop"), ("向上拖出面板，就能贴在桌面上", "Drag it up out of the shelf to stick it on the desktop"),
         ("复制文字", "Copy Text"), ("关闭", "Close"), ("截屏", "Screenshot"), ("录屏", "Record"), ("取消", "Cancel"),
         // Menu bar / app
         ("截图", "Screenshot"), ("剪贴板", "Clipboard"), ("搜索剪贴板", "Search Clipboard"),

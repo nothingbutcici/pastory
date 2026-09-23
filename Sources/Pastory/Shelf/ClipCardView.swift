@@ -6,7 +6,7 @@ struct ClipCardView: View, Equatable {
     /// Closures only capture the model and the item, so data equality is enough; with `.equatable()` the arrow keys
     /// re-render the two cards whose `selected` changed instead of the whole row.
     static func == (a: ClipCardView, b: ClipCardView) -> Bool {
-        a.item == b.item && a.selected == b.selected && a.onClipboard == b.onClipboard && a.index == b.index && a.renaming == b.renaming && a.onDesktop == b.onDesktop
+        a.item == b.item && a.selected == b.selected && a.onClipboard == b.onClipboard && a.index == b.index && a.renaming == b.renaming && a.onDesktop == b.onDesktop && a.showDragHint == b.showDragHint
     }
 
     let item: ClipItem
@@ -22,6 +22,8 @@ struct ClipCardView: View, Equatable {
     let onDelete: () -> Void
     /// The card also lives on the desktop as a sticky note.
     var onDesktop = false
+    /// The one-time hint after the first Pin.
+    var showDragHint = false
     @State private var tearing = false
 
     static let width: CGFloat = 288
@@ -53,6 +55,22 @@ struct ClipCardView: View, Equatable {
         // The sheet casts the shadow; shadowing the whole subtree (text, thumbnails) re-rasterised every card on every change.
         .background(ticket.fill(paperPaint).shadow(color: .black.opacity(selected ? 0.55 : 0.4), radius: selected ? 14 : 9, x: 2, y: selected ? 9 : 6))
         .overlay(alignment: .top) { decoration }
+        .overlay(alignment: .top) {
+            if showDragHint {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.up").font(.system(size: 11, weight: .semibold))
+                    Text("向上拖出面板，就能贴在桌面上".l).font(.serif(13))
+                }
+                .foregroundStyle(Color.ink)
+                .padding(.horizontal, 12).padding(.vertical, 6)
+                .background(Color.paperBlue, in: Capsule())
+                .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
+                .offset(y: -44)
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                .allowsHitTesting(false)
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: showDragHint)
         .offset(y: selected ? -6 : 0)
         .animation(.easeOut(duration: 0.1), value: selected)
         .contentShape(Rectangle())

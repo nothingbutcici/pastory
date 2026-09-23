@@ -105,14 +105,14 @@ final class Preferences {
         ])
     }
 
-    /// Desktop notes: "desktop" = just above the desktop, below every app window; "top" = above everything.
-    var desktopNoteLayer: String { get { d.string(forKey: "desktopNoteLayer") ?? "top" } set { d.set(newValue, forKey: "desktopNoteLayer") } }
-    /// Notes on the desktop: [{id, x, y}] in screen coordinates.
+    /// Notes on the desktop: [{id, x, y, w, h, top}] in screen coordinates; `top` = floats above windows.
     var desktopNotes: [[String: Any]] {
         get { d.array(forKey: "desktopNotes") as? [[String: Any]] ?? [] }
         set { d.set(newValue, forKey: "desktopNotes") }
     }
 
+    /// One-time hint after the first Pin: cards can be dragged out onto the desktop.
+    var sawDragHint: Bool { get { d.bool(forKey: "sawDragHint") } set { d.set(newValue, forKey: "sawDragHint") } }
     /// Onboarding checklist: which of the two shortcuts has actually been used once.
     var welcomeTried: Set<String> {
         get { Set(d.stringArray(forKey: "welcomeTried") ?? []) }

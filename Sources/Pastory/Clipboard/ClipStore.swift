@@ -413,7 +413,15 @@ final class ClipStore {
         items[i].modifiedAt = Date()
         guard persist(items[i]) else { items[i].pinned.toggle(); return }      // UI must not claim a pin the disk does not have
         if !items[i].pinned { Retention.reschedule() }             // an un-pinned old item may be the next to expire
-        else { ShelfPanelController.shared.model.noteWelcomeTried("pin") }
+        else {
+            let model = ShelfPanelController.shared.model
+            model.noteWelcomeTried("pin")
+            if !Preferences.shared.sawDragHint, !DesktopNotes.shared.isOnDesktop(id) {
+                Preferences.shared.sawDragHint = true
+                model.dragHintFor = id
+                DispatchQueue.main.asyncAfter(deadline: .now() + 6) { if model.dragHintFor == id { model.dragHintFor = nil } }
+            }
+        }
     }
 
     /// Self-test only.

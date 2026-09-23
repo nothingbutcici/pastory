@@ -43,6 +43,7 @@ struct WelcomeCard: View {
                      text: captureKey.isSet ? String(format: "按 %@ 截一张图".l, captureKey.display) : "先给截图设一个快捷键".l)
                 todo(done: model.welcomeTried.contains("copy"), text: "复制一段文本".l)
                 todo(done: model.welcomeTried.contains("pin"), text: "将一个卡片 Pin 起来".l, pin: true)
+                todo(done: model.welcomeTried.contains("desktop"), text: "把一张卡片向上拖出面板，贴到桌面上".l)
                 todo(done: false, text: "点击「开始使用」，卡片消失".l)
                 Spacer(minLength: 6)
             }

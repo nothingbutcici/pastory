@@ -21,6 +21,7 @@ final class DesktopNotes {
                   let x = entry["x"] as? Double, let y = entry["y"] as? Double else { continue }
             let size = (entry["w"] as? Double).flatMap { w in (entry["h"] as? Double).map { CGSize(width: w, height: $0) } }
             show(id, at: CGPoint(x: x, y: y), size: size, persist: false)
+            if entry["top"] as? Bool == false { setOnTop(id, false) }
         }
         persist()
     }
@@ -32,6 +33,7 @@ final class DesktopNotes {
         if !item.pinned { ClipStore.shared.togglePin(id) }        // a note must not vanish with the nightly cleanup
         if let w = windows[id] { w.orderFrontRegardless(); return }
         show(id, at: origin ?? nextFreeSpot(), size: nil, persist: true)
+        ShelfPanelController.shared.model.noteWelcomeTried("desktop")
     }
 
     func close(_ id: String) {
@@ -46,12 +48,17 @@ final class DesktopNotes {
     /// Cards deleted from the shelf take their notes with them.
     func itemsGone(_ ids: [String]) { for id in ids where windows[id] != nil { close(id) } }
 
-    /// The layer setting changed.
-    func applyLayer() { windows.values.forEach { $0.level = Self.level } }
-
-    static var level: NSWindow.Level {
-        Preferences.shared.desktopNoteLayer == "top" ? .floating
-            : NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)) + 1)     // above the icons, below every app window
+    /// Per note: floating above every window, or just above the desktop icons, below every app window.
+    static func level(top: Bool) -> NSWindow.Level {
+        top ? .floating : NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)) + 1)
+    }
+    func isOnTop(_ id: String) -> Bool { windows[id]?.onTop ?? true }
+    func setOnTop(_ id: String, _ top: Bool) {
+        guard let w = windows[id] else { return }
+        w.onTop = top
+        w.level = Self.level(top: top)
+        if top { w.orderFrontRegardless() }
+        persist()
     }
 
     // MARK: Tear-out from the shelf
@@ -76,6 +83,7 @@ final class DesktopNotes {
         w.setFrameOrigin(Self.clamp(w.frame.origin, size: w.frame.size))
         w.alphaValue = 1
         if let item = ClipStore.shared.items.first(where: { $0.id == id }), !item.pinned { ClipStore.shared.togglePin(id) }
+        ShelfPanelController.shared.model.noteWelcomeTried("desktop")
         persist()
     }
 
@@ -108,7 +116,7 @@ final class DesktopNotes {
 
     func persist() {
         Preferences.shared.desktopNotes = windows.map { id, w in
-            ["id": id, "x": Double(w.frame.minX), "y": Double(w.frame.minY), "w": Double(w.frame.width), "h": Double(w.frame.height)] }
+            ["id": id, "x": Double(w.frame.minX), "y": Double(w.frame.minY), "w": Double(w.frame.width), "h": Double(w.frame.height), "top": w.onTop] }
     }
 }
 
@@ -118,6 +126,8 @@ final class DesktopNotes {
 final class NoteWindow: NSPanel {
     let itemID: String
     let geometry = NoteGeometry()
+    /// A note always arrives on top (so a tear-out is visibly there); the user can sink it to the desktop afterwards.
+    var onTop = true
     private var hosting: NSHostingView<DesktopNoteView>!
     private var downAt: CGPoint?
     private var mode: Mode = .idle
@@ -134,7 +144,7 @@ final class NoteWindow: NSPanel {
         hasShadow = false                                  // the paper draws its own
         hidesOnDeactivate = false
         isReleasedWhenClosed = false
-        level = DesktopNotes.level
+        level = DesktopNotes.level(top: true)
         collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
         hosting = NSHostingView(rootView: DesktopNoteView(itemID: id, geometry: geometry))
         hosting.sizingOptions = []

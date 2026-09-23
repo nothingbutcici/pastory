@@ -28,7 +28,6 @@ final class PrefsMirror {
     var checkForUpdates: Bool { get { access(keyPath: \.checkForUpdates); return Preferences.shared.checkForUpdates } set { withMutation(keyPath: \.checkForUpdates) { Preferences.shared.checkForUpdates = newValue } } }
     var recordPasswordManagers: Bool { get { access(keyPath: \.recordPasswordManagers); return Preferences.shared.recordPasswordManagers } set { withMutation(keyPath: \.recordPasswordManagers) { Preferences.shared.recordPasswordManagers = newValue } } }
     var recordHEVC: Bool { get { access(keyPath: \.recordHEVC); return Preferences.shared.recordHEVC } set { withMutation(keyPath: \.recordHEVC) { Preferences.shared.recordHEVC = newValue } } }
-    var desktopNoteLayer: String { get { access(keyPath: \.desktopNoteLayer); return Preferences.shared.desktopNoteLayer } set { withMutation(keyPath: \.desktopNoteLayer) { Preferences.shared.desktopNoteLayer = newValue; Task { @MainActor in DesktopNotes.shared.applyLayer() } } } }
     var launchAtLogin: Bool {
         didSet {
             do {
