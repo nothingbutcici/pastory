@@ -82,10 +82,9 @@ struct WelcomeCard: View {
                 Text("稍后也能在设置中调整哦".l).font(.serif(12)).foregroundStyle(Color.inkMuted)
                 Spacer()
                 Button { model.finishWelcome() } label: {
-                    Text("开始使用".l).font(.serif(15, bold: true)).foregroundStyle(Color.ink)
-                        .padding(.horizontal, 20).padding(.vertical, 6)
-                        .background(Color.white, in: RoundedRectangle(cornerRadius: 8))
-                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.ink.opacity(0.35), lineWidth: 1))
+                    Text("开始使用".l).font(.serif(15, bold: true)).foregroundStyle(Color.onBrown)
+                        .padding(.horizontal, 20).padding(.vertical, 7)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(Paint.desk))
                 }
                 .buttonStyle(.plain)
             }
@@ -110,9 +109,9 @@ struct WelcomeCard: View {
 
     /// Section label on a torn scrap of blue paper, like the sidebar's active tab, but shorter.
     private func heading(_ s: String) -> some View {
-        Text(s).font(.serif(14, bold: true)).foregroundStyle(Color.ink)
+        Text(s).font(.serif(14, bold: true)).foregroundStyle(Color.onBrown)
             .padding(.horizontal, 12).padding(.vertical, 4)
-            .background(TornPaper(top: true, right: true, bottom: true, left: true, seed: 21, amplitude: 1.6, step: 6).fill(Color.white))
+            .background(TornPaper(top: true, right: true, bottom: true, left: true, seed: 21, amplitude: 1.6, step: 6).fill(Paint.desk))
             .padding(.bottom, 8)
     }
 

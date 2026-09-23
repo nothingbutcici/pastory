@@ -30,13 +30,12 @@ struct ContactPane: View {
 
             ScrollView(.vertical, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 16) {
-                    Spacer(minLength: 0)
                     sheet("反馈 bug & 提功能".l, "Pastory 微信小小群，交个朋友".l, qr: Theme.wechatGroup)
                     sheet("GitHub 点个 Star 吧".l, "开源产品，喜欢就请助力一下".l, link: ("nothingbutcici/pastory", Self.repoURL))
                     sheet("关注我的 X".l, "新版本和碎碎念都在这。".l, link: ("@nothingbutcici", Self.xURL))
                     sheet("Buy me a coffee", "觉得好用，请我喝一杯。".l, qr: Theme.coffee)
-                    Spacer(minLength: 0)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.bottom, 20)
             }
         }
