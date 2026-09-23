@@ -90,7 +90,7 @@ enum SelfTest {
             case "note":
                 await seedStore()
                 guard let t = ClipStore.shared.items.first(where: { $0.kind == .text }) else { ok = false; break }
-                let host = NSHostingView(rootView: DesktopNoteView(itemID: t.id))
+                let host = NSHostingView(rootView: DesktopNoteView(itemID: t.id, measuring: true))
                 host.sizingOptions = [.intrinsicContentSize]
                 host.frame = CGRect(origin: .zero, size: host.fittingSize)
                 let w = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)

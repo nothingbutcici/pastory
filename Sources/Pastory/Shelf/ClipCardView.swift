@@ -62,10 +62,10 @@ struct ClipCardView: View, Equatable {
         .opacity(tearing ? 0.35 : 1)
         // Drag a card up and out of the shelf: it becomes a sticky note under the pointer. Sideways drags belong to
         // the row's own scrolling, so only a clearly upward pull starts the tear.
-        .gesture(DragGesture(minimumDistance: 14, coordinateSpace: .global)
+        .gesture(DragGesture(minimumDistance: 6, coordinateSpace: .global)
             .onChanged { g in
                 if !tearing {
-                    guard g.translation.height < -36, abs(g.translation.height) > abs(g.translation.width) else { return }
+                    guard g.translation.height < -18, abs(g.translation.height) > abs(g.translation.width) * 0.8 else { return }
                     tearing = true
                     DesktopNotes.shared.beginTear(item.id, at: NSEvent.mouseLocation)
                 } else {

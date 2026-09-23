@@ -131,7 +131,7 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
         p.hidesOnDeactivate = false
         p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         p.delegate = self
-        p.contentView = NSHostingView(rootView: ShelfView(model: model))
+        p.contentView = FirstMouseHostingView(rootView: ShelfView(model: model))
         return p
     }
 
@@ -544,4 +544,11 @@ final class ShelfModel {
         store.remove(item.id)
         return true
     }
+}
+
+
+/// After a single click the keyboard goes back to the previous app and the shelf is no longer key. The next
+/// mouse-down would then only serve to bring the window forward; this lets it start a tear-out drag instead.
+final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }

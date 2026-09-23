@@ -19,7 +19,8 @@ final class DesktopNotes {
         for entry in Preferences.shared.desktopNotes {
             guard let id = entry["id"] as? String, ClipStore.shared.items.contains(where: { $0.id == id }),
                   let x = entry["x"] as? Double, let y = entry["y"] as? Double else { continue }
-            show(id, at: CGPoint(x: x, y: y), persist: false)
+            let size = (entry["w"] as? Double).flatMap { w in (entry["h"] as? Double).map { CGSize(width: w, height: $0) } }
+            show(id, at: CGPoint(x: x, y: y), size: size, persist: false)
         }
         persist()
     }
@@ -30,7 +31,7 @@ final class DesktopNotes {
         guard let item = ClipStore.shared.items.first(where: { $0.id == id }) else { return }
         if !item.pinned { ClipStore.shared.togglePin(id) }        // a note must not vanish with the nightly cleanup
         if let w = windows[id] { w.orderFrontRegardless(); return }
-        show(id, at: origin ?? nextFreeSpot(), persist: true)
+        show(id, at: origin ?? nextFreeSpot(), size: nil, persist: true)
     }
 
     func close(_ id: String) {
@@ -59,7 +60,7 @@ final class DesktopNotes {
     func beginTear(_ id: String, at mouse: CGPoint) {
         guard windows[id] == nil else { return }
         tearing = id
-        show(id, at: originFor(mouse: mouse, id: id), persist: false)
+        show(id, at: originFor(mouse: mouse, id: id), size: nil, persist: false)
         windows[id]?.alphaValue = 0.85
     }
     func moveTear(to mouse: CGPoint) {
@@ -78,8 +79,8 @@ final class DesktopNotes {
 
     // MARK: Internals
 
-    private func show(_ id: String, at origin: CGPoint, persist: Bool) {
-        let w = NoteWindow(id: id)
+    private func show(_ id: String, at origin: CGPoint, size: CGSize?, persist: Bool) {
+        let w = NoteWindow(id: id, size: size)
         w.setFrameOrigin(Self.clamp(origin, size: w.frame.size))
         w.orderFrontRegardless()
         windows[id] = w
@@ -104,44 +105,100 @@ final class DesktopNotes {
     }
 
     func persist() {
-        Preferences.shared.desktopNotes = windows.map { id, w in ["id": id, "x": Double(w.frame.minX), "y": Double(w.frame.minY)] }
+        Preferences.shared.desktopNotes = windows.map { id, w in
+            ["id": id, "x": Double(w.frame.minX), "y": Double(w.frame.minY), "w": Double(w.frame.width), "h": Double(w.frame.height)] }
     }
 }
 
 /// One sticky note. Non-activating, so a click copies without stealing focus from the app you are in.
+/// Moving and resizing are handled here, at the window level, so no SwiftUI gesture inside can swallow them:
+/// drag anywhere to move; drag the bottom-right corner to resize.
 final class NoteWindow: NSPanel {
     let itemID: String
+    let geometry = NoteGeometry()
     private var hosting: NSHostingView<DesktopNoteView>!
+    private var downAt: CGPoint?
+    private var mode: Mode = .idle
+    private enum Mode { case idle, deciding, moving, resizing(origin: CGPoint, size: CGSize) }
+    static let minSize = CGSize(width: 220, height: 150)
+    static let grip: CGFloat = 22
 
-    init(id: String) {
+    init(id: String, size: CGSize?) {
         itemID = id
         super.init(contentRect: CGRect(x: 0, y: 0, width: DesktopNoteView.width, height: 200),
                    styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         isOpaque = false
         backgroundColor = .clear
         hasShadow = false                                  // the paper draws its own
-        isMovableByWindowBackground = true
         hidesOnDeactivate = false
         isReleasedWhenClosed = false
         level = DesktopNotes.level
         collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
-        hosting = NSHostingView(rootView: DesktopNoteView(itemID: id, refit: { [weak self] in self?.refit() }))
-        hosting.sizingOptions = [.intrinsicContentSize]
+        hosting = NSHostingView(rootView: DesktopNoteView(itemID: id, geometry: geometry))
+        hosting.sizingOptions = []
         contentView = hosting
-        refit()
+        if let size { apply(size: size) } else { fitToContent() }
         NotificationCenter.default.addObserver(forName: NSWindow.didMoveNotification, object: self, queue: .main) { _ in
             MainActor.assumeIsolated { DesktopNotes.shared.persist() }
         }
     }
 
-    /// Size the window to the card; keep the top edge where it is so a note grows downward.
-    func refit() {
-        let size = hosting.fittingSize
-        guard size.width > 0, size.height > 0, size != frame.size else { return }
+    /// First appearance: the natural size of the card for this content.
+    func fitToContent() {
+        let probe = NSHostingView(rootView: DesktopNoteView(itemID: itemID, geometry: NoteGeometry(), measuring: true))
+        probe.sizingOptions = [.intrinsicContentSize]
+        var s = probe.fittingSize
+        let cap = (NSScreen.main?.visibleFrame.height ?? 900) * 0.6
+        s.height = min(max(s.height, Self.minSize.height), cap)
+        s.width = max(s.width, DesktopNoteView.width + DesktopNoteView.margin * 2)
+        apply(size: s)
+    }
+
+    private func apply(size: CGSize) {
         let top = frame.maxY
         setFrame(CGRect(x: frame.minX, y: top - size.height, width: size.width, height: size.height), display: true)
+        geometry.size = CGSize(width: size.width - DesktopNoteView.margin * 2, height: size.height - DesktopNoteView.margin * 2)
+    }
+
+    override func sendEvent(_ event: NSEvent) {
+        switch event.type {
+        case .leftMouseDown:
+            downAt = NSEvent.mouseLocation
+            let p = event.locationInWindow
+            let inGrip = p.x >= frame.width - DesktopNoteView.margin - Self.grip && p.y <= DesktopNoteView.margin + Self.grip
+            mode = inGrip ? .resizing(origin: frame.origin, size: frame.size) : .deciding
+            if inGrip { return }
+        case .leftMouseDragged:
+            guard let down = downAt else { break }
+            let now = NSEvent.mouseLocation
+            switch mode {
+            case .deciding:
+                if hypot(now.x - down.x, now.y - down.y) > 4 { mode = .moving; performDrag(with: event) }
+                return
+            case .moving: return
+            case .resizing(let origin, let size):
+                let dx = now.x - down.x, dy = now.y - down.y
+                let w = max(Self.minSize.width, size.width + dx), h = max(Self.minSize.height, size.height - dy)
+                setFrame(CGRect(x: origin.x, y: origin.y + size.height - h, width: w, height: h), display: true)
+                geometry.size = CGSize(width: w - DesktopNoteView.margin * 2, height: h - DesktopNoteView.margin * 2)
+                return
+            case .idle: break
+            }
+        case .leftMouseUp:
+            let was = mode
+            mode = .idle; downAt = nil
+            if case .resizing = was { DesktopNotes.shared.persist(); return }
+            if case .moving = was { return }
+        default: break
+        }
+        super.sendEvent(event)
     }
 
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
+}
+
+/// The card's current size, driven by the window; the view lays out to it.
+@Observable final class NoteGeometry {
+    var size = CGSize(width: DesktopNoteView.width, height: 200)
 }

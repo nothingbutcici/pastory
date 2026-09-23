@@ -4,8 +4,11 @@ import SwiftUI
 /// double-click pastes into the app in front. Width matches the shelf card; height follows the content.
 struct DesktopNoteView: View {
     let itemID: String
-    var refit: () -> Void = {}
+    var geometry = NoteGeometry()
+    /// Measuring pass: natural size for the content, used once to pick the window's first size.
+    var measuring = false
     static let width: CGFloat = 288
+    static let margin: CGFloat = 14          // shadow and pushpin live in this band around the paper
     private static let side: CGFloat = 18
     @State private var copiedTick = 0
     @State private var showCopied = false
@@ -45,7 +48,8 @@ struct DesktopNoteView: View {
                 .padding(.leading, Self.side).padding(.trailing, 8)
                 .frame(height: 40)
             }
-            .frame(width: Self.width)
+            .frame(width: measuring ? Self.width : geometry.size.width)
+            .frame(height: measuring ? nil : geometry.size.height, alignment: .top)
             .background(
                 RoundedRectangle(cornerRadius: 6).fill(Paint.paper)
                     .shadow(color: .black.opacity(0.35), radius: 10, x: 2, y: 6)
@@ -56,7 +60,18 @@ struct DesktopNoteView: View {
                         .shadow(color: .black.opacity(0.28), radius: 2, x: 1, y: 2).offset(y: -6)
                 }
             }
-            .padding(14)          // room for the shadow and the pin inside the window
+            .overlay(alignment: .bottomTrailing) {
+                if !measuring {
+                    // Resize grip: three short diagonal strokes in the corner.
+                    Path { p in
+                        for k in stride(from: 4.0, through: 12.0, by: 4.0) { p.move(to: CGPoint(x: 16 - k, y: 16)); p.addLine(to: CGPoint(x: 16, y: 16 - k)) }
+                    }
+                    .stroke(Color.ink.opacity(0.35), lineWidth: 1)
+                    .frame(width: 16, height: 16)
+                    .padding(6)
+                }
+            }
+            .padding(Self.margin)
             .contentShape(Rectangle())
             .onTapGesture { (NSApp.currentEvent?.clickCount ?? 1) >= 2 ? paste(item) : copy(item) }
             .contextMenu {
@@ -65,8 +80,6 @@ struct DesktopNoteView: View {
                 Divider()
                 Button("从桌面关闭".l) { DesktopNotes.shared.close(itemID) }
             }
-            .onChange(of: ClipStore.shared.version) { _, _ in DispatchQueue.main.async(execute: refit) }
-            .onChange(of: ClipStore.shared.thumbTick) { _, _ in DispatchQueue.main.async(execute: refit) }
         } else {
             Color.clear.frame(width: 1, height: 1)
         }
@@ -102,12 +115,12 @@ struct DesktopNoteView: View {
             let measured = ceil((text as NSString).boundingRect(with: CGSize(width: inner, height: .greatestFiniteMagnitude),
                                                                  options: [.usesLineFragmentOrigin, .usesFontLeading],
                                                                  attributes: [.font: font, .paragraphStyle: Self.paragraph]).height) + 2
-            ScrollView(.vertical, showsIndicators: measured > cap) {
+            ScrollView(.vertical, showsIndicators: true) {
                 Text(text).font(.serif(14)).foregroundStyle(Color.ink).lineSpacing(5)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .textSelection(.enabled)
             }
-            .frame(height: min(measured, cap))
+            .frame(height: measuring ? min(measured, cap) : nil)
+            .frame(maxHeight: measuring ? nil : .infinity)
             .padding(.horizontal, Self.side).padding(.vertical, 12)
         case .url:
             VStack(alignment: .leading, spacing: 6) {
@@ -116,6 +129,7 @@ struct DesktopNoteView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Self.side).padding(.vertical, 12)
+            .frame(maxHeight: measuring ? nil : .infinity, alignment: .top)
         case .files:
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(item.snippet.split(separator: "\n").prefix(12), id: \.self) { line in
@@ -127,6 +141,7 @@ struct DesktopNoteView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Self.side).padding(.vertical, 12)
+            .frame(maxHeight: measuring ? nil : .infinity, alignment: .top)
         case .image, .video:
             Group {
                 if let img = ClipStore.shared.thumbnail(of: item) {
@@ -148,6 +163,7 @@ struct DesktopNoteView: View {
                 }
             }
             .padding(.horizontal, Self.side).padding(.vertical, 14)
+            .frame(maxHeight: measuring ? nil : .infinity, alignment: .top)
         }
     }
 
