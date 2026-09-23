@@ -65,8 +65,8 @@ struct ClipCardView: View, Equatable {
                 .padding(.horizontal, 12).padding(.vertical, 6)
                 .background(Color.paperBlue, in: Capsule())
                 .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
-                .offset(y: -44)
-                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                .padding(.top, 8)         // inside the card, over the pin band: the row above clips anything drawn outside
+                .transition(.opacity.combined(with: .move(edge: .top)))
                 .allowsHitTesting(false)
             }
         }
