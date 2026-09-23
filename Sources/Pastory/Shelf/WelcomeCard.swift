@@ -107,8 +107,12 @@ struct WelcomeCard: View {
         .onReceive(NotificationCenter.default.publisher(for: .shortcutsChanged)) { _ in tick += 1 }
     }
 
+    /// Section label on a torn scrap of blue paper, like the sidebar's active tab, but shorter.
     private func heading(_ s: String) -> some View {
-        Text(s).font(.serif(14, bold: true)).foregroundStyle(Color.inkMuted).padding(.bottom, 4)
+        Text(s).font(.serif(14, bold: true)).foregroundStyle(Color.ink)
+            .padding(.horizontal, 12).padding(.vertical, 4)
+            .background(TornPaper(top: true, right: true, bottom: true, left: true, seed: 21, amplitude: 1.6, step: 6).fill(Paint.paperBlue))
+            .padding(.bottom, 8)
     }
 
     /// Icon · title · keycaps. A taken shortcut says so under the title.
