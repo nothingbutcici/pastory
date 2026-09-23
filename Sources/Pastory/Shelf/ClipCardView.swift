@@ -6,7 +6,7 @@ struct ClipCardView: View, Equatable {
     /// Closures only capture the model and the item, so data equality is enough; with `.equatable()` the arrow keys
     /// re-render the two cards whose `selected` changed instead of the whole row.
     static func == (a: ClipCardView, b: ClipCardView) -> Bool {
-        a.item == b.item && a.selected == b.selected && a.onClipboard == b.onClipboard && a.index == b.index && a.renaming == b.renaming && a.onDesktop == b.onDesktop && a.showDragHint == b.showDragHint
+        a.item == b.item && a.selected == b.selected && a.onClipboard == b.onClipboard && a.index == b.index && a.renaming == b.renaming && a.onDesktop == b.onDesktop
     }
 
     let item: ClipItem
@@ -22,8 +22,6 @@ struct ClipCardView: View, Equatable {
     let onDelete: () -> Void
     /// The card also lives on the desktop as a sticky note.
     var onDesktop = false
-    /// The one-time hint after the first Pin.
-    var showDragHint = false
     @State private var tearing = false
 
     static let width: CGFloat = 288
@@ -55,24 +53,6 @@ struct ClipCardView: View, Equatable {
         // The sheet casts the shadow; shadowing the whole subtree (text, thumbnails) re-rasterised every card on every change.
         .background(ticket.fill(paperPaint).shadow(color: .black.opacity(selected ? 0.55 : 0.4), radius: selected ? 14 : 9, x: 2, y: selected ? 9 : 6))
         .overlay(alignment: .top) { decoration }
-        .overlay(alignment: .top) {
-            if showDragHint {
-                // A small paper tag on the desk colour, so it reads on cream and blue paper alike, and sits below the
-                // pin band so it never collides with the pushpin of a selected card.
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text("↑").font(.system(size: 13, weight: .semibold))
-                    Text("向上拖出面板，就能贴在桌面上".l).font(.script(16))
-                }
-                .foregroundStyle(Color.onBrown)
-                .padding(.horizontal, 12).padding(.vertical, 5)
-                .background(TornPaper(top: true, right: true, bottom: true, left: true, seed: 31, amplitude: 1.2, step: 5).fill(Paint.desk))
-                .shadow(color: .black.opacity(0.3), radius: 3, y: 2)
-                .padding(.top, 108)         // clear of header and title band even on the selected card; over the body
-                .transition(.opacity)
-                .allowsHitTesting(false)
-            }
-        }
-        .animation(.easeOut(duration: 0.2), value: showDragHint)
         .offset(y: selected ? -6 : 0)
         .animation(.easeOut(duration: 0.1), value: selected)
         .contentShape(Rectangle())

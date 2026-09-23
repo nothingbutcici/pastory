@@ -42,7 +42,6 @@ enum L {
         ("试一试", "Try it"), ("按 %@ 打开或收起剪贴板", "Press %@ to open or hide the clipboard"), ("按 %@ 截一张图", "Press %@ to take a screenshot"),
         ("先给剪贴板设一个快捷键", "Set a clipboard shortcut first"), ("先给截图设一个快捷键", "Set a screenshot shortcut first"),
         ("被其他应用占用，点击换一个", "Taken by another app. Click to pick another"),
-        ("全部保留", "Keeping everything"), ("可在设置里定时清理", "Schedule cleanup in Settings"), ("保留 %d 天", "Keeping %d days"),
         ("记录密码管理器复制的内容", "Record copies from password managers"),
         ("从 1Password 等「密码管理软件」复制的内容也会进剪贴板。", "Copies from password managers such as 1Password are recorded too."),
         ("从 1Password 等「密码管理软件」复制的内容均不进剪贴板。", "Nothing copied from password managers such as 1Password is recorded."),
@@ -51,7 +50,8 @@ enum L {
         ("贴到桌面", "Stick to Desktop"), ("从桌面收起", "Remove from Desktop"), ("在桌面上显示", "Show on Desktop"), ("从桌面关闭", "Close on Desktop"),
         ("已贴在桌面", "On the desktop"),         ("浮于窗口上（点击改为仅桌面显示）", "Floating above windows (click: desktop only)"), ("仅桌面显示（点击改为浮于窗口上）", "Desktop only (click: float above windows)"),
         ("改为仅桌面显示", "Keep on Desktop Only"), ("改为浮于窗口上", "Float Above Windows"),
-        ("把一张卡片向上拖出面板，贴到桌面上", "Drag a card up out of the shelf onto the desktop"), ("向上拖出面板，就能贴在桌面上", "Drag it up out of the shelf to stick it on the desktop"),
+        ("把一张卡片向上拖出面板，贴到桌面上", "Drag a card up out of the shelf onto the desktop"), ("单击卡片", "Click a card"), ("双击卡片", "Double-click a card"), ("拖动卡片", "Drag a card"),
+        ("粘贴进刚才的应用", "Paste into the app you came from"), ("固定到桌面任意位置", "Stick it anywhere on the desktop"), ("未 Pin 的内容保留 %d 天", "Unpinned items kept %d days"),
         ("复制文字", "Copy Text"), ("关闭", "Close"), ("截屏", "Screenshot"), ("录屏", "Record"), ("取消", "Cancel"),
         // Menu bar / app
         ("截图", "Screenshot"), ("剪贴板", "Clipboard"), ("搜索剪贴板", "Search Clipboard"),
@@ -90,7 +90,7 @@ enum L {
         ("保存", "Save"), ("保存到这里", "Save Here"), ("选择一个文件夹，把这些文件复制过去", "Choose a folder to copy these files into"),
         ("编辑图片", "Edit Image"), ("+ 加个标题", "+ add a title"), ("保存并复制", "Save and Copy"),
         // Shelf
-        ("设置", "Settings"), ("今日暂存", "Today's clips"), ("Pin 后长期保存", "Pin to keep"), ("关闭 ⎋", "Close ⎋"),
+        ("设置", "Settings"), ("关闭 ⎋", "Close ⎋"),
         ("还没有内容。复制点什么，或者按 %@ 截个图。", "Nothing yet. Copy something, or press %@ to take a screenshot."),
         ("没有匹配的内容", "No matches"), ("复制并关闭", "Copy and Close"), ("命名…", "Name…"), ("重命名…", "Rename…"),
         ("去掉标题", "Remove Title"), ("在 Finder 中显示", "Show in Finder"), ("打开", "Open"), ("复制识别出的文字", "Copy Recognized Text"),

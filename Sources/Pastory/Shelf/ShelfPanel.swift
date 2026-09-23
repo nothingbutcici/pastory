@@ -313,8 +313,6 @@ final class ShelfModel {
         showWelcome = false
         ShelfPanelController.shared.relayoutHeight()
     }
-    /// Shown once, right after the first Pin: the card can be dragged out onto the desktop.
-    var dragHintFor: String?
     /// Bumped when a setting that the sidebar shows (retention) changes.
     var prefsTick = 0
     /// Card whose title is being edited inline.
