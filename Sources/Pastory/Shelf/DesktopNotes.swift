@@ -67,11 +67,13 @@ final class DesktopNotes {
         guard let id = tearing, let w = windows[id] else { return }
         w.setFrameOrigin(originFor(mouse: mouse, id: id))
     }
-    /// Dropped. Over the shelf = changed your mind; anywhere else = it stays, and the card is pinned.
+    /// Dropped. The pointer decides, not the note's frame: a long note hangs down over the shelf while its
+    /// header is up on the desktop, and that is a valid drop. Pointer still over the shelf = changed your mind.
     func endTear(over shelf: CGRect?) {
         guard let id = tearing, let w = windows[id] else { tearing = nil; return }
         tearing = nil
-        if let shelf, shelf.intersects(w.frame) { w.orderOut(nil); w.close(); windows[id] = nil; return }
+        if let shelf, shelf.contains(NSEvent.mouseLocation) { w.orderOut(nil); w.close(); windows[id] = nil; return }
+        w.setFrameOrigin(Self.clamp(w.frame.origin, size: w.frame.size))
         w.alphaValue = 1
         if let item = ClipStore.shared.items.first(where: { $0.id == id }), !item.pinned { ClipStore.shared.togglePin(id) }
         persist()
