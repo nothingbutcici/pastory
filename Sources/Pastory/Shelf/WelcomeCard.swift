@@ -21,12 +21,12 @@ struct WelcomeCard: View {
                 Text("Pastory").font(.serif(16)).foregroundStyle(Color.ink)
                 Spacer()
             }
-            .padding(.horizontal, 18).padding(.top, 30).padding(.bottom, 6)
+            .padding(.horizontal, 18).padding(.top, 26).padding(.bottom, 4)
             Rectangle().fill(Color.ink.opacity(0.7)).frame(height: 1).padding(.horizontal, 18)
             // Handwritten title between the two rules.
-            Text("欢迎使用 Pastory".l).font(.script(28)).foregroundStyle(Color.ink).lineLimit(1)
+            Text("欢迎使用 Pastory".l).font(.script(24)).foregroundStyle(Color.ink).lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 18).padding(.top, 6).padding(.bottom, 3)
+                .padding(.horizontal, 18).padding(.top, 4).padding(.bottom, 2)
                 .overlay(alignment: .bottom) { Rectangle().fill(Color.ink.opacity(0.6)).frame(height: 1).padding(.horizontal, 18) }
 
             // Two columns side by side, so the card is as tall as any other card and no taller.
@@ -53,7 +53,7 @@ struct WelcomeCard: View {
                 Spacer(minLength: 0)
             }
             }
-            .padding(.horizontal, 18).padding(.top, 8)
+            .padding(.horizontal, 18).padding(.top, 6)
             }
             .frame(maxHeight: .infinity)          // whatever is left between the title rule and the tear line
 
@@ -133,7 +133,7 @@ struct WelcomeCard: View {
                     .opacity(done ? 0.5 : 1)
             }
         }
-        .padding(.vertical, 3)
+        .padding(.vertical, 1.5)
     }
 
     /// Dashed tear-off line with the two notches on the card's edges.
