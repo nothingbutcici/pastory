@@ -253,11 +253,11 @@ final class AnnotateView: NSView, NSTextViewDelegate {
         case kVK_Escape:
             if selectedID != nil { selectedID = nil } else { cancel() }
             return
-        case kVK_ANSI_Z where cmd: undo(); return
-        case kVK_Delete, kVK_ForwardDelete: deleteSelected(); return
+        case kVK_ANSI_Z where cmd: if !recordMode { undo() }; return
+        case kVK_Delete, kVK_ForwardDelete: if !recordMode { deleteSelected() }; return
         default: break
         }
-        if !cmd, let ch = event.charactersIgnoringModifiers?.lowercased().first,
+        if !recordMode, !cmd, let ch = event.charactersIgnoringModifiers?.lowercased().first,
            let t = AnnotateTool.allCases.first(where: { $0.key == ch }) {
             tool = t
             return

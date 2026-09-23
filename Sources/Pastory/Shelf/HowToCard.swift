@@ -10,14 +10,15 @@ enum HowToCard {
         let p = Preferences.shared
         let store = ClipStore.shared
         let text = L.isEnglish ? english : chinese
+        guard !store.loadFailed, !store.lastSaveFailed else { return }      // seed only when the card can actually land on disk
         if p.howToVersion == 0 {
             // Older builds used a plain flag; treat it as version 1.
             p.howToVersion = p.didSeedHowTo ? 1 : 0
         }
         if p.howToVersion == 0 {
-            guard let item = store.insertText(text, rtf: nil, source: CaptureCoordinator.source) else { return }
+            guard let item = store.insertText(text, rtf: nil, source: CaptureCoordinator.source), !store.lastSaveFailed else { return }
             store.setTitle(L.isEnglish ? titleEN : titleZH, for: item.id)
-            if !item.pinned { store.togglePin(item.id) }
+            if !item.pinned { store.togglePin(item.id, welcome: false) }
         } else if p.howToVersion < version,
                   let old = store.items.first(where: { ($0.title == titleZH || $0.title == titleEN) && $0.sourceAppName == CaptureCoordinator.source.name }) {
             store.updateText(old.id, text: text)      // the card is still around: refresh its copy in place

@@ -189,6 +189,7 @@ final class SelectionOverlayController {
         recordBar?.removeFromSuperview(); recordBar = nil
         canvas.recordMode = false
         toolbar?.isHidden = false
+        toolbar?.subBar.isHidden = false
         layoutChrome()
     }
 

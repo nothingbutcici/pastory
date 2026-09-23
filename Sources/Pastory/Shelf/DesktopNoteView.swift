@@ -13,6 +13,7 @@ struct DesktopNoteView: View {
     @State private var copiedTick = 0
     @State private var showCopied = false
     @State private var layerTick = 0
+    @State private var noteText = ""
 
     private var item: ClipItem? { ClipStore.shared.items.first { $0.id == itemID } }
 
@@ -118,18 +119,15 @@ struct DesktopNoteView: View {
     private func content(_ item: ClipItem) -> some View {
         switch item.kind {
         case .text:
-            let text = ClipStore.shared.text(of: item) ?? item.snippet
-            let font = Theme.serif(size: 14)
-            let inner = Self.width - Self.side * 2
-            let cap = (NSScreen.main?.visibleFrame.height ?? 900) * 0.6
-            let measured = ceil((text as NSString).boundingRect(with: CGSize(width: inner, height: .greatestFiniteMagnitude),
-                                                                 options: [.usesLineFragmentOrigin, .usesFontLeading],
-                                                                 attributes: [.font: font, .paragraphStyle: Self.paragraph]).height) + 2
+            // The measuring probe needs the text right now; a live note loads it once per content change instead of
+            // re-reading the payload from disk every time the store changes.
+            let text = measuring ? (ClipStore.shared.text(of: item) ?? item.snippet) : noteText
             ScrollView(.vertical, showsIndicators: true) {
                 Text(text).font(.serif(14)).foregroundStyle(Color.ink).lineSpacing(5)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(height: measuring ? min(measured, cap) : nil)
+            .frame(height: measuring ? Self.naturalHeight(of: text) : nil)
+            .task(id: item.contentHash) { if !measuring { noteText = ClipStore.shared.text(of: item) ?? item.snippet } }
             .frame(maxHeight: measuring ? nil : .infinity)
             .padding(.horizontal, Self.side).padding(.vertical, 12)
         case .url:
@@ -189,6 +187,15 @@ struct DesktopNoteView: View {
         .buttonStyle(.plain).help(tip)
     }
 
+    /// Height of the whole text at note width, capped so a long note never exceeds 60% of the screen.
+    private static func naturalHeight(of text: String) -> CGFloat {
+        let inner = Self.width - Self.side * 2
+        let cap = (NSScreen.main?.visibleFrame.height ?? 900) * 0.6
+        let h = ceil((text as NSString).boundingRect(with: CGSize(width: inner, height: .greatestFiniteMagnitude),
+                                                     options: [.usesLineFragmentOrigin, .usesFontLeading],
+                                                     attributes: [.font: Theme.serif(size: 14), .paragraphStyle: paragraph]).height) + 2
+        return min(h, cap)
+    }
     private static let paragraph: NSParagraphStyle = { let p = NSMutableParagraphStyle(); p.lineSpacing = 5; return p }()
 
     private func kindLabel(_ item: ClipItem) -> String {

@@ -5,6 +5,7 @@ import AppKit
 final class TextEditorWindow: NSObject, NSWindowDelegate {
     private static var open: [String: TextEditorWindow] = [:]
     private let item: ClipItem
+    private var reopenShelf = false
     private let window: NSWindow
     private let textView = NSTextView()
     private let titleField = TitleField()
@@ -14,6 +15,7 @@ final class TextEditorWindow: NSObject, NSWindowDelegate {
         if let w = open[item.id] { w.window.makeKeyAndOrderFront(nil); return }
         let e = TextEditorWindow(item: item)
         open[item.id] = e
+        e.reopenShelf = ShelfPanelController.shared.isVisible      // opened from a desktop note: the shelf was never up
         ShelfPanelController.shared.hide()
         NSApp.activate(ignoringOtherApps: true)
         e.window.makeKeyAndOrderFront(nil)
@@ -124,7 +126,7 @@ final class TextEditorWindow: NSObject, NSWindowDelegate {
 
     func windowWillClose(_ notification: Notification) {
         Self.open[item.id] = nil
-        ShelfPanelController.shared.show()
+        if reopenShelf { ShelfPanelController.shared.show() }
     }
 }
 

@@ -16,6 +16,7 @@ final class DesktopNotes {
 
     /// Launch: bring back every note whose card still exists, where it was.
     func restore() {
+        guard !ClipStore.shared.loadFailed else { return }      // an unreadable store must not erase every placement
         for entry in Preferences.shared.desktopNotes {
             guard let id = entry["id"] as? String, ClipStore.shared.items.contains(where: { $0.id == id }),
                   let x = entry["x"] as? Double, let y = entry["y"] as? Double else { continue }
@@ -30,7 +31,7 @@ final class DesktopNotes {
     /// near the top-right of the main screen, stepped so notes placed one after another do not stack.
     func place(_ id: String, at origin: CGPoint? = nil) {
         guard let item = ClipStore.shared.items.first(where: { $0.id == id }) else { return }
-        if !item.pinned { ClipStore.shared.togglePin(id) }        // a note must not vanish with the nightly cleanup
+        if !item.pinned { ClipStore.shared.togglePin(id, welcome: false) }    // a note must not vanish with the nightly cleanup
         if let w = windows[id] { w.orderFrontRegardless(); return }
         show(id, at: origin ?? nextFreeSpot(), size: nil, persist: true)
         ShelfPanelController.shared.model.noteWelcomeTried("desktop")
@@ -82,7 +83,7 @@ final class DesktopNotes {
         if let shelf, shelf.contains(NSEvent.mouseLocation) { w.orderOut(nil); w.close(); windows[id] = nil; return }
         w.setFrameOrigin(Self.clamp(w.frame.origin, size: w.frame.size))
         w.alphaValue = 1
-        if let item = ClipStore.shared.items.first(where: { $0.id == id }), !item.pinned { ClipStore.shared.togglePin(id) }
+        if let item = ClipStore.shared.items.first(where: { $0.id == id }), !item.pinned { ClipStore.shared.togglePin(id, welcome: false) }
         ShelfPanelController.shared.model.noteWelcomeTried("desktop")
         persist()
     }
@@ -115,6 +116,7 @@ final class DesktopNotes {
     }
 
     func persist() {
+        guard tearing == nil else { return }      // a note still being torn out is not placed yet (the drop may cancel it)
         Preferences.shared.desktopNotes = windows.map { id, w in
             ["id": id, "x": Double(w.frame.minX), "y": Double(w.frame.minY), "w": Double(w.frame.width), "h": Double(w.frame.height), "top": w.onTop] }
     }
@@ -153,10 +155,12 @@ final class NoteWindow: NSPanel {
         hosting.layer?.isOpaque = false
         contentView = hosting
         if let size { apply(size: size) } else { fitToContent() }
-        NotificationCenter.default.addObserver(forName: NSWindow.didMoveNotification, object: self, queue: .main) { _ in
+        moveObserver = NotificationCenter.default.addObserver(forName: NSWindow.didMoveNotification, object: self, queue: .main) { _ in
             MainActor.assumeIsolated { DesktopNotes.shared.persist() }
         }
     }
+    private var moveObserver: NSObjectProtocol?
+    deinit { if let moveObserver { NotificationCenter.default.removeObserver(moveObserver) } }
 
     /// First appearance: the natural size of the card for this content.
     func fitToContent() {

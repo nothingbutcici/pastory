@@ -66,6 +66,7 @@ struct ClipCardView: View, Equatable {
             .onChanged { g in
                 if !tearing {
                     guard g.translation.height < -18, abs(g.translation.height) > abs(g.translation.width) * 0.8 else { return }
+                    if DesktopNotes.shared.isOnDesktop(item.id) { DesktopNotes.shared.bringToFront(item.id); return }
                     tearing = true
                     DesktopNotes.shared.beginTear(item.id, at: NSEvent.mouseLocation)
                 } else {

@@ -22,7 +22,6 @@ extension Font {
 enum Paint {
     static let paper = ImagePaint(image: Image(nsImage: Theme.paperTile))
     static let paperBlue = ImagePaint(image: Image(nsImage: Theme.paperBlueTile))
-    static let paperPink = ImagePaint(image: Image(nsImage: Theme.paperPinkTile))
     static let desk = ImagePaint(image: Image(nsImage: Theme.deskTile))
 }
 

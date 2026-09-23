@@ -6,6 +6,7 @@ import AppKit
 final class ImageEditorWindow: NSObject, NSWindowDelegate, AnnotateDelegate {
     private static var open: [String: ImageEditorWindow] = [:]
     private let item: ClipItem
+    private var reopenShelf = false
     private let window: NSWindow
     private var canvas: AnnotateView!
     private var toolbar: AnnotateToolbar!
@@ -15,6 +16,7 @@ final class ImageEditorWindow: NSObject, NSWindowDelegate, AnnotateDelegate {
         guard let png = ClipStore.shared.png(of: item), let cg = Screenshotter.image(fromPNG: png) else { NSSound.beep(); return }
         let e = ImageEditorWindow(item: item, image: cg)
         open[item.id] = e
+        e.reopenShelf = ShelfPanelController.shared.isVisible      // opened from a desktop note: the shelf was never up
         ShelfPanelController.shared.hide()
         NSApp.activate(ignoringOtherApps: true)
         e.window.makeKeyAndOrderFront(nil)
@@ -90,7 +92,7 @@ final class ImageEditorWindow: NSObject, NSWindowDelegate, AnnotateDelegate {
     func windowWillClose(_ notification: Notification) {
         OCRPanelController.shared.close()
         Self.open[item.id] = nil
-        ShelfPanelController.shared.show()
+        if reopenShelf { ShelfPanelController.shared.show() }
     }
 }
 

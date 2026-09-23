@@ -19,7 +19,7 @@ final class SettingsWindowController {
 
 @Observable
 final class PrefsMirror {
-    var retentionDays: Int { didSet { Preferences.shared.retentionDays = retentionDays; Task { @MainActor in Retention.sweep(); Retention.reschedule(); ShelfPanelController.shared.model.prefsTick += 1 } } }
+    var retentionDays: Int { didSet { Preferences.shared.retentionDays = retentionDays; Task { @MainActor in Retention.sweep(); Retention.reschedule() } } }
     var cleanupHour: Int { didSet { Preferences.shared.cleanupHour = cleanupHour; Task { @MainActor in Retention.reschedule() } } }
     var exportDir: String { didSet { Preferences.shared.customExportDir = exportDir.isEmpty ? nil : exportDir } }
     var paused: Bool { didSet { Preferences.shared.monitoringPaused = paused } }

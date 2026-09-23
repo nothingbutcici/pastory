@@ -407,13 +407,14 @@ final class ClipStore {
         persist(item)
     }
 
-    func togglePin(_ id: String) {
+    /// `welcome: false` = a pin the app did on the user's behalf (seeding, desktop notes); it must not tick the welcome checklist.
+    func togglePin(_ id: String, welcome: Bool = true) {
         guard let i = items.firstIndex(where: { $0.id == id }) else { return }
         items[i].pinned.toggle()
         items[i].modifiedAt = Date()
         guard persist(items[i]) else { items[i].pinned.toggle(); return }      // UI must not claim a pin the disk does not have
         if !items[i].pinned { Retention.reschedule() }             // an un-pinned old item may be the next to expire
-        else { ShelfPanelController.shared.model.noteWelcomeTried("pin") }
+        else if welcome { ShelfPanelController.shared.model.noteWelcomeTried("pin") }
     }
 
     /// Self-test only.

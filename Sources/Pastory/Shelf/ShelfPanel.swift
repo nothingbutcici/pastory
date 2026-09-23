@@ -79,7 +79,7 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
             }
         }
         let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main ?? NSScreen.screens[0]
-        var height = max(384, (screen.frame.height * 0.48).rounded() - 36)      // 48% minus about a centimetre; cards follow the panel
+        let height = max(384, (screen.frame.height * 0.48).rounded() - 36)      // 48% minus about a centimetre; cards follow the panel
         let target = CGRect(x: screen.frame.minX, y: screen.frame.minY, width: screen.frame.width, height: height)
         model.reset()
         // The window itself never leaves this screen (a display arranged below would otherwise see it slide through);
@@ -313,7 +313,6 @@ final class ShelfModel {
         showWelcome = false          // the card goes; the shelf stays exactly as it is
     }
     /// Bumped when a setting that the sidebar shows (retention) changes.
-    var prefsTick = 0
     /// Card whose title is being edited inline.
     var renamingID: String?
     var filter: ShelfFilter = .all { didSet { selectAvailableItem() } }

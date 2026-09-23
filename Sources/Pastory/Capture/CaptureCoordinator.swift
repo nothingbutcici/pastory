@@ -145,6 +145,7 @@ final class CaptureCoordinator: AnnotateDelegate {
         let target: CaptureTarget = local.size == overlay.heldScreenSize ? .display(display) : .region(display, local)
         OCRPanelController.shared.close()
         SelectionOverlayController.shared.release()
+        ShelfPanelController.shared.holdOpen = false      // the frame is fixed now; the shelf goes back to hiding on outside clicks
         let session = RecordingSession(target: target, regionScreenRect: rect)
         session.onFinish = { [weak self] in
             self?.recording = nil
