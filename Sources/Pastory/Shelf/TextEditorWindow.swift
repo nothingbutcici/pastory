@@ -54,6 +54,14 @@ final class TextEditorWindow: NSObject, NSWindowDelegate {
         textView.insertionPointColor = Theme.ink
         textView.backgroundColor = Theme.paper
         textView.textContainerInset = CGSize(width: 18, height: 16)
+        // Reading room: 16 pt serif needs more than the default leading, especially for CJK. Applied to the text
+        // already there and to whatever gets typed.
+        let para = NSMutableParagraphStyle()
+        para.lineSpacing = 7
+        para.paragraphSpacing = 4
+        textView.defaultParagraphStyle = para
+        textView.typingAttributes = [.font: Theme.serif(size: 16), .foregroundColor: Theme.ink, .paragraphStyle: para]
+        textView.textStorage?.addAttributes([.paragraphStyle: para], range: NSRange(location: 0, length: textView.string.utf16.count))
         textView.isAutomaticQuoteSubstitutionEnabled = false
         textView.isAutomaticDashSubstitutionEnabled = false
         textView.autoresizingMask = [.width]

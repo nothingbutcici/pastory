@@ -113,6 +113,8 @@ final class Preferences {
 
     /// The 「Pastory 怎么用」 card has been seeded into the store once.
     var didSeedHowTo: Bool { get { d.bool(forKey: "didSeedHowTo") } set { d.set(newValue, forKey: "didSeedHowTo") } }
+    /// Copy version of the seeded card; a newer build refreshes the card in place if it still exists.
+    var howToVersion: Int { get { d.integer(forKey: "howToVersion") } set { d.set(newValue, forKey: "howToVersion") } }
     /// Onboarding checklist: which of the two shortcuts has actually been used once.
     var welcomeTried: Set<String> {
         get { Set(d.stringArray(forKey: "welcomeTried") ?? []) }
