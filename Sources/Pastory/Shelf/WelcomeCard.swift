@@ -30,7 +30,10 @@ struct WelcomeCard: View {
                 .overlay(alignment: .bottom) { Rectangle().fill(Color.ink.opacity(0.6)).frame(height: 1).padding(.horizontal, 18) }
 
             // Two columns side by side, so the card is as tall as any other card and no taller.
+            GeometryReader { geo in
             ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 0) {
+            Spacer(minLength: 0)
             HStack(alignment: .top, spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
                 heading("设置常用快捷键".l)
@@ -38,8 +41,8 @@ struct WelcomeCard: View {
                 step(icon: "crop", title: "截图".l, key: Preferences.Key.hotkeyCapture, tag: "capture")
                 Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            Rectangle().fill(Color.ink.opacity(0.15)).frame(width: 1).padding(.vertical, 4).padding(.horizontal, 14)
+            .fixedSize(horizontal: true, vertical: false)
+            Rectangle().fill(Color.ink.opacity(0.15)).frame(width: 1).padding(.vertical, 4).padding(.horizontal, 20)
             VStack(alignment: .leading, spacing: 0) {
                 heading("试一试".l)
                 todo(done: model.welcomeTried.contains("shelf"),
@@ -54,7 +57,12 @@ struct WelcomeCard: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.horizontal, 18).padding(.top, 6)
+            .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+            }
+            .frame(minHeight: geo.size.height)     // spacers centre the block when it fits; it scrolls when it does not
+            .padding(.horizontal, 18)
+            }
             }
             .frame(maxHeight: .infinity)          // whatever is left between the title rule and the tear line
 
@@ -107,11 +115,10 @@ struct WelcomeCard: View {
         // Title line, then the keycaps on their own line underneath: narrow, and nothing has to squeeze sideways.
         return VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 8) {
-                Image(systemName: icon).font(.system(size: 14, weight: .light)).foregroundStyle(Color.ink).frame(width: 20)
                 Text(title).font(.serif(13)).foregroundStyle(Color.ink)
                 if let note { Text(note).font(.serif(11)).foregroundStyle(Color.ink.opacity(0.45)).lineLimit(1) }
             }
-            ShortcutRecorder(key: key, keycaps: true, status: binding).padding(.leading, 28)
+            ShortcutRecorder(key: key, keycaps: true, status: binding)
         }
         .padding(.vertical, 5)
     }
