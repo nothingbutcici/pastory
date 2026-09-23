@@ -52,7 +52,7 @@ struct DesktopNoteView: View {
             .frame(height: measuring ? nil : geometry.size.height, alignment: .top)
             .background(
                 RoundedRectangle(cornerRadius: 6).fill(Paint.paper)
-                    .shadow(color: .black.opacity(0.35), radius: 10, x: 2, y: 6)
+                    .shadow(color: .black.opacity(0.22), radius: 6, x: 1, y: 3)
             )
             .overlay(alignment: .top) {
                 if let img = Theme.pushpin {

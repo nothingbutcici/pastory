@@ -138,6 +138,9 @@ final class NoteWindow: NSPanel {
         collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
         hosting = NSHostingView(rootView: DesktopNoteView(itemID: id, geometry: geometry))
         hosting.sizingOptions = []
+        hosting.wantsLayer = true
+        hosting.layer?.backgroundColor = NSColor.clear.cgColor      // the margin band around the paper must be see-through
+        hosting.layer?.isOpaque = false
         contentView = hosting
         if let size { apply(size: size) } else { fitToContent() }
         NotificationCenter.default.addObserver(forName: NSWindow.didMoveNotification, object: self, queue: .main) { _ in
