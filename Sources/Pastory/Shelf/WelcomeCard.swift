@@ -6,7 +6,8 @@ struct WelcomeCard: View {
     @Bindable var model: ShelfModel
     @State private var tick = 0                      // re-read the shortcuts after the recorder changes them
     @State private var status: [String: String?] = [:]   // per-row notice from the recorder, shown under the title
-    static let width: CGFloat = 560          // wide, never tall: the card keeps the shelf's own height
+    /// Wide, never tall: the card keeps the shelf's own height. English lines run longer, so its card is wider.
+    static var width: CGFloat { L.isEnglish ? 560 : 480 }
 
     var body: some View {
         let _ = tick
