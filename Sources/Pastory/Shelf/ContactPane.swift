@@ -44,8 +44,10 @@ struct ContactPane: View {
     /// Every sheet is the same size: title, one line, then the QR code or the link button centred in the same slot.
     private func sheet(_ title: String, _ line: String, qr: NSImage? = nil, link: (String, URL)? = nil) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(title).font(.serif(13, bold: true)).foregroundStyle(Color.inkMuted)
-                .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 6)
+            Text(title).font(.serif(13, bold: true)).foregroundStyle(Color.onBrown)
+                .padding(.horizontal, 10).padding(.vertical, 3)
+                .background(TornPaper(top: true, right: true, bottom: true, left: true, seed: 21, amplitude: 1.4, step: 6).fill(Paint.desk))
+                .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 14)
             Text(line).font(.serif(14)).foregroundStyle(Color.ink).lineLimit(2).fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 16)
                 .frame(height: 44, alignment: .top)
@@ -54,6 +56,7 @@ struct ContactPane: View {
                     Image(nsImage: qr).resizable().interpolation(.high).aspectRatio(contentMode: .fit)
                         .frame(width: 120, height: 120)
                         .padding(6).background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
                 if let (label, url) = link {
                     Button { NSWorkspace.shared.open(url) } label: {
