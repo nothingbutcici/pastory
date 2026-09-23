@@ -11,6 +11,8 @@ final class ShelfPanelController: NSObject, NSWindowDelegate {
     private var panel: NSPanel?
     /// Screen rect of the shelf while visible (a note dropped back onto it is a cancelled tear-out).
     var frameOnScreen: CGRect? { panel?.isVisible == true ? panel?.frame : nil }
+    /// Window id of the shelf while visible, so the picker can offer it like any other window.
+    var windowID: CGWindowID? { panel?.isVisible == true ? panel.map { CGWindowID($0.windowNumber) } : nil }
     let model = ShelfModel()
     /// True while a save dialog is up, so losing key status does not slide the shelf away.
     var holdOpen = false

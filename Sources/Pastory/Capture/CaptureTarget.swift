@@ -32,11 +32,12 @@ struct ShareableSnapshot {
 
     /// Front-to-back, so the first hit under the pointer is the window the user actually sees.
     /// SCShareableContent does not promise an order; the window server list does.
-    var pickableWindows: [SCWindow] {
+    /// `also`: our own windows that may be picked (the shelf; it sits above the normal layer, so it needs naming).
+    func pickableWindows(also: Set<CGWindowID> = []) -> [SCWindow] {
         let pid = ProcessInfo.processInfo.processIdentifier
         let visible = content.windows.filter {
-            $0.isOnScreen && $0.owningApplication?.processID != pid
-                && $0.frame.width > 40 && $0.frame.height > 40 && $0.windowLayer == 0
+            $0.isOnScreen && $0.frame.width > 40 && $0.frame.height > 40
+                && (($0.owningApplication?.processID != pid && $0.windowLayer == 0) || also.contains($0.windowID))
         }
         var order: [CGWindowID: Int] = [:]
         if let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] {

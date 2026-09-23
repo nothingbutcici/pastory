@@ -6,7 +6,7 @@ struct WelcomeCard: View {
     @Bindable var model: ShelfModel
     @State private var tick = 0                      // re-read the shortcuts after the recorder changes them
     @State private var status: [String: String?] = [:]   // per-row notice from the recorder, shown under the title
-    static let width: CGFloat = 720          // wide, never tall: the card keeps the shelf's own height
+    static let width: CGFloat = 600          // wide, never tall: the card keeps the shelf's own height
 
     var body: some View {
         let _ = tick
@@ -38,8 +38,8 @@ struct WelcomeCard: View {
                 step(icon: "crop", title: "截图".l, key: Preferences.Key.hotkeyCapture, tag: "capture")
                 Spacer(minLength: 0)
             }
-            .frame(width: 360, alignment: .leading)
-            Rectangle().fill(Color.ink.opacity(0.15)).frame(width: 1).padding(.vertical, 4).padding(.horizontal, 16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Rectangle().fill(Color.ink.opacity(0.15)).frame(width: 1).padding(.vertical, 4).padding(.horizontal, 14)
             VStack(alignment: .leading, spacing: 0) {
                 heading("试一试".l)
                 todo(done: model.welcomeTried.contains("shelf"),
@@ -52,6 +52,7 @@ struct WelcomeCard: View {
                 todo(done: false, text: "点击「开始使用」，卡片消失".l)
                 Spacer(minLength: 0)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.horizontal, 18).padding(.top, 6)
             }
@@ -103,16 +104,16 @@ struct WelcomeCard: View {
         let raw = status[tag] ?? nil
         let note: String? = raw.map { $0.hasPrefix("已设置".l) || $0.hasPrefix("Set") ? "已设置".l : $0 }
         let binding = Binding<String?>(get: { status[tag] ?? nil }, set: { status[tag] = $0 })
-        return HStack(spacing: 12) {
-            Image(systemName: icon).font(.system(size: 14, weight: .light)).foregroundStyle(Color.ink).frame(width: 20)
-            VStack(alignment: .leading, spacing: 2) {
+        // Title line, then the keycaps on their own line underneath: narrow, and nothing has to squeeze sideways.
+        return VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 8) {
+                Image(systemName: icon).font(.system(size: 14, weight: .light)).foregroundStyle(Color.ink).frame(width: 20)
                 Text(title).font(.serif(13)).foregroundStyle(Color.ink)
                 if let note { Text(note).font(.serif(11)).foregroundStyle(Color.ink.opacity(0.45)).lineLimit(1) }
             }
-            Spacer(minLength: 10)
-            ShortcutRecorder(key: key, keycaps: true, status: binding)
+            ShortcutRecorder(key: key, keycaps: true, status: binding).padding(.leading, 28)
         }
-        .padding(.vertical, 3)
+        .padding(.vertical, 5)
     }
 
     /// Checklist line: an empty box that fills once the thing has really been done.

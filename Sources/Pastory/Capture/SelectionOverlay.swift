@@ -61,7 +61,7 @@ final class SelectionOverlayController {
         self.mode = mode
         hoveredWindow = nil
 
-        let pickable = snapshot.pickableWindows
+        let pickable = snapshot.pickableWindows(also: Set([ShelfPanelController.shared.windowID].compactMap { $0 }))
         for screen in NSScreen.screens {
             guard let display = snapshot.display(for: screen) else { continue }
             let w = OverlayWindow(screen: screen, display: display)
